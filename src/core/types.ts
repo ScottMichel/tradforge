@@ -1,0 +1,38 @@
+/** Exact place where a text appears in a source file. */
+export interface SourceLocation {
+  /** File path, relative to the root of the project being translated. */
+  readonly file: string;
+  /** Key of the text inside the file, when the format has keys (JSON). */
+  readonly key?: string;
+}
+
+/** A text found by a reader, at one location. */
+export interface Occurrence {
+  readonly source: string;
+  readonly location: SourceLocation;
+  /** Hint for the translator: where and how the text is used. */
+  readonly context?: string;
+  /** Lower value = translated first. */
+  readonly priority: number;
+}
+
+/** A unique text to translate, with every location where it appears. */
+export interface Segment {
+  readonly source: string;
+  readonly context?: string;
+  readonly priority: number;
+  readonly locations: readonly SourceLocation[];
+}
+
+/** machine: produced by a model. reviewed: checked by a human. stale: the source changed since. */
+export type TranslationStatus = "machine" | "reviewed" | "stale";
+
+/** One entry of the translation memory. */
+export interface TranslationEntry {
+  readonly source: string;
+  readonly target: string;
+  readonly status: TranslationStatus;
+  readonly model?: string;
+  /** ISO 8601 date of the last change. */
+  readonly updatedAt: string;
+}
