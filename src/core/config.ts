@@ -9,6 +9,10 @@ export interface SourceConfig {
   readonly format: SourceFormat;
   /** Glob patterns, relative to the project root. */
   readonly include: readonly string[];
+  /** Lower value = translated first. May be negative. */
+  readonly priority: number;
+  /** Hint for the translator about how these texts are used. */
+  readonly context?: string;
 }
 
 export interface ProviderConfig {
@@ -55,6 +59,7 @@ export class ConfigError extends Error {
 
 const DEFAULT_WORK_DIR = ".tradforge";
 const DEFAULT_BATCH_SIZE = 20;
+const DEFAULT_PRIORITY = 0;
 const DEFAULT_PROVIDER: ProviderConfig = {
   type: "ollama",
   model: "mistral-small",
@@ -129,12 +134,15 @@ function parseSources(value: unknown, report: Report): SourceConfig[] {
 function parseSource(value: unknown, path: string, report: Report): SourceConfig {
   if (!isObject(value)) {
     report(path, "must be an object");
-    return { format: SOURCE_FORMATS[0], include: [] };
+    return { format: SOURCE_FORMATS[0], include: [], priority: DEFAULT_PRIORITY };
   }
-  return {
-    format: parseChoice(SOURCE_FORMATS, value.format, `${path}.format`, report),
-    include: parseStringList(value.include, `${path}.include`, report),
-  };
+  // Parsed in field order, so that problems are reported in that order too.
+  const format = parseChoice(SOURCE_FORMATS, value.format, `${path}.format`, report);
+  const include = parseStringList(value.include, `${path}.include`, report);
+  const priority = parseInteger(value.priority, `${path}.priority`, report, DEFAULT_PRIORITY);
+  const context =
+    value.context === undefined ? undefined : parseString(value.context, `${path}.context`, report);
+  return { format, include, priority, ...(context !== undefined ? { context } : {}) };
 }
 
 function parseStringList(value: unknown, path: string, report: Report): string[] {
@@ -167,22 +175,21 @@ function parseTranslation(value: unknown, report: Report): TranslationConfig {
     report("translation", "must be an object");
     return { batchSize: DEFAULT_BATCH_SIZE, glossary: {} };
   }
+  const batchSize = parseInteger(value.batchSize, "translation.batchSize", report, DEFAULT_BATCH_SIZE, 1);
   const instructions =
     value.instructions === undefined
       ? undefined
       : parseString(value.instructions, "translation.instructions", report);
-  return {
-    batchSize: parseBatchSize(value.batchSize, report),
-    ...(instructions !== undefined ? { instructions } : {}),
-    glossary: parseGlossary(value.glossary, report),
-  };
+  const glossary = parseGlossary(value.glossary, report);
+  return { batchSize, ...(instructions !== undefined ? { instructions } : {}), glossary };
 }
 
-function parseBatchSize(value: unknown, report: Report): number {
-  if (value === undefined) return DEFAULT_BATCH_SIZE;
-  if (typeof value === "number" && Number.isInteger(value) && value >= 1) return value;
-  report("translation.batchSize", "must be an integer greater than or equal to 1");
-  return DEFAULT_BATCH_SIZE;
+function parseInteger(value: unknown, path: string, report: Report, fallback: number, min?: number): number {
+  if (value === undefined) return fallback;
+  const valid = typeof value === "number" && Number.isInteger(value) && (min === undefined || value >= min);
+  if (valid) return value;
+  report(path, min === undefined ? "must be an integer" : `must be an integer greater than or equal to ${min}`);
+  return fallback;
 }
 
 function parseGlossary(value: unknown, report: Report): Record<string, string> {

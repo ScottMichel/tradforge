@@ -26,7 +26,7 @@ describe("parseConfig", () => {
       sourceLanguage: "en",
       targetLanguage: "fr",
       workDir: ".tradforge",
-      sources: [{ format: "json", include: ["locales/en/*.json"] }],
+      sources: [{ format: "json", include: ["locales/en/*.json"], priority: 0 }],
       provider: { type: "ollama", model: "mistral-small", host: "http://localhost:11434" },
       translation: { batchSize: 20, glossary: {} },
     });
@@ -79,6 +79,32 @@ describe("parseConfig", () => {
   it("requires at least one source", () => {
     expect(problemPaths({ ...minimal, sources: [] })).toEqual(["sources"]);
     expect(problemPaths({ sourceLanguage: "en", targetLanguage: "fr" })).toEqual(["sources"]);
+  });
+
+  it("keeps the priority and context of each source", () => {
+    const config = parseConfig({
+      ...minimal,
+      sources: [
+        { format: "lua", include: ["dialogues/*.lua"], priority: -1, context: "NPC dialogue lines" },
+        { format: "json", include: ["ui/*.json"], priority: 5 },
+      ],
+    });
+    expect(config.sources).toStrictEqual([
+      { format: "lua", include: ["dialogues/*.lua"], priority: -1, context: "NPC dialogue lines" },
+      { format: "json", include: ["ui/*.json"], priority: 5 },
+    ]);
+  });
+
+  it("rejects a priority that is not an integer and an empty context", () => {
+    expect(
+      problemPaths({
+        ...minimal,
+        sources: [
+          { format: "json", include: ["a"], priority: 1.5 },
+          { format: "json", include: ["b"], priority: "high", context: " " },
+        ],
+      }),
+    ).toEqual(["sources[0].priority", "sources[1].priority", "sources[1].context"]);
   });
 
   it("rejects glossary entries that are not strings", () => {
