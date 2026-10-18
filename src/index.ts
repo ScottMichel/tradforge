@@ -23,6 +23,11 @@ export { CsvError } from "./storage/csv.js";
 export { exportReviewCsv, importReviewCsv } from "./storage/review.js";
 export type { ImportResult, ReviewStatus } from "./storage/review.js";
 
+export { translateSegments } from "./core/pipeline.js";
+export type { PipelineConfig, PipelineOptions, PipelineSummary, ProgressEvent } from "./core/pipeline.js";
+export { extractOccurrences, extractSegments } from "./formats/extract.js";
+export { READERS } from "./formats/readers.js";
+
 export { BatchError, ProviderUnavailableError } from "./core/provider.js";
 export type { Provider, TranslationItem, TranslationRequest } from "./core/provider.js";
 export { createProvider } from "./providers/factory.js";
