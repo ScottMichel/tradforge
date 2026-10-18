@@ -1,3 +1,4 @@
+import { compareCodeUnits } from "./compare.js";
 import type { Occurrence, Segment, SourceLocation } from "./types.js";
 
 interface Group {
@@ -35,9 +36,4 @@ export function groupOccurrences(occurrences: readonly Occurrence[]): Segment[] 
       ...(group.context !== undefined ? { context: group.context } : {}),
     }))
         .sort((a, b) => a.priority - b.priority || compareCodeUnits(a.source, b.source));
-}
-
-/** Locale-independent order (UTF-16 code units): same result on every machine. */
-function compareCodeUnits(a: string, b: string): number {
-  return a < b ? -1 : a > b ? 1 : 0;
 }
