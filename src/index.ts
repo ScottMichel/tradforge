@@ -13,3 +13,7 @@ export type {
   TradforgeConfig,
   TranslationConfig,
 } from "./core/config.js";
+
+export { ReadError } from "./core/reader.js";
+export type { Reader, ReaderInput } from "./core/reader.js";
+export { jsonReader } from "./formats/json/reader.js";
