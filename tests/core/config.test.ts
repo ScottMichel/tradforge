@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ConfigError, parseConfig } from "../../src/core/config.js";
+import { ConfigError, DEFAULT_OUTPUT, parseConfig } from "../../src/core/config.js";
 
 const minimal = {
   sourceLanguage: "en",
@@ -26,7 +26,14 @@ describe("parseConfig", () => {
       sourceLanguage: "en",
       targetLanguage: "fr",
       workDir: ".tradforge",
-      sources: [{ format: "json", include: ["locales/en/*.json"], priority: 0 }],
+      sources: [
+        {
+          format: "json",
+          include: ["locales/en/*.json"],
+          priority: 0,
+          output: { path: "{dir}/{name}.{lang}{ext}", asciiOnly: false, untranslated: "keep-source" },
+        },
+      ],
       provider: { type: "ollama", model: "mistral-small", host: "http://localhost:11434" },
       translation: { batchSize: 20, glossary: {} },
       validation: { placeholders: ["braces", "printf", "markup"] },
@@ -91,8 +98,14 @@ describe("parseConfig", () => {
       ],
     });
     expect(config.sources).toStrictEqual([
-      { format: "lua", include: ["dialogues/*.lua"], priority: -1, context: "NPC dialogue lines" },
-      { format: "json", include: ["ui/*.json"], priority: 5 },
+      {
+        format: "lua",
+        include: ["dialogues/*.lua"],
+        priority: -1,
+        context: "NPC dialogue lines",
+        output: DEFAULT_OUTPUT,
+      },
+      { format: "json", include: ["ui/*.json"], priority: 5, output: DEFAULT_OUTPUT },
     ]);
   });
 
@@ -120,6 +133,43 @@ describe("parseConfig", () => {
       "validation.placeholders[1]",
     ]);
     expect(problemPaths({ ...minimal, validation: { placeholders: "braces" } })).toEqual(["validation.placeholders"]);
+  });
+
+  it("keeps the output settings of each source", () => {
+    const config = parseConfig({
+      ...minimal,
+      sources: [
+        {
+          format: "json",
+          include: ["locales/en/*.json"],
+          output: { path: "locales/{lang}/{name}{ext}", asciiOnly: true, untranslated: "omit" },
+        },
+      ],
+    });
+    expect(config.sources[0]?.output).toStrictEqual({
+      path: "locales/{lang}/{name}{ext}",
+      asciiOnly: true,
+      untranslated: "omit",
+    });
+  });
+
+  it("rejects unknown output placeholders, absolute output paths and wrong output values", () => {
+    expect(
+      problemPaths({
+        ...minimal,
+        sources: [
+          { format: "json", include: ["a"], output: { path: "out/{language}/{name}.json" } },
+          { format: "json", include: ["b"], output: { path: "C:/out/{name}.json", asciiOnly: "yes" } },
+          { format: "json", include: ["c"], output: { path: "/out/{name}.json", untranslated: "drop" } },
+        ],
+      }),
+    ).toEqual([
+      "sources[0].output.path",
+      "sources[1].output.path",
+      "sources[1].output.asciiOnly",
+      "sources[2].output.path",
+      "sources[2].output.untranslated",
+    ]);
   });
 
   it("rejects glossary entries that are not strings", () => {

@@ -8,6 +8,28 @@ export type SourceFormat = (typeof SOURCE_FORMATS)[number];
 export const PROVIDER_TYPES = ["ollama"] as const;
 export type ProviderType = (typeof PROVIDER_TYPES)[number];
 
+/** What to do with a text that has no translation: keep the source text, or leave it out (JSON keys only). */
+export const UNTRANSLATED_MODES = ["keep-source", "omit"] as const;
+export type UntranslatedMode = (typeof UNTRANSLATED_MODES)[number];
+
+/** Placeholders of an output path template, e.g. "locales/{lang}/{name}{ext}". */
+export const OUTPUT_PLACEHOLDERS = ["dir", "name", "ext", "lang"] as const;
+
+export interface OutputConfig {
+  /** Path of the translated file, relative to the project root. {dir}, {name} and {ext} come from the source file. */
+  readonly path: string;
+  /** Escape every non-ASCII character, for games that read UTF-8 badly. */
+  readonly asciiOnly: boolean;
+  readonly untranslated: UntranslatedMode;
+}
+
+/** Next to the source file: locales/en/ui.json → locales/en/ui.fr.json. Never overwrites the source. */
+export const DEFAULT_OUTPUT: OutputConfig = {
+  path: "{dir}/{name}.{lang}{ext}",
+  asciiOnly: false,
+  untranslated: "keep-source",
+};
+
 export interface SourceConfig {
   readonly format: SourceFormat;
   /** Glob patterns, relative to the project root. */
@@ -16,6 +38,8 @@ export interface SourceConfig {
   readonly priority: number;
   /** Hint for the translator about how these texts are used. */
   readonly context?: string;
+  /** Where and how to write the translated files. */
+  readonly output: OutputConfig;
 }
 
 export interface ProviderConfig {
@@ -139,7 +163,7 @@ function parseSources(value: unknown, report: Report): SourceConfig[] {
 function parseSource(value: unknown, path: string, report: Report): SourceConfig {
   if (!isObject(value)) {
     report(path, "must be an object");
-    return { format: SOURCE_FORMATS[0], include: [], priority: DEFAULT_PRIORITY };
+    return { format: SOURCE_FORMATS[0], include: [], priority: DEFAULT_PRIORITY, output: DEFAULT_OUTPUT };
   }
   // Parsed in field order, so that problems are reported in that order too.
   const format = parseChoice(SOURCE_FORMATS, value.format, `${path}.format`, report);
@@ -147,7 +171,53 @@ function parseSource(value: unknown, path: string, report: Report): SourceConfig
   const priority = parseInteger(value.priority, `${path}.priority`, report, DEFAULT_PRIORITY);
   const context =
     value.context === undefined ? undefined : parseString(value.context, `${path}.context`, report);
-  return { format, include, priority, ...(context !== undefined ? { context } : {}) };
+  const output = parseOutput(value.output, `${path}.output`, report);
+  return { format, include, priority, ...(context !== undefined ? { context } : {}), output };
+}
+
+const TEMPLATE_PLACEHOLDER = /\{([^{}]*)\}/g;
+const ABSOLUTE_PATH = /^([a-zA-Z]:)?[\\/]/;
+
+function parseOutput(value: unknown, path: string, report: Report): OutputConfig {
+  if (value === undefined) return DEFAULT_OUTPUT;
+  if (!isObject(value)) {
+    report(path, "must be an object");
+    return DEFAULT_OUTPUT;
+  }
+  const template = parseString(value.path, `${path}.path`, report, DEFAULT_OUTPUT.path);
+  checkOutputTemplate(template, `${path}.path`, report);
+  const asciiOnly = parseBoolean(value.asciiOnly, `${path}.asciiOnly`, report, DEFAULT_OUTPUT.asciiOnly);
+  const untranslated = parseChoice(
+    UNTRANSLATED_MODES,
+    value.untranslated,
+    `${path}.untranslated`,
+    report,
+    DEFAULT_OUTPUT.untranslated,
+  );
+  return { path: template, asciiOnly, untranslated };
+}
+
+/** Reports the first problem of an output path template: an absolute path, or an unknown placeholder. */
+function checkOutputTemplate(template: string, path: string, report: Report): void {
+  if (ABSOLUTE_PATH.test(template)) {
+    report(path, "must be relative to the project root");
+    return;
+  }
+  const known: readonly string[] = OUTPUT_PLACEHOLDERS;
+  for (const [placeholder, name = ""] of template.matchAll(TEMPLATE_PLACEHOLDER)) {
+    if (!known.includes(name)) {
+      const list = OUTPUT_PLACEHOLDERS.map((p) => `{${p}}`).join(", ");
+      report(path, `unknown placeholder ${placeholder} (use ${list})`);
+      return;
+    }
+  }
+}
+
+function parseBoolean(value: unknown, path: string, report: Report, fallback: boolean): boolean {
+  if (value === undefined) return fallback;
+  if (typeof value === "boolean") return value;
+  report(path, "must be true or false");
+  return fallback;
 }
 
 function parseStringList(value: unknown, path: string, report: Report): string[] {
