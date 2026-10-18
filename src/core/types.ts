@@ -26,8 +26,11 @@ export interface Segment {
   readonly locations: readonly SourceLocation[];
 }
 
-/** machine: produced by a model. reviewed: checked by a human. stale: the source changed since. */
-export type TranslationStatus = "machine" | "reviewed" | "stale";
+/**
+ * Who produced the translation. machine: a model. reviewed: a human (never overwritten by a model).
+ * Whether a source is still used by the project ("stale") is derived from the current sources, not stored.
+ */
+export type TranslationStatus = "machine" | "reviewed";
 
 /** One entry of the translation memory. */
 export interface TranslationEntry {
@@ -36,5 +39,16 @@ export interface TranslationEntry {
   readonly status: TranslationStatus;
   readonly model?: string;
   /** ISO 8601 date of the last change. */
+  readonly updatedAt: string;
+}
+
+/** A source the model could not translate correctly. */
+export interface FailedTranslation {
+  readonly source: string;
+  /** Why the last attempt was rejected (validation issues, unreadable answer...). */
+  readonly reason: string;
+  readonly attempts: number;
+  readonly model?: string;
+  /** ISO 8601 date of the last attempt. */
   readonly updatedAt: string;
 }
