@@ -23,6 +23,14 @@ export { CsvError } from "./storage/csv.js";
 export { exportReviewCsv, importReviewCsv } from "./storage/review.js";
 export type { ImportResult, ReviewStatus } from "./storage/review.js";
 
+export { BatchError, ProviderUnavailableError } from "./core/provider.js";
+export type { Provider, TranslationItem, TranslationRequest } from "./core/provider.js";
+export { createProvider } from "./providers/factory.js";
+export { createOllamaProvider } from "./providers/ollama/provider.js";
+export type { OllamaOptions } from "./providers/ollama/provider.js";
+export { createMockProvider } from "./providers/mock/provider.js";
+export type { MockOptions, MockProvider } from "./providers/mock/provider.js";
+
 export { PLACEHOLDER_SYNTAXES } from "./core/validation/placeholders.js";
 export type { PlaceholderSyntax } from "./core/validation/placeholders.js";
 export { DEFAULT_VALIDATION_OPTIONS, validateTranslation } from "./core/validation/validate.js";
