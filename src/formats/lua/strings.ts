@@ -4,6 +4,10 @@ export interface LuaString {
   readonly value: string;
   /** 1-based line where the literal starts. */
   readonly line: number;
+  /** Offset of the literal in the source, opening quote or bracket included. */
+  readonly start: number;
+  /** Offset just after the closing quote or bracket: source.slice(start, end) is the literal. */
+  readonly end: number;
 }
 
 /** The Lua source cannot be tokenized (e.g. a string is never closed). */
@@ -95,7 +99,9 @@ class Lexer {
       const level = char === "[" ? this.longBracketLevel() : undefined;
       if (level !== undefined) {
         const line = this.line;
-        this.strings.push({ value: this.readLongBracket(level, "string"), line });
+        const start = this.pos;
+        const value = this.readLongBracket(level, "string");
+        this.strings.push({ value, line, start, end: this.pos });
         continue;
       }
       this.advance();
@@ -105,6 +111,7 @@ class Lexer {
 
   private readShortString(quote: string): void {
     const line = this.line;
+    const start = this.pos;
     const buffer = new ByteBuffer();
     this.pos++;
     for (;;) {
@@ -119,7 +126,7 @@ class Lexer {
       }
     }
     this.pos++;
-    this.strings.push({ value: buffer.decode(), line });
+    this.strings.push({ value: buffer.decode(), line, start, end: this.pos });
   }
 
   private readEscape(buffer: ByteBuffer): void {

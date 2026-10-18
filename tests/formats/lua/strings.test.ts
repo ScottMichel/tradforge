@@ -52,6 +52,12 @@ describe("extractLuaStrings", () => {
     expect(values(`t["key"] = f[[arg]]`)).toEqual(["key", "arg"]);
   });
 
+  it("reports where each literal starts and ends, quotes and brackets included", () => {
+    const source = 'x = "a\\"b" .. [==[c]==]';
+    const spans = extractLuaStrings(source).map((s) => source.slice(s.start, s.end));
+    expect(spans).toEqual(['"a\\"b"', "[==[c]==]"]);
+  });
+
   it("reports the line where each string starts", () => {
     const lines = extractLuaStrings('"a"\r\n\n[[b\nc]] "d"').map((s) => s.line);
     expect(lines).toEqual([1, 3, 4]);
