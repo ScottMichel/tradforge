@@ -12,7 +12,18 @@ export type {
   SourceFormat,
   TradforgeConfig,
   TranslationConfig,
+  ValidationConfig,
 } from "./core/config.js";
+
+export { PLACEHOLDER_SYNTAXES } from "./core/validation/placeholders.js";
+export type { PlaceholderSyntax } from "./core/validation/placeholders.js";
+export { DEFAULT_VALIDATION_OPTIONS, validateTranslation } from "./core/validation/validate.js";
+export type {
+  IssueCode,
+  TranslationPair,
+  ValidationIssue,
+  ValidationOptions,
+} from "./core/validation/validate.js";
 
 export { ReadError } from "./core/reader.js";
 export type { Reader, ReaderInput } from "./core/reader.js";

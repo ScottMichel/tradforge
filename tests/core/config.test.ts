@@ -29,6 +29,7 @@ describe("parseConfig", () => {
       sources: [{ format: "json", include: ["locales/en/*.json"], priority: 0 }],
       provider: { type: "ollama", model: "mistral-small", host: "http://localhost:11434" },
       translation: { batchSize: 20, glossary: {} },
+      validation: { placeholders: ["braces", "printf", "markup"] },
     });
   });
 
@@ -105,6 +106,20 @@ describe("parseConfig", () => {
         ],
       }),
     ).toEqual(["sources[0].priority", "sources[1].priority", "sources[1].context"]);
+  });
+
+  it("keeps the chosen placeholder syntaxes, none included", () => {
+    expect(parseConfig({ ...minimal, validation: { placeholders: ["braces"] } }).validation).toStrictEqual({
+      placeholders: ["braces"],
+    });
+    expect(parseConfig({ ...minimal, validation: { placeholders: [] } }).validation.placeholders).toEqual([]);
+  });
+
+  it("rejects unknown placeholder syntaxes", () => {
+    expect(problemPaths({ ...minimal, validation: { placeholders: ["braces", "icu"] } })).toEqual([
+      "validation.placeholders[1]",
+    ]);
+    expect(problemPaths({ ...minimal, validation: { placeholders: "braces" } })).toEqual(["validation.placeholders"]);
   });
 
   it("rejects glossary entries that are not strings", () => {

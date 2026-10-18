@@ -1,3 +1,5 @@
+import { PLACEHOLDER_SYNTAXES, type PlaceholderSyntax } from "./validation/placeholders.js";
+
 /** Every format a reader exists for. Single source of truth for validation and types. */
 export const SOURCE_FORMATS = ["json", "lua"] as const;
 export type SourceFormat = (typeof SOURCE_FORMATS)[number];
@@ -30,6 +32,11 @@ export interface TranslationConfig {
   readonly glossary: Readonly<Record<string, string>>;
 }
 
+export interface ValidationConfig {
+  /** Placeholder syntaxes that translations must preserve. Empty disables the check. */
+  readonly placeholders: readonly PlaceholderSyntax[];
+}
+
 export interface TradforgeConfig {
   readonly sourceLanguage: string;
   readonly targetLanguage: string;
@@ -38,6 +45,7 @@ export interface TradforgeConfig {
   readonly sources: readonly SourceConfig[];
   readonly provider: ProviderConfig;
   readonly translation: TranslationConfig;
+  readonly validation: ValidationConfig;
 }
 
 export interface ConfigProblem {
@@ -96,6 +104,7 @@ export function parseConfig(raw: unknown): TradforgeConfig {
     sources: parseSources(raw.sources, report),
     provider: parseProvider(raw.provider, report),
     translation: parseTranslation(raw.translation, report),
+    validation: parseValidation(raw.validation, report),
   };
 
   if (problems.length > 0) throw new ConfigError(problems);
@@ -205,4 +214,24 @@ function parseGlossary(value: unknown, report: Report): Record<string, string> {
   }
   // fromEntries defines own properties, so a "__proto__" term stays a plain entry.
   return Object.fromEntries(entries);
+}
+
+function parseValidation(value: unknown, report: Report): ValidationConfig {
+  if (value === undefined) return { placeholders: [...PLACEHOLDER_SYNTAXES] };
+  if (!isObject(value)) {
+    report("validation", "must be an object");
+    return { placeholders: [] };
+  }
+  return { placeholders: parsePlaceholderSyntaxes(value.placeholders, report) };
+}
+
+function parsePlaceholderSyntaxes(value: unknown, report: Report): PlaceholderSyntax[] {
+  if (value === undefined) return [...PLACEHOLDER_SYNTAXES];
+  if (!Array.isArray(value)) {
+    report("validation.placeholders", `must be an array of ${PLACEHOLDER_SYNTAXES.join(", ")}`);
+    return [];
+  }
+  return value.map((syntax: unknown, index) =>
+    parseChoice(PLACEHOLDER_SYNTAXES, syntax, `validation.placeholders[${index}]`, report),
+  );
 }
