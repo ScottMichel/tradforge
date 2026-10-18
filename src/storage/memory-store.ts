@@ -1,10 +1,11 @@
 import { isObject, type JsonObject } from "../core/json.js";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { TranslationMemory, type MemoryLanguages } from "../core/memory.js";
 import { stripBom } from "../core/reader.js";
 import type { FailedTranslation, TranslationEntry, TranslationStatus } from "../core/types.js";
 import { writeFileAtomic } from "./atomic.js";
+import { readFileIfExists } from "./read.js";
 
 const MEMORY_FILE = "memory.json";
 const VERSION = 1;
@@ -31,7 +32,7 @@ export function memoryFilePath(workDir: string): string {
 /** Loads the memory of the work directory, or an empty one if there is no file yet. */
 export async function loadMemory(workDir: string, languages: MemoryLanguages): Promise<TranslationMemory> {
   const file = memoryFilePath(workDir);
-  const content = await readIfExists(file);
+  const content = await readFileIfExists(file);
   if (content === undefined) return new TranslationMemory({ languages });
 
   const data = parseContent(file, content);
@@ -148,19 +149,6 @@ function parseContent(file: string, content: string): MemoryFileData {
     if (error instanceof MemoryFileError) throw new MemoryFileError(`${file}: ${error.message}`, { cause: error });
     throw error;
   }
-}
-
-async function readIfExists(file: string): Promise<string | undefined> {
-  try {
-    return await readFile(file, "utf8");
-  } catch (error) {
-    if (isNodeError(error) && error.code === "ENOENT") return undefined;
-    throw error;
-  }
-}
-
-function isNodeError(error: unknown): error is NodeJS.ErrnoException {
-  return error instanceof Error && "code" in error;
 }
 
 function sameLanguages(a: MemoryLanguages, b: MemoryLanguages): boolean {

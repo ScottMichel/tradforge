@@ -3,15 +3,25 @@ export const VERSION = "0.1.0";
 export { groupOccurrences } from "./core/segments.js";
 export type { Occurrence, Segment, SourceLocation, TranslationEntry, TranslationStatus } from "./core/types.js";
 
-export { ConfigError, parseConfig, PROVIDER_TYPES, SOURCE_FORMATS } from "./core/config.js";
+export {
+  ConfigError,
+  DEFAULT_OUTPUT,
+  OUTPUT_PLACEHOLDERS,
+  parseConfig,
+  PROVIDER_TYPES,
+  SOURCE_FORMATS,
+  UNTRANSLATED_MODES,
+} from "./core/config.js";
 export type {
   ConfigProblem,
+  OutputConfig,
   ProviderConfig,
   ProviderType,
   SourceConfig,
   SourceFormat,
   TradforgeConfig,
   TranslationConfig,
+  UntranslatedMode,
   ValidationConfig,
 } from "./core/config.js";
 
@@ -27,6 +37,14 @@ export { translateSegments } from "./core/pipeline.js";
 export type { PipelineConfig, PipelineOptions, PipelineSummary, ProgressEvent } from "./core/pipeline.js";
 export { extractOccurrences, extractSegments } from "./formats/extract.js";
 export { READERS } from "./formats/readers.js";
+export type { Writer, WriterInput, WriterOutput } from "./core/writer.js";
+export { WRITERS } from "./formats/writers.js";
+export { jsonWriter } from "./formats/json/writer.js";
+export { luaWriter } from "./formats/lua/writer.js";
+export { buildProject } from "./formats/build.js";
+export type { BuildOptions, BuiltFile } from "./formats/build.js";
+export { listProjectFiles, OutputError, outputPath } from "./formats/project.js";
+export type { ProjectFile } from "./formats/project.js";
 
 export { BatchError, ProviderUnavailableError } from "./core/provider.js";
 export type { Provider, TranslationItem, TranslationRequest } from "./core/provider.js";
