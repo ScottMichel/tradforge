@@ -16,7 +16,8 @@ export const luaReader: Reader = {
   },
 };
 
-function lexLua(file: string, content: string): LuaString[] {
+/** Every string literal of a Lua source file; syntax errors name the file. */
+export function lexLua(file: string, content: string): LuaString[] {
   try {
     return extractLuaStrings(stripBom(content));
   } catch (error) {

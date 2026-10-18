@@ -17,7 +17,8 @@ export const jsonReader: Reader = {
   },
 };
 
-function parseJson(file: string, content: string): unknown {
+/** Parses a JSON source file; errors name the file. */
+export function parseJson(file: string, content: string): unknown {
   try {
     return JSON.parse(stripBom(content));
   } catch (error) {
