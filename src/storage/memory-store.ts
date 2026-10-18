@@ -1,3 +1,4 @@
+import { isObject, type JsonObject } from "../core/json.js";
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { TranslationMemory, type MemoryLanguages } from "../core/memory.js";
@@ -112,11 +113,6 @@ function parseFailure(value: unknown, path: string): FailedTranslation {
   return { source, reason, attempts, ...(model !== undefined ? { model } : {}), updatedAt };
 }
 
-type JsonObject = Readonly<Record<string, unknown>>;
-
-function isObject(value: unknown): value is JsonObject {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function expectObject(value: unknown, path: string): JsonObject {
   if (isObject(value)) return value;

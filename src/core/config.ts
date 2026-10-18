@@ -1,3 +1,4 @@
+import { isObject } from "./json.js";
 import { PLACEHOLDER_SYNTAXES, type PlaceholderSyntax } from "./validation/placeholders.js";
 
 /** Every format a reader exists for. Single source of truth for validation and types. */
@@ -74,12 +75,7 @@ const DEFAULT_PROVIDER: ProviderConfig = {
   host: "http://localhost:11434",
 };
 
-type JsonObject = Readonly<Record<string, unknown>>;
 type Report = (path: string, message: string) => void;
-
-function isObject(value: unknown): value is JsonObject {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim() !== "";
