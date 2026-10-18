@@ -15,6 +15,14 @@ export type {
   ValidationConfig,
 } from "./core/config.js";
 
+export { TranslationMemory } from "./core/memory.js";
+export type { ImportOutcome, MemoryLanguages, MemoryOptions, MemoryStats, RecordOutcome } from "./core/memory.js";
+export type { FailedTranslation } from "./core/types.js";
+export { loadMemory, MemoryFileError, saveMemory } from "./storage/memory-store.js";
+export { CsvError } from "./storage/csv.js";
+export { exportReviewCsv, importReviewCsv } from "./storage/review.js";
+export type { ImportResult, ReviewStatus } from "./storage/review.js";
+
 export { PLACEHOLDER_SYNTAXES } from "./core/validation/placeholders.js";
 export type { PlaceholderSyntax } from "./core/validation/placeholders.js";
 export { DEFAULT_VALIDATION_OPTIONS, validateTranslation } from "./core/validation/validate.js";
