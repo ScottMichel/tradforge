@@ -17,3 +17,4 @@ export type {
 export { ReadError } from "./core/reader.js";
 export type { Reader, ReaderInput } from "./core/reader.js";
 export { jsonReader } from "./formats/json/reader.js";
+export { luaReader } from "./formats/lua/reader.js";

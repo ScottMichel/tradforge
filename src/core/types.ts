@@ -4,6 +4,8 @@ export interface SourceLocation {
   readonly file: string;
   /** Key of the text inside the file, when the format has keys (JSON). */
   readonly key?: string;
+  /** 1-based line of the text, when the format has no keys (Lua). */
+  readonly line?: number;
 }
 
 /** A text found by a reader, at one location. */
