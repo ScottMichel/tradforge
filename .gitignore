@@ -3,3 +3,6 @@ dist/
 coverage/
 *.log
 .tradforge/
+
+# Local handoff notes for Claude Code (not versioned)
+CLAUDE.md
