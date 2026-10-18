@@ -27,6 +27,11 @@ describe("groupOccurrences", () => {
     expect(sources).toEqual(["C", "A", "B"]);
   });
 
+    it("sorts by code unit, whatever the machine locale", () => {
+    const sources = groupOccurrences([occ("b", "f"), occ("B", "f"), occ("a", "f")]).map((s) => s.source);
+    expect(sources).toEqual(["B", "a", "b"]);
+  });
+
   it("keeps texts that only differ by case or punctuation apart", () => {
     expect(groupOccurrences([occ("Yes.", "f"), occ("Yes?", "f"), occ("yes.", "f")])).toHaveLength(3);
   });
