@@ -169,8 +169,7 @@ function parseSource(value: unknown, path: string, report: Report): SourceConfig
   const format = parseChoice(SOURCE_FORMATS, value.format, `${path}.format`, report);
   const include = parseStringList(value.include, `${path}.include`, report);
   const priority = parseInteger(value.priority, `${path}.priority`, report, DEFAULT_PRIORITY);
-  const context =
-    value.context === undefined ? undefined : parseString(value.context, `${path}.context`, report);
+  const context = value.context === undefined ? undefined : parseString(value.context, `${path}.context`, report);
   const output = parseOutput(value.output, `${path}.output`, report);
   return { format, include, priority, ...(context !== undefined ? { context } : {}), output };
 }
@@ -252,9 +251,7 @@ function parseTranslation(value: unknown, report: Report): TranslationConfig {
   }
   const batchSize = parseInteger(value.batchSize, "translation.batchSize", report, DEFAULT_BATCH_SIZE, 1);
   const instructions =
-    value.instructions === undefined
-      ? undefined
-      : parseString(value.instructions, "translation.instructions", report);
+    value.instructions === undefined ? undefined : parseString(value.instructions, "translation.instructions", report);
   const glossary = parseGlossary(value.glossary, report);
   return { batchSize, ...(instructions !== undefined ? { instructions } : {}), glossary };
 }

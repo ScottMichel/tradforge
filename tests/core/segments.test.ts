@@ -27,7 +27,7 @@ describe("groupOccurrences", () => {
     expect(sources).toEqual(["C", "A", "B"]);
   });
 
-    it("sorts by code unit, whatever the machine locale", () => {
+  it("sorts by code unit, whatever the machine locale", () => {
     const sources = groupOccurrences([occ("b", "f"), occ("B", "f"), occ("a", "f")]).map((s) => s.source);
     expect(sources).toEqual(["B", "a", "b"]);
   });

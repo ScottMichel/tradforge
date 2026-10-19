@@ -33,7 +33,10 @@ describe("importReviewCsv", () => {
 
   it("imports corrected and new translations as reviewed", () => {
     const memory = sampleMemory();
-    const result = importReviewCsv(memory, csv(["Hello", "Salut", "machine"], ["New text", "Nouveau texte", "pending"]));
+    const result = importReviewCsv(
+      memory,
+      csv(["Hello", "Salut", "machine"], ["New text", "Nouveau texte", "pending"]),
+    );
     expect(result).toStrictEqual({ added: 1, updated: 1, skipped: 0, unchanged: 0, empty: 0 });
     expect(memory.get("Hello")).toMatchObject({ target: "Salut", status: "reviewed" });
     expect(memory.get("New text")).toMatchObject({ target: "Nouveau texte", status: "reviewed" });

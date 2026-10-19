@@ -8,9 +8,7 @@ describe("formatCsv", () => {
       ["Hello, you", 'Say "hi"'],
       ["Line 1\nLine 2", " padded"],
     ];
-    expect(formatCsv(rows)).toBe(
-      '﻿source,target\r\n"Hello, you","Say ""hi"""\r\n"Line 1\nLine 2"," padded"\r\n',
-    );
+    expect(formatCsv(rows)).toBe('\uFEFFsource,target\r\n"Hello, you","Say ""hi"""\r\n"Line 1\nLine 2"," padded"\r\n');
   });
 });
 
@@ -25,7 +23,11 @@ describe("parseCsv", () => {
   });
 
   it("reads LF files without BOM or final line end, and empty fields", () => {
-    expect(parseCsv("a,b\n1,,3\n,")).toEqual([["a", "b"], ["1", "", "3"], ["", ""]]);
+    expect(parseCsv("a,b\n1,,3\n,")).toEqual([
+      ["a", "b"],
+      ["1", "", "3"],
+      ["", ""],
+    ]);
   });
 
   it("reports an unterminated quoted field with its line", () => {

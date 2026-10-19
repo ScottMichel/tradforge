@@ -1,6 +1,6 @@
 import { buildProject } from "../../formats/build.js";
 import { loadMemory } from "../../storage/memory-store.js";
-import { EXIT, type Command } from "../command.js";
+import { type Command, EXIT } from "../command.js";
 import { formatCount, plural } from "../format.js";
 import { projectOf } from "../project.js";
 
@@ -22,7 +22,9 @@ export const buildCommand: Command = {
     }
     for (const file of report) {
       const total = file.translated + file.untranslated;
-      out(`  ${file.output}: ${formatCount(file.translated)}/${formatCount(total)} translated${file.written ? "" : " (unchanged)"}`);
+      out(
+        `  ${file.output}: ${formatCount(file.translated)}/${formatCount(total)} translated${file.written ? "" : " (unchanged)"}`,
+      );
     }
     const written = report.filter((file) => file.written).length;
     out(`${plural(written, "file")} written, ${formatCount(report.length - written)} unchanged.`);

@@ -6,7 +6,7 @@ import { encodeLuaString, luaWriter } from "../../../src/formats/lua/writer.js";
 
 const translations = new Map([
   ["Welcome to the camp", "Bienvenue au camp"],
-  ["Say \"hi\"\nto him", 'Dis "salut"\nà lui'],
+  ['Say "hi"\nto him', 'Dis "salut"\nà lui'],
   ["It's late", "Il est tard"],
   ["A long text", "Un long texte"],
   ["idle", "inactif"], // must never be used: "idle" is code, not text
@@ -46,7 +46,7 @@ player:Say("Not translated yet")
   it("escapes non-ASCII characters as UTF-8 decimal bytes when asked to", () => {
     const content = write(script, { asciiOnly: true }).content;
     expect(content).toContain('player:Say("Dis \\"salut\\"\\n\\195\\160 lui")');
-    expect(content).not.toMatch(/[^\x00-\x7f]/);
+    expect([...content].every((char) => (char.codePointAt(0) ?? 0) <= 0x7f)).toBe(true);
   });
 
   it("writes code that the Lua reader reads back as the translations", () => {
@@ -67,7 +67,7 @@ player:Say("Not translated yet")
 describe("encodeLuaString", () => {
   it.each([
     ["plain", '"', false],
-    ["quote \" and backslash \\", '"', false],
+    ['quote " and backslash \\', '"', false],
     ["single ' quote", "'", false],
     ["tab\tbell\x07 zero\x00 then 1", '"', false],
     ["\\065 is not A", '"', false],

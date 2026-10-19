@@ -19,7 +19,7 @@ describe("parseTranslations", () => {
   });
 
   it("accepts an answer wrapped in a Markdown code block", () => {
-    const content = "```json\n" + answer([{ id: 0, translation: "Bonjour" }]) + "\n```";
+    const content = `\`\`\`json\n${answer([{ id: 0, translation: "Bonjour" }])}\n\`\`\``;
     expect(parseTranslations(content, [0])).toEqual(new Map([[0, "Bonjour"]]));
   });
 

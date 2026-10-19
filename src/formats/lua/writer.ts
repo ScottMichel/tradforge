@@ -2,7 +2,7 @@ import type { Writer } from "../../core/writer.js";
 import { isNaturalText } from "./natural-text.js";
 import { lexLua } from "./reader.js";
 
-const BOM = "﻿";
+const BOM = "\uFEFF";
 const encoder = new TextEncoder();
 
 const ESCAPES = new Map([
@@ -52,8 +52,8 @@ export function encodeLuaString(value: string, quote: '"' | "'", asciiOnly: bool
   let literal = quote;
   for (const char of value) {
     const code = char.codePointAt(0) ?? 0;
-    const escape = ESCAPES.get(char);
-    if (escape !== undefined) literal += escape;
+    const escaped = ESCAPES.get(char);
+    if (escaped !== undefined) literal += escaped;
     else if (char === quote) literal += `\\${quote}`;
     else if (code < 0x20 || code === 0x7f) literal += decimalEscape(code);
     else if (code > 0x7f && asciiOnly) for (const byte of encoder.encode(char)) literal += decimalEscape(byte);

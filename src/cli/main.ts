@@ -5,7 +5,7 @@ import { OutputError } from "../formats/project.js";
 import { CsvError } from "../storage/csv.js";
 import { MemoryFileError } from "../storage/memory-store.js";
 import { VERSION } from "../version.js";
-import { EXIT, GLOBAL_OPTIONS, OPTION_HELP, OPTIONS, UsageError, type CliOptions, type Command } from "./command.js";
+import { type CliOptions, type Command, EXIT, GLOBAL_OPTIONS, OPTION_HELP, OPTIONS, UsageError } from "./command.js";
 import { buildCommand } from "./commands/build.js";
 import { diffCommand } from "./commands/diff.js";
 import { exportCommand } from "./commands/export.js";

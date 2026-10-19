@@ -54,7 +54,9 @@ describe("end to end", () => {
 
     const second = await runOnce();
     expect(second.summary).toMatchObject({ total: 1, alreadyDone: 3, translated: 1 });
-    expect(second.provider.requests.flatMap((request) => request.items.map((item) => item.source))).toEqual(["Welcome"]);
+    expect(second.provider.requests.flatMap((request) => request.items.map((item) => item.source))).toEqual([
+      "Welcome",
+    ]);
 
     const third = await runOnce();
     expect(third.summary).toMatchObject({ total: 0, alreadyDone: 4 });

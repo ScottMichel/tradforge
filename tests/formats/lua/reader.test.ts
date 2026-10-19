@@ -44,7 +44,7 @@ describe("luaReader", () => {
   });
 
   it("accepts a UTF-8 byte order mark", () => {
-    expect(read('﻿x = "Good night"').map((o) => o.source)).toEqual(["Good night"]);
+    expect(read('\uFEFFx = "Good night"').map((o) => o.source)).toEqual(["Good night"]);
   });
 
   it("names the file and the line when the Lua is invalid", () => {

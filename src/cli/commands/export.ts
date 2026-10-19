@@ -4,7 +4,7 @@ import { extractSegments } from "../../formats/extract.js";
 import { writeFileAtomic } from "../../storage/atomic.js";
 import { loadMemory } from "../../storage/memory-store.js";
 import { exportReviewCsv } from "../../storage/review.js";
-import { EXIT, type Command } from "../command.js";
+import { type Command, EXIT } from "../command.js";
 import { plural } from "../format.js";
 import { displayPath, projectOf } from "../project.js";
 

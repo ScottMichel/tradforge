@@ -145,7 +145,10 @@ async function translateWithRetries(batch: readonly Segment[], options: Pipeline
   for (let attempt = 1; attempt <= MAX_ATTEMPTS && pending.length > 0; attempt++) {
     const size = attempt === 1 ? batch.length : attempt === 2 ? Math.ceil(batch.length / 4) : 1;
     const rejected: Rejected[] = [];
-    for (const group of chunk(pending.map((item) => item.segment), size)) {
+    for (const group of chunk(
+      pending.map((item) => item.segment),
+      size,
+    )) {
       for (const item of await translateGroup(group, options, tally)) rejected.push(item);
     }
     pending = rejected;

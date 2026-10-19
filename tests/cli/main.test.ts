@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { CliIo } from "../../src/cli/io.js";
 import { EXIT, runCli } from "../../src/cli/main.js";
-import { ProviderUnavailableError, type Provider } from "../../src/core/provider.js";
+import { type Provider, ProviderUnavailableError } from "../../src/core/provider.js";
 import { createMockProvider } from "../../src/providers/mock/provider.js";
 
 let root: string;
@@ -179,6 +179,9 @@ describe("the command line", () => {
   it("prints the texts as JSON for scripts", async () => {
     await createProject();
     const segments = JSON.parse((await cli("extract --json")).out);
-    expect(segments[0]).toMatchObject({ source: "Hello {name}", locations: [{ file: "locales/en/ui.json", key: "hello" }] });
+    expect(segments[0]).toMatchObject({
+      source: "Hello {name}",
+      locations: [{ file: "locales/en/ui.json", key: "hello" }],
+    });
   });
 });

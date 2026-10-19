@@ -1,9 +1,9 @@
-import { selectSegments, translateSegments, type ProgressEvent } from "../../core/pipeline.js";
+import { type ProgressEvent, selectSegments, translateSegments } from "../../core/pipeline.js";
 import type { Segment } from "../../core/types.js";
 import { extractSegments } from "../../formats/extract.js";
 import { createProvider } from "../../providers/factory.js";
 import { loadMemory, memoryFilePath, saveMemory } from "../../storage/memory-store.js";
-import { EXIT, UsageError, type Command } from "../command.js";
+import { type Command, EXIT, UsageError } from "../command.js";
 import { formatCount, formatDuration, plural, quote } from "../format.js";
 import { displayPath, projectOf } from "../project.js";
 
@@ -65,7 +65,9 @@ export const translateCommand: Command = {
     });
 
     if (summary.interrupted) {
-      io.out(`Interrupted: ${formatCount(summary.translated)} translated, progress saved. Run the same command to resume.`);
+      io.out(
+        `Interrupted: ${formatCount(summary.translated)} translated, progress saved. Run the same command to resume.`,
+      );
       return EXIT.interrupted;
     }
     io.out(

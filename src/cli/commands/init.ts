@@ -1,7 +1,7 @@
 import path from "node:path";
 import { writeFileAtomic } from "../../storage/atomic.js";
 import { readFileIfExists } from "../../storage/read.js";
-import { EXIT, type Command } from "../command.js";
+import { type Command, EXIT } from "../command.js";
 import { CONFIG_FILE, CONFIG_TEMPLATE } from "../config-file.js";
 import { CliError, displayPath } from "../project.js";
 

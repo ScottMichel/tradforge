@@ -1,4 +1,4 @@
-import { ReadError, stripBom, type Reader } from "../../core/reader.js";
+import { ReadError, type Reader, stripBom } from "../../core/reader.js";
 import type { Occurrence } from "../../core/types.js";
 
 export const jsonReader: Reader = {
@@ -28,10 +28,7 @@ export function parseJson(file: string, content: string): unknown {
 }
 
 /** Walks any JSON value and yields every non-blank string, in document order. */
-function* stringsIn(
-  value: unknown,
-  path: readonly string[],
-): Generator<{ path: readonly string[]; source: string }> {
+function* stringsIn(value: unknown, path: readonly string[]): Generator<{ path: readonly string[]; source: string }> {
   if (typeof value === "string") {
     if (value.trim() !== "") yield { path, source: value };
   } else if (Array.isArray(value)) {

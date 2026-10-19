@@ -1,7 +1,7 @@
 import { diffSources } from "../../core/diff.js";
 import { extractSegments } from "../../formats/extract.js";
 import { loadMemory } from "../../storage/memory-store.js";
-import { EXIT, type Command } from "../command.js";
+import { type Command, EXIT } from "../command.js";
 import { formatCount, quote } from "../format.js";
 import { projectOf } from "../project.js";
 

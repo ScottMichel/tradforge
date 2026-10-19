@@ -1,6 +1,6 @@
-import { ReadError, stripBom, type Reader } from "../../core/reader.js";
+import { ReadError, type Reader, stripBom } from "../../core/reader.js";
 import { isNaturalText } from "./natural-text.js";
-import { extractLuaStrings, LuaSyntaxError, type LuaString } from "./strings.js";
+import { extractLuaStrings, type LuaString, LuaSyntaxError } from "./strings.js";
 
 export const luaReader: Reader = {
   format: "lua",

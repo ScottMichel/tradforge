@@ -1,6 +1,6 @@
 import { extractSegments } from "../../formats/extract.js";
 import { loadMemory } from "../../storage/memory-store.js";
-import { EXIT, type Command } from "../command.js";
+import { type Command, EXIT } from "../command.js";
 import { formatCount } from "../format.js";
 import { projectOf } from "../project.js";
 
@@ -21,7 +21,9 @@ export const statusCommand: Command = {
     out(`Project: ${root}`);
     out(`Languages: ${config.sourceLanguage} → ${config.targetLanguage}, model ${config.provider.model}`);
     out(`Texts: ${formatCount(stats.total)}`);
-    out(`  translated    ${formatCount(stats.translated)} (${percent.toFixed(1)} %), ${formatCount(stats.reviewed)} reviewed`);
+    out(
+      `  translated    ${formatCount(stats.translated)} (${percent.toFixed(1)} %), ${formatCount(stats.reviewed)} reviewed`,
+    );
     out(`  failed        ${formatCount(stats.failed)}`);
     out(`  to translate  ${formatCount(stats.pending)}`);
     out(`  stale         ${formatCount(stats.stale)} (translations whose text left the project)`);

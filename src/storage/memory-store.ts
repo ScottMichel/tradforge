@@ -1,7 +1,7 @@
-import { isObject, type JsonObject } from "../core/json.js";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { TranslationMemory, type MemoryLanguages } from "../core/memory.js";
+import { isObject, type JsonObject } from "../core/json.js";
+import { type MemoryLanguages, TranslationMemory } from "../core/memory.js";
 import { stripBom } from "../core/reader.js";
 import type { FailedTranslation, TranslationEntry, TranslationStatus } from "../core/types.js";
 import { writeFileAtomic } from "./atomic.js";
@@ -113,7 +113,6 @@ function parseFailure(value: unknown, path: string): FailedTranslation {
   const updatedAt = expectText(failure.updatedAt, `${path}.updatedAt`);
   return { source, reason, attempts, ...(model !== undefined ? { model } : {}), updatedAt };
 }
-
 
 function expectObject(value: unknown, path: string): JsonObject {
   if (isObject(value)) return value;

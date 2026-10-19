@@ -62,7 +62,9 @@ describe("Ollama provider", () => {
   });
 
   it("stops with a clear message when the model is not installed", async () => {
-    const { fetch } = fakeFetch(() => new Response(JSON.stringify({ error: "model 'qwen9' not found" }), { status: 404 }));
+    const { fetch } = fakeFetch(
+      () => new Response(JSON.stringify({ error: "model 'qwen9' not found" }), { status: 404 }),
+    );
     const provider = createOllamaProvider({ host: "http://localhost:11434", model: "qwen9", fetch });
     await expect(provider.translateBatch(request)).rejects.toThrow(/ollama pull qwen9/);
   });

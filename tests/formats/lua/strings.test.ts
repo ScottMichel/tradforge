@@ -29,10 +29,9 @@ describe("extractLuaStrings", () => {
   });
 
   it("reads long strings verbatim, without their first line break", () => {
-    expect(values(String.raw`a = [[C:\path\n]] b = [[` + "\nHello\r\nWorld]]")).toEqual([
-      String.raw`C:\path\n`,
-      "Hello\nWorld",
-    ]);
+    // Raw part: a Lua backslash that must stay as it is. Normal part: real line breaks, CRLF included.
+    const source = [String.raw`a = [[C:\path\n]] b = [[`, "\nHello\r\nWorld]]"].join("");
+    expect(values(source)).toEqual([String.raw`C:\path\n`, "Hello\nWorld"]);
   });
 
   it("reads long strings with levels", () => {

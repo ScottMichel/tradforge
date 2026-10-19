@@ -1,5 +1,5 @@
 import { isObject } from "../../core/json.js";
-import { BatchError, ProviderUnavailableError, type Provider, type TranslationRequest } from "../../core/provider.js";
+import { BatchError, type Provider, ProviderUnavailableError, type TranslationRequest } from "../../core/provider.js";
 import { buildSystemPrompt, buildUserMessage } from "../llm/prompt.js";
 import { parseTranslations } from "../llm/response.js";
 
@@ -53,7 +53,10 @@ export function createOllamaProvider(options: OllamaOptions): Provider {
         });
         const body = await response.text();
         if (!response.ok) throw httpError(response.status, body, options.model);
-        return parseTranslations(chatContent(body), request.items.map((item) => item.id));
+        return parseTranslations(
+          chatContent(body),
+          request.items.map((item) => item.id),
+        );
       } catch (error) {
         if (signal?.aborted === true) throw signal.reason; // the user interrupted: let it through as it is
         if (timeout.aborted) {

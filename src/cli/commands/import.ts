@@ -2,7 +2,7 @@ import path from "node:path";
 import { loadMemory, saveMemory } from "../../storage/memory-store.js";
 import { readFileIfExists } from "../../storage/read.js";
 import { importReviewCsv } from "../../storage/review.js";
-import { EXIT, UsageError, type Command } from "../command.js";
+import { type Command, EXIT, UsageError } from "../command.js";
 import { formatCount } from "../format.js";
 import { CliError, displayPath, projectOf } from "../project.js";
 

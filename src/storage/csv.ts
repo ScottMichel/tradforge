@@ -16,7 +16,7 @@ const NEEDS_QUOTES = /[",\r\n]|^\s|\s$/;
  */
 export function formatCsv(rows: readonly (readonly string[])[]): string {
   const lines = rows.map((row) => row.map(formatField).join(","));
-  return `﻿${lines.map((line) => `${line}\r\n`).join("")}`;
+  return `\uFEFF${lines.map((line) => `${line}\r\n`).join("")}`;
 }
 
 function formatField(field: string): string {

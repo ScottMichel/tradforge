@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateTranslation, type ValidationOptions } from "../../../src/core/validation/validate.js";
+import { type ValidationOptions, validateTranslation } from "../../../src/core/validation/validate.js";
 
 const issues = (source: string, target: string, options?: Partial<ValidationOptions>) =>
   validateTranslation({ source, target }, options);

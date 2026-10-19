@@ -1,6 +1,6 @@
 import path from "node:path";
-import { ConfigFileError, openProject, type Project } from "./config-file.js";
 import type { CommandContext } from "./command.js";
+import { ConfigFileError, openProject, type Project } from "./config-file.js";
 
 export { ConfigFileError, type Project };
 

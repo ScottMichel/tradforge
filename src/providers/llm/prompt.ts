@@ -36,7 +36,11 @@ export function buildSystemPrompt(request: TranslationRequest): string {
 
   const glossary = usedGlossary(request);
   if (glossary.length > 0) {
-    lines.push("", "Glossary (always use these translations):", ...glossary.map(([term, target]) => `- ${term} → ${target}`));
+    lines.push(
+      "",
+      "Glossary (always use these translations):",
+      ...glossary.map(([term, target]) => `- ${term} → ${target}`),
+    );
   }
 
   lines.push("", `Answer only with JSON in this form, with one entry per text id: ${RESPONSE_EXAMPLE}`);

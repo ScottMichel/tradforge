@@ -1,4 +1,4 @@
-import { findTokens, PLACEHOLDER_SYNTAXES, removeTokens, type PlaceholderSyntax } from "./placeholders.js";
+import { findTokens, PLACEHOLDER_SYNTAXES, type PlaceholderSyntax, removeTokens } from "./placeholders.js";
 
 export type IssueCode =
   | "empty"
@@ -77,7 +77,9 @@ const checkMarkup: Validator = ({ source, target }, { placeholders }) => {
     ...(missing.length > 0 ? [`missing ${missing.join(", ")}`] : []),
     ...(added.length > 0 ? [`added ${added.join(", ")}`] : []),
   ];
-  return differences.length > 0 ? [{ code: "markup-changed", message: `markup differs: ${differences.join("; ")}` }] : [];
+  return differences.length > 0
+    ? [{ code: "markup-changed", message: `markup differs: ${differences.join("; ")}` }]
+    : [];
 };
 
 const checkLineBreaks = sameCount("line-breaks-changed", /\r\n|\r|\n/g, "line breaks");

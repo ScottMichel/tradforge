@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { parseConfig } from "../../src/core/config.js";
 import { TranslationMemory } from "../../src/core/memory.js";
-import { translateSegments, type PipelineOptions, type ProgressEvent } from "../../src/core/pipeline.js";
-import { ProviderUnavailableError, type Provider } from "../../src/core/provider.js";
+import { type PipelineOptions, type ProgressEvent, translateSegments } from "../../src/core/pipeline.js";
+import { type Provider, ProviderUnavailableError } from "../../src/core/provider.js";
 import type { Segment } from "../../src/core/types.js";
 import { createMockProvider, type MockProvider } from "../../src/providers/mock/provider.js";
 

@@ -76,7 +76,9 @@ function checkSizes(plans: readonly PlannedFile[]): void {
     if (existing === undefined) return [];
     const before = Buffer.byteLength(existing);
     const after = Buffer.byteLength(result.content);
-    return before >= MIN_GUARDED_BYTES && after < before * MIN_SIZE_RATIO ? [`  - ${output}: ${before} → ${after} bytes`] : [];
+    return before >= MIN_GUARDED_BYTES && after < before * MIN_SIZE_RATIO
+      ? [`  - ${output}: ${before} → ${after} bytes`]
+      : [];
   });
   if (shrunk.length > 0) {
     throw new OutputError(

@@ -29,11 +29,7 @@ export interface DiffOptions {
  * Compares the sources of the project with those of the memory.
  * A small edit (punctuation, one word) shows as "changed": its old translation is a good starting point.
  */
-export function diffSources(
-  current: Iterable<string>,
-  known: Iterable<string>,
-  options: DiffOptions = {},
-): SourceDiff {
+export function diffSources(current: Iterable<string>, known: Iterable<string>, options: DiffOptions = {}): SourceDiff {
   const threshold = options.threshold ?? 0.8;
   const maxComparisons = options.maxComparisons ?? 250_000;
   const currentSet = new Set(current);

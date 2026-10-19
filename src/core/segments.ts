@@ -35,5 +35,5 @@ export function groupOccurrences(occurrences: readonly Occurrence[]): Segment[] 
       locations: group.locations,
       ...(group.context !== undefined ? { context: group.context } : {}),
     }))
-        .sort((a, b) => a.priority - b.priority || compareCodeUnits(a.source, b.source));
+    .sort((a, b) => a.priority - b.priority || compareCodeUnits(a.source, b.source));
 }
