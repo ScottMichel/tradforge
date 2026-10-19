@@ -1,0 +1,220 @@
+# tradforge
+
+[English](README.md) · **Français**
+
+[![CI](https://github.com/ScottMichel/tradforge/actions/workflows/ci.yml/badge.svg)](https://github.com/ScottMichel/tradforge/actions/workflows/ci.yml)
+[![Licence : MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+**Traduisez tous les textes d'un projet — un jeu, un mod, une application — avec un modèle d'IA qui tourne sur votre
+propre ordinateur, en vous assurant que le résultat ne casse rien.**
+
+Le modèle traduit. tradforge fait tout le reste : il trouve les textes dans vos fichiers, pilote le modèle, **vérifie
+chaque traduction**, retient ce qui est fait, survit aux interruptions et écrit des fichiers traduits propres.
+
+```text
+$ tradforge translate
+Translating 2,481 texts (96,320 characters) with mistral-small, 20 per batch...
+  1,240/2,481 done, 1 failed, about 12 min left
+  2,481/2,481 done, 1 failed
+Done: 2,480 translated, 1 failed. Memory saved in .tradforge/memory.json.
+```
+
+## Pourquoi tradforge ?
+
+Demander à un modèle de langage de traduire des milliers de lignes fonctionne… jusqu'au jour où ça ne fonctionne plus.
+Les modèles sautent des lignes, répondent avec un JSON cassé, traduisent des noms de variables ou **inventent des
+variables** (`town` devient `{town}`), et une seule ligne fautive peut faire planter un jeu. tradforge est né de la
+traduction d'un gros mod de jeu (voir [l'étude de cas](#étude-de-cas)) et transforme ces leçons en garanties :
+
+- **Validation stricte** de chaque traduction : variables conservées et jamais inventées (`{name}`, `%d`, `%1$s`),
+  balises conservées (`<b>`, `<LINE>`), mêmes retours à la ligne, mêmes `*actions*`, mêmes espaces en début et en fin,
+  rien de laissé en anglais, aucune longueur absurde. Une traduction refusée est retentée par groupes plus petits,
+  puis notée en échec avec sa raison.
+- **Mémoire de traduction** : chaque texte unique n'est traduit qu'une fois, même s'il apparaît 300 fois. Relancez
+  après une mise à jour : seuls les nouveaux textes sont envoyés au modèle.
+- **Aucun travail perdu** : la mémoire est enregistrée de façon atomique après chaque lot. Un Ctrl+C, un plantage ou une
+  coupure de courant ne la corrompent jamais ; le lancement suivant reprend là où il s'était arrêté.
+- **Relecture humaine protégée** : une traduction corrigée par une personne n'est jamais écrasée par le modèle.
+  Exportez un CSV, relisez-le dans Excel ou LibreOffice, réimportez-le.
+- **Sorties sûres** : les fichiers traduits gardent la structure des originaux ; tradforge refuse de remplacer un gros
+  fichier de sortie par un beaucoup plus petit (l'accident classique du « lancé depuis le mauvais dossier »), sauf avec
+  `--force`.
+- **Local et gratuit** : fonctionne avec [Ollama](https://ollama.com) sur votre machine. Pas de clé d'API, aucun coût
+  par phrase, vos textes ne quittent jamais votre ordinateur.
+- **Aucune dépendance à l'exécution** : seulement Node.js.
+
+## Démarrage rapide
+
+1. **Installez [Node.js](https://nodejs.org) 22 ou plus récent et [Ollama](https://ollama.com)**, puis téléchargez un
+   modèle :
+
+   ```sh
+   ollama pull mistral-small
+   ```
+
+2. **Installez tradforge.** Il n'est pas encore publié sur npm ; en attendant, installez-le depuis les sources :
+
+   ```sh
+   git clone https://github.com/ScottMichel/tradforge.git
+   cd tradforge
+   npm ci && npm run build && npm link
+   ```
+
+3. **Dans le dossier de votre projet :**
+
+   ```sh
+   tradforge init        # crée tradforge.config.json, chaque réglage expliqué
+   tradforge status      # combien de textes, combien déjà traduits
+   tradforge translate   # traduit ce qui manque (Ctrl+C pour arrêter, relancez pour reprendre)
+   tradforge build       # écrit les fichiers traduits
+   ```
+
+Envie de voir d'abord ? Le dossier [`examples/game`](examples/game) est un petit jeu avec une interface en JSON et des
+dialogues en Lua : `cd examples/game`, puis `tradforge translate --dry-run`.
+
+## Commandes
+
+| Commande | Rôle |
+| --- | --- |
+| `init [--force]` | Crée un `tradforge.config.json` commenté |
+| `status` | Textes du projet : traduits, relus, en échec, à traduire, obsolètes |
+| `extract [--json]` | Trouve les textes à traduire, sans les traduire |
+| `diff` | Textes nouveaux, retirés et *légèrement modifiés* depuis la dernière traduction |
+| `translate [--limit <n>] [--only <chemin>] [--retry] [--dry-run]` | Traduit ce que la mémoire n'a pas encore |
+| `build [--force]` | Écrit les fichiers traduits |
+| `export [<fichier.csv>]` | Écrit un CSV pour relire ou compléter les traductions |
+| `import <fichier.csv> [--keep]` | Importe des traductions relues ou manuelles |
+
+Toutes les commandes acceptent `--config <fichier>` et `--help`. Codes de sortie : `0` succès, `1` erreur, `2` ligne de
+commande incorrecte, `130` interruption.
+
+## Configuration
+
+`tradforge init` écrit ce fichier avec un commentaire sur chaque réglage (les commentaires sont autorisés). Seules les
+langues et les sources sont obligatoires.
+
+```jsonc
+{
+  "sourceLanguage": "en",
+  "targetLanguage": "fr",
+  "workDir": ".tradforge",
+  "sources": [
+    {
+      "format": "json",
+      "include": ["locales/en/*.json"],
+      "priority": 0,
+      "context": "User interface",
+      "output": { "path": "locales/{lang}/{name}{ext}", "asciiOnly": false, "untranslated": "keep-source" }
+    }
+  ],
+  "provider": { "type": "ollama", "model": "mistral-small", "host": "http://localhost:11434" },
+  "translation": {
+    "batchSize": 20,
+    "instructions": "Video game texts. Keep a natural, casual tone.",
+    "glossary": { "NPC": "PNJ" }
+  },
+  "validation": { "placeholders": ["braces", "printf", "markup"] }
+}
+```
+
+| Réglage | Signification | Par défaut |
+| --- | --- | --- |
+| `workDir` | Dossier de la mémoire de traduction. **À versionner** : il contient tout le travail. | `.tradforge` |
+| `sources[].format` | `json` ou `lua` | obligatoire |
+| `sources[].include` | Motifs de fichiers, relatifs au fichier de configuration | obligatoire |
+| `sources[].priority` | Plus petit = traduit en premier (peut être négatif) | `0` |
+| `sources[].context` | Indique au modèle comment les textes sont utilisés | aucun |
+| `sources[].output.path` | Où écrire les traductions. `{dir}`, `{name}`, `{ext}` viennent du fichier source, `{lang}` est la langue cible | `{dir}/{name}.{lang}{ext}` |
+| `sources[].output.asciiOnly` | Échappe les accents (`é` → `é` en JSON, `\195\169` en Lua) pour les programmes qui lisent mal l'UTF-8 | `false` |
+| `sources[].output.untranslated` | `keep-source` ou `omit` (clés JSON uniquement) | `keep-source` |
+| `provider` | Serveur Ollama et modèle | `mistral-small` sur `localhost:11434` |
+| `translation.batchSize` | Textes envoyés au modèle par requête | `20` |
+| `translation.instructions` | Ton, public, conventions, envoyés avec chaque lot | aucune |
+| `translation.glossary` | Termes toujours traduits de la même façon (seuls ceux présents dans un lot sont envoyés) | `{}` |
+| `validation.placeholders` | Syntaxes de variables à protéger : `braces` `{name}`, `printf` `%s`, `markup` `<b>` | les trois |
+
+> **VS Code :** pour que l'éditeur ne signale plus les commentaires comme des erreurs, ajoutez
+> `"files.associations": { "tradforge.config.json": "jsonc" }` à vos paramètres.
+
+## Formats pris en charge
+
+| Format | Lecture | Écriture |
+| --- | --- | --- |
+| **JSON** | toutes les chaînes, objets et tableaux imbriqués (`menu.quit`, `tips.0`) | même structure, même indentation, mêmes fins de ligne ; échappements `\u` en option |
+| **Lua** | chaînes littérales de tout type (`"..."`, `'...'`, `[[...]]`, `[==[...]==]`, tous les échappements), en ignorant les commentaires et les **chaînes qui ressemblent à du code** (`"idle"`, `"media/ui/icon.png"`, `"hp=%d"`) | chaînes remplacées sur place, le reste du fichier conservé à l'octet près ; échappements `\ddd` en option |
+
+D'autres formats arrivent : sous-titres (`.srt`, `.vtt`), Project Zomboid, Ren'Py, RimWorld, Paradox, YAML, gettext
+`.po`, Android, iOS, XLIFF, Markdown… Voir la [feuille de route](#feuille-de-route).
+
+## Fonctionnement
+
+```text
+fichiers du projet ──► trouver (motifs include ; jamais le dossier de travail ni les traductions déjà produites)
+                   ──► lire (un lecteur par format) ──► regrouper les textes identiques
+                   ──► retirer ce que la mémoire connaît ──► lots, par priorité
+                   ──► modèle (consignes + glossaire + contexte, réponse JSON imposée)
+                   ──► valider ──► refusée ? nouvel essai : un quart du lot, puis le texte seul, puis échec noté
+                   ──► mémoire (enregistrement atomique après chaque lot)
+                   ──► construire (un écrivain par format ; tout est préparé et vérifié avant la moindre écriture)
+```
+
+Le cœur (`src/core`) est de la logique pure : il ne touche jamais au disque ni au réseau. Les formats, les moteurs, le
+stockage et la ligne de commande sont des adaptateurs branchés dessus ; c'est pourquoi un nouveau format ou un nouveau
+moteur ne modifie jamais le cœur. Détails (en anglais) dans [docs/architecture.md](docs/architecture.md).
+
+## Utilisation comme bibliothèque
+
+```ts
+import { createProvider, extractSegments, loadMemory, parseConfig, saveMemory, translateSegments } from "tradforge";
+
+const config = parseConfig({ sourceLanguage: "en", targetLanguage: "fr", sources: [{ format: "json", include: ["locales/en/*.json"] }] });
+const segments = await extractSegments(".", config);
+const memory = await loadMemory(".tradforge", config);
+await translateSegments({ segments, memory, provider: createProvider(config.provider), config, save: () => saveMemory(".tradforge", memory) });
+```
+
+## Étude de cas
+
+tradforge est la version générique d'un script écrit pour traduire en français un gros mod communautaire du jeu
+*Project Zomboid* :
+
+| | |
+| --- | --- |
+| Textes | environ **98 000** phrases, ~5 millions de caractères |
+| Matériel | une AMD Radeon RX 7900 XT |
+| Modèle | `mistral-small` avec Ollama |
+| Durée | environ **17 heures** |
+| Refusées par la validation | **0,03 %**, corrigées à la main |
+
+Aucun texte de ce mod, ni d'aucun autre projet tiers, ne figure dans ce dépôt : les exemples et les tests utilisent
+des textes écrits pour tradforge.
+
+## Limites
+
+- Deux formats pour l'instant (JSON, Lua) et un seul moteur (Ollama).
+- Les textes sont traduits par lots, sans la conversation qui les entoure : le ton peut varier d'une ligne à l'autre.
+- Le glossaire est transmis au modèle mais pas encore vérifié.
+- `diff` montre les textes légèrement modifiés mais ne réutilise pas encore automatiquement leur ancienne traduction.
+- Dans les fichiers JSON produits, les clés numériques (`"1"`, `"42"`) apparaissent en premier : une règle de
+  JavaScript, le contenu est inchangé.
+
+## Feuille de route
+
+1. **Traduction plus intelligente** : lots dans l'ordre du fichier avec les lignes voisines comme contexte, groupes de
+   conversation, protection des variables, typographie française, vérification du glossaire, réutilisation automatique
+   des textes légèrement modifiés, détection des formats.
+2. **Formats de jeux et sous-titres** : Project Zomboid, Ren'Py, RimWorld, Paradox, `.srt`, `.vtt`.
+3. **Moteurs et vitesse** : API compatibles OpenAI, Claude, Gemini, DeepL, lots en parallèle, estimation des coûts.
+4. **Qualité** : `tradforge compare` (plusieurs modèles côte à côte), retraduction inverse des lignes suspectes.
+5. **Formats d'applications** : XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
+6. **Application de bureau** : ouvrir un fichier ou un dossier, traduire, relire — sans ligne de commande.
+7. **Documents bureautiques** : `.docx`, `.odt`, `.pptx`, `.xlsx`.
+
+## Contribuer
+
+Les contributions sont les bienvenues, en particulier les nouveaux formats : chacun est un lecteur et un écrivain
+indépendants. Voir [CONTRIBUTING.md](CONTRIBUTING.md) (en anglais).
+
+## Licence
+
+[MIT](LICENSE) © Kazuugnii
