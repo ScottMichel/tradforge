@@ -1,4 +1,4 @@
-export const VERSION = "0.1.0";
+export { VERSION } from "./version.js";
 
 export { groupOccurrences } from "./core/segments.js";
 export type { Occurrence, Segment, SourceLocation, TranslationEntry, TranslationStatus } from "./core/types.js";
@@ -33,8 +33,10 @@ export { CsvError } from "./storage/csv.js";
 export { exportReviewCsv, importReviewCsv } from "./storage/review.js";
 export type { ImportResult, ReviewStatus } from "./storage/review.js";
 
-export { translateSegments } from "./core/pipeline.js";
-export type { PipelineConfig, PipelineOptions, PipelineSummary, ProgressEvent } from "./core/pipeline.js";
+export { selectSegments, translateSegments } from "./core/pipeline.js";
+export type { PipelineConfig, PipelineOptions, PipelineSummary, ProgressEvent, Selection } from "./core/pipeline.js";
+export { diffSources, similarity } from "./core/diff.js";
+export type { ChangedSource, DiffOptions, SourceDiff } from "./core/diff.js";
 export { extractOccurrences, extractSegments } from "./formats/extract.js";
 export { READERS } from "./formats/readers.js";
 export type { Writer, WriterInput, WriterOutput } from "./core/writer.js";

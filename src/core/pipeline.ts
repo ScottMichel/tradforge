@@ -71,12 +71,7 @@ export async function translateSegments(options: PipelineOptions): Promise<Pipel
   const { memory, config, signal } = options;
   const now = options.now ?? Date.now;
 
-  const candidates = options.segments.filter(
-    (segment) =>
-      memory.get(segment.source) === undefined &&
-      (options.retryFailed === true || memory.getFailure(segment.source) === undefined),
-  );
-  const todo = options.limit === undefined ? candidates : candidates.slice(0, options.limit);
+  const { todo, alreadyDone } = selectSegments(options.segments, memory, options);
   const totalChars = countChars(todo);
 
   const tally: Tally = { translated: 0, failed: 0, chars: 0 };
@@ -115,11 +110,33 @@ export async function translateSegments(options: PipelineOptions): Promise<Pipel
 
   return {
     total: todo.length,
-    alreadyDone: options.segments.length - candidates.length,
+    alreadyDone,
     translated: tally.translated,
     failed: tally.failed,
     interrupted,
   };
+}
+
+export interface Selection {
+  /** The texts to translate in this run, in order. */
+  readonly todo: readonly Segment[];
+  /** Texts skipped because the memory already has them. */
+  readonly alreadyDone: number;
+}
+
+/** The texts a run will translate: not in the memory, past failures only with retryFailed, at most limit. */
+export function selectSegments(
+  segments: readonly Segment[],
+  memory: TranslationMemory,
+  options: { readonly retryFailed?: boolean; readonly limit?: number } = {},
+): Selection {
+  const candidates = segments.filter(
+    (segment) =>
+      memory.get(segment.source) === undefined &&
+      (options.retryFailed === true || memory.getFailure(segment.source) === undefined),
+  );
+  const todo = options.limit === undefined ? candidates : candidates.slice(0, options.limit);
+  return { todo, alreadyDone: segments.length - candidates.length };
 }
 
 /** Whole batch, then quarters, then one text at a time; what still fails is logged with its last reason. */
