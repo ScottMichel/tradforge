@@ -1,0 +1,29 @@
+{
+  // A small game with a JSON user interface and Lua dialogues. Every text was written for this example.
+  "sourceLanguage": "en",
+  "targetLanguage": "fr",
+
+  "sources": [
+    {
+      // Dialogues first: players read them the most.
+      "format": "lua",
+      "include": ["scripts/*.lua"],
+      "priority": 0,
+      "context": "Lines spoken by characters of a survival game",
+      "output": { "path": "scripts/{lang}/{name}{ext}", "asciiOnly": true }
+    },
+    {
+      "format": "json",
+      "include": ["locales/en/*.json"],
+      "priority": 1,
+      "context": "User interface of a survival game",
+      "output": { "path": "locales/{lang}/{name}{ext}" }
+    }
+  ],
+
+  "translation": {
+    "batchSize": 20,
+    "instructions": "Casual video game tone. Players are addressed with \"tu\".",
+    "glossary": { "NPC": "PNJ", "Health": "Santé" }
+  }
+}

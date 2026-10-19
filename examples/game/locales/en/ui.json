@@ -1,0 +1,18 @@
+{
+  "menu": {
+    "play": "Play",
+    "options": "Options",
+    "quit": "Quit game",
+    "confirmQuit": "Are you sure you want to quit? Unsaved progress will be lost."
+  },
+  "hud": {
+    "health": "Health: %d/%d",
+    "welcome": "Welcome back, {name}!",
+    "day": "Day {day}, {hour}:{minute}"
+  },
+  "tips": [
+    "Eat before you go to sleep.",
+    "Talk to the NPC near the gate to learn about the camp.",
+    "Press <b>E</b> to open a door."
+  ]
+}
