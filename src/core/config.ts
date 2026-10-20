@@ -94,6 +94,14 @@ export interface OpenAiCompatibleProviderConfig {
   /** Name of the environment variable that holds the API key. The key itself never goes in the configuration. */
   readonly apiKeyEnv: string;
   readonly responseFormat: ResponseFormat;
+  /** Prices of the engine, for the cost estimate of a dry run. Not built in: prices change too often. */
+  readonly pricing?: Pricing;
+}
+
+/** In any currency, per million tokens, as API price lists show them. */
+export interface Pricing {
+  readonly inputPerMillion: number;
+  readonly outputPerMillion: number;
 }
 
 /** Discriminated by type: each engine has its own settings. */
@@ -365,6 +373,7 @@ function parseOpenAiCompatible(value: Record<string, unknown>, report: Report): 
       `never write an API key in the configuration: put it in the ${apiKeyEnv || DEFAULT_API_KEY_ENV} environment variable`,
     );
   }
+  const pricing = value.pricing === undefined ? undefined : parsePricing(value.pricing, report);
   return {
     type: "openai-compatible",
     model: parseString(value.model, "provider.model", report),
@@ -377,7 +386,22 @@ function parseOpenAiCompatible(value: Record<string, unknown>, report: Report): 
       report,
       "json-schema",
     ),
+    ...(pricing !== undefined ? { pricing } : {}),
   };
+}
+
+function parsePricing(value: unknown, report: Report): Pricing | undefined {
+  if (!isObject(value)) {
+    report("provider.pricing", 'must be an object such as { "inputPerMillion": 0.4, "outputPerMillion": 1.6 }');
+    return undefined;
+  }
+  const price = (key: "inputPerMillion" | "outputPerMillion"): number => {
+    const amount = value[key];
+    if (typeof amount === "number" && Number.isFinite(amount) && amount >= 0) return amount;
+    report(`provider.pricing.${key}`, "must be a number, 0 or more");
+    return 0;
+  };
+  return { inputPerMillion: price("inputPerMillion"), outputPerMillion: price("outputPerMillion") };
 }
 
 const DEFAULT_TRANSLATION: TranslationConfig = {

@@ -186,6 +186,30 @@ describe("the command line", () => {
     expect(result.err).toContain("ollama serve");
   });
 
+  it("estimates the tokens of a dry run, and its cost when the prices are known", async () => {
+    await createProject();
+    const local = (await cli("translate --dry-run")).out;
+    expect(local).toMatch(/Estimated use: about [\d,]+ tokens sent and [\d,]+ received \(1 request/);
+    expect(local).toContain("Local model: no cost.");
+
+    const config = await read("tradforge.config.json");
+    const remote = (pricing: string) =>
+      config.replace(
+        /"provider": \{[^}]*\}/,
+        `"provider": { "type": "openai-compatible", "model": "gpt-test"${pricing} }`,
+      );
+    await createFile("tradforge.config.json", remote(""));
+    expect((await cli("translate --dry-run")).out).toContain("Add provider.pricing");
+
+    await createFile(
+      "tradforge.config.json",
+      remote(', "pricing": { "inputPerMillion": 2000, "outputPerMillion": 8000 }'),
+    );
+    expect((await cli("translate --dry-run")).out).toMatch(
+      /Estimated cost: about [\d.,]+ \(2,000 per million tokens sent, 8,000 received\)/,
+    );
+  });
+
   it("says when it waits because of a rate limit", async () => {
     await createProject();
     let refused = false;

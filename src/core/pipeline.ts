@@ -342,7 +342,8 @@ async function requestWithPatience(
     await run.pause.done();
     try {
       // Built again on each try: the neighbours translated meanwhile give a better context.
-      return await provider.translateBatch(buildRequest(group, run, shields), signal);
+      const context = { config: run.options.config, memory: run.options.memory, ...run };
+      return await provider.translateBatch(buildRequest(group, context, shields), signal);
     } catch (error) {
       if (!(error instanceof RateLimitError)) throw error;
       if (waits >= MAX_RATE_LIMIT_WAITS) {
@@ -359,20 +360,43 @@ async function requestWithPatience(
   }
 }
 
+/**
+ * The requests a run would send if every answer were good: same batches, same groups, same context lines (with
+ * the translations known now). For estimates: no retry, no reused text, and no request is sent.
+ */
+export function planRequests(
+  segments: readonly Segment[],
+  memory: TranslationMemory,
+  config: PipelineConfig,
+  options: { readonly retryFailed?: boolean; readonly limit?: number } = {},
+): TranslationRequest[] {
+  const { todo } = selectSegments(segments, memory, options);
+  const context: RequestContext = { config, memory, previous: new Map(), neighbours: new Neighbours(segments) };
+  return chunkByGroup(todo, config.translation.batchSize).map((batch) => buildRequest(batch, context, undefined));
+}
+
+/** What building a request needs. */
+interface RequestContext {
+  readonly config: PipelineConfig;
+  readonly memory: TranslationMemory;
+  readonly previous: ReadonlyMap<string, PreviousTranslation>;
+  readonly neighbours: Neighbours;
+}
+
 /** Ids are positions in the group: the answer is matched back by position. */
 function buildRequest(
   group: readonly Segment[],
-  run: Run,
+  context: RequestContext,
   shields: readonly { readonly text: string }[] | undefined,
 ): TranslationRequest {
-  const { config } = run.options;
+  const { config } = context;
   const { instructions, glossary, contextLines } = config.translation;
-  const surrounding = run.neighbours.around(group, contextLines, run.options.memory);
+  const surrounding = context.neighbours.around(group, contextLines, context.memory);
   return {
     sourceLanguage: config.sourceLanguage,
     targetLanguage: config.targetLanguage,
     items: group.map((segment, id) => {
-      const previous = run.previous.get(segment.source);
+      const previous = context.previous.get(segment.source);
       return {
         id,
         source: shields?.[id]?.text ?? segment.source,

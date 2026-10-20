@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseConfig } from "../../src/core/config.js";
 import { TranslationMemory } from "../../src/core/memory.js";
-import { type PipelineOptions, type ProgressEvent, translateSegments } from "../../src/core/pipeline.js";
+import { type PipelineOptions, type ProgressEvent, planRequests, translateSegments } from "../../src/core/pipeline.js";
 import { type Provider, ProviderUnavailableError, RateLimitError } from "../../src/core/provider.js";
 import type { Segment } from "../../src/core/types.js";
 import { createMockProvider, type MockProvider } from "../../src/providers/mock/provider.js";
@@ -564,5 +564,53 @@ describe("translateSegments under a rate limit", () => {
     const summary = await translate({ provider, signal: controller.signal }); // the real sleep, not a fake one
     expect(summary).toMatchObject({ interrupted: true, translated: 0, failed: 0 });
     expect(Date.now() - started).toBeLessThan(5000);
+  });
+});
+
+describe("planRequests", () => {
+  const planned = parseConfig({
+    sourceLanguage: "en",
+    targetLanguage: "fr",
+    sources: [{ format: "json", include: ["*.json"] }],
+    translation: { batchSize: 2, instructions: "Casual tone.", glossary: { NPC: "PNJ" }, contextLines: 0 },
+  });
+  const texts = [
+    segment("Hello", "greeting"),
+    segment("Talk to the NPC"),
+    segment("Line 1", undefined, "dialog"),
+    segment("Line 2", undefined, "dialog"),
+    segment("Bye"),
+  ];
+
+  it("plans exactly the requests a run sends when every answer is good", async () => {
+    const memory = new TranslationMemory({ languages: planned });
+    memory.recordMachine("Bye", "Salut", "m");
+    const plan = planRequests(texts, memory, planned);
+
+    const provider = createMockProvider({ translate: (source) => `[fr] ${source.replace("NPC", "PNJ")}` });
+    await translateSegments({ segments: texts, memory, provider, config: planned, save: async () => {} });
+    expect(plan).toStrictEqual(provider.requests);
+    expect(plan.map((request) => request.items.length)).toEqual([2, 2]);
+  });
+
+  it("sends the neighbours already translated as context", () => {
+    const withContext = { ...planned, translation: { ...planned.translation, contextLines: 1 } };
+    const memory = new TranslationMemory({ languages: planned });
+    memory.recordMachine("Talk to the NPC", "Parle au PNJ", "m");
+    const [request] = planRequests(texts, memory, withContext);
+    expect(request?.items.map((item) => item.source)).toEqual(["Hello"]); // the dialog group does not fit with it
+    expect(request?.surrounding).toEqual({
+      before: [],
+      after: [{ source: "Talk to the NPC", translation: "Parle au PNJ" }],
+    });
+  });
+
+  it("follows the limit and the failures to retry, like a run", () => {
+    const memory = new TranslationMemory({ languages: planned });
+    memory.recordFailure("Hello", "empty");
+    const sources = (options: { retryFailed?: boolean; limit?: number }) =>
+      planRequests(texts, memory, planned, options).flatMap((request) => request.items.map((item) => item.source));
+    expect(sources({})).toEqual(["Talk to the NPC", "Line 1", "Line 2", "Bye"]);
+    expect(sources({ retryFailed: true, limit: 2 })).toEqual(["Hello", "Talk to the NPC"]);
   });
 });

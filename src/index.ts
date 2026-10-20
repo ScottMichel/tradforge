@@ -4,6 +4,7 @@ export type {
   OllamaProviderConfig,
   OpenAiCompatibleProviderConfig,
   OutputConfig,
+  Pricing,
   ProviderConfig,
   ProviderType,
   ResponseFormat,
@@ -43,7 +44,7 @@ export type {
   RateLimitEvent,
   Selection,
 } from "./core/pipeline.js";
-export { selectSegments, translateSegments } from "./core/pipeline.js";
+export { planRequests, selectSegments, translateSegments } from "./core/pipeline.js";
 export type { Protected } from "./core/protection.js";
 export { ProtectionError, protectPlaceholders, restorePlaceholders } from "./core/protection.js";
 export type {
@@ -116,6 +117,8 @@ export type { OllamaOptions } from "./providers/ollama/provider.js";
 export { createOllamaProvider } from "./providers/ollama/provider.js";
 export type { OpenAiCompatibleOptions } from "./providers/openai-compatible/provider.js";
 export { createOpenAiCompatibleProvider } from "./providers/openai-compatible/provider.js";
+export type { UsageEstimate } from "./providers/usage.js";
+export { estimateUsage } from "./providers/usage.js";
 export { CsvError } from "./storage/csv.js";
 export { decodeText, EncodingError, encodeText } from "./storage/encoding.js";
 export { loadMemory, MemoryFileError, saveMemory } from "./storage/memory-store.js";

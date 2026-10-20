@@ -7,6 +7,8 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `translate --dry-run` estimates the tokens sent and received, measured on the real prompt, and the cost with
+  `provider.pricing` (`inputPerMillion`, `outputPerMillion`).
 - Rate limits: on HTTP 429, every batch pauses for the delay the server asks (`Retry-After`), or 1 s, 2 s, 4 s...,
   then the same batch is sent again without counting an attempt. A used-up quota stops the run.
 - `translation.concurrency`: several batches sent at the same time, for remote APIs. Saves of the memory never

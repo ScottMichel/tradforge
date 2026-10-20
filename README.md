@@ -82,7 +82,7 @@ dialogues: `cd examples/game`, then `tradforge translate --dry-run`.
 | `status` | Texts in the project: translated, reviewed, failed, to translate, stale |
 | `extract [--json]` | Find the texts to translate, without translating them |
 | `diff` | New, removed and *slightly changed* texts since the last translation |
-| `translate [--limit <n>] [--only <path>] [--retry] [--dry-run]` | Translate what the memory does not have yet |
+| `translate [--limit <n>] [--only <path>] [--retry] [--dry-run]` | Translate what the memory does not have yet; `--dry-run` sends nothing and estimates the tokens and the cost |
 | `build [--force]` | Write the translated files |
 | `export [<file.csv>]` | Write a CSV to review or complete the translations |
 | `import <file.csv> [--keep]` | Import reviewed or manual translations |
@@ -193,6 +193,12 @@ file is usually committed, and never shows the key in its messages. Local server
 
 `responseFormat` tells how the answer is constrained: `json-schema` (the answer must follow tradforge's schema),
 `json-object` (any JSON) or `none` (the instructions alone), for servers that refuse schemas.
+
+`translate --dry-run` estimates the tokens a run sends and receives, measured on the real prompt (instructions,
+glossary and context lines are paid for with every batch). Add `"pricing": { "inputPerMillion": 0.4,
+"outputPerMillion": 1.6 }` to the provider, copied from the price list of your API, to get the cost: tradforge has no
+built-in prices, since they change too often. On the example project, the estimate was 11 % above the real count for
+what is sent, and exact for what is received; retries are not included.
 
 When an API asks to slow down (HTTP 429), every batch pauses for the delay the server gives (or 1 s, 2 s, 4 s...),
 then the same batch is sent again: a rate limit is never counted as a failure. After 6 waits in a row, tradforge stops

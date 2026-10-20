@@ -153,6 +153,8 @@ export function renderConfig(draft: ConfigDraft): string {
   //     "apiKeyEnv": "OPENAI_API_KEY" }
   // The API key is read from that environment variable: never write it in this file.
   // "responseFormat": "json-schema" (default), or "json-object" / "none" for servers that refuse schemas.
+  // "pricing": { "inputPerMillion": 0.4, "outputPerMillion": 1.6 } from your API's price list: "translate --dry-run"
+  // then estimates the cost.
   "provider": { "type": "ollama", "model": "mistral-small", "host": "http://localhost:11434" },
 
   "translation": {

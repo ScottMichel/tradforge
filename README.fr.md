@@ -87,7 +87,7 @@ dialogues en Lua : `cd examples/game`, puis `tradforge translate --dry-run`.
 | `status` | Textes du projet : traduits, relus, en échec, à traduire, obsolètes |
 | `extract [--json]` | Trouve les textes à traduire, sans les traduire |
 | `diff` | Textes nouveaux, retirés et *légèrement modifiés* depuis la dernière traduction |
-| `translate [--limit <n>] [--only <chemin>] [--retry] [--dry-run]` | Traduit ce que la mémoire n'a pas encore |
+| `translate [--limit <n>] [--only <chemin>] [--retry] [--dry-run]` | Traduit ce que la mémoire n'a pas encore ; `--dry-run` n'envoie rien et estime les tokens et le coût |
 | `build [--force]` | Écrit les fichiers traduits |
 | `export [<fichier.csv>]` | Écrit un CSV pour relire ou compléter les traductions |
 | `import <fichier.csv> [--keep]` | Importe des traductions relues ou manuelles |
@@ -199,6 +199,12 @@ qui est souvent commité, et n'affiche jamais la clé dans ses messages. Les ser
 `responseFormat` indique comment la réponse est contrainte : `json-schema` (la réponse doit suivre le schéma de
 tradforge), `json-object` (n'importe quel JSON) ou `none` (les consignes seules), pour les serveurs qui refusent les
 schémas.
+
+`translate --dry-run` estime les tokens qu'un passage envoie et reçoit, mesurés sur le vrai prompt (consignes,
+glossaire et lignes de contexte sont payés à chaque lot). Ajoutez `"pricing": { "inputPerMillion": 0.4,
+"outputPerMillion": 1.6 }` au fournisseur, recopié de la grille tarifaire de votre API, pour obtenir le coût : tradforge
+n'a pas de prix intégrés, qui changent trop souvent. Sur le projet d'exemple, l'estimation dépassait de 11 % le compte
+réel pour l'envoi, et tombait juste pour la réception ; les nouvelles tentatives ne sont pas comptées.
 
 Quand une API demande de ralentir (HTTP 429), tous les lots font une pause du délai donné par le serveur (sinon
 1 s, 2 s, 4 s…), puis le même lot est renvoyé : une limite de débit ne compte jamais comme un échec. Après 6 attentes

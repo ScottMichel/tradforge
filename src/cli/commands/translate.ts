@@ -1,7 +1,9 @@
-import { type ProgressEvent, selectSegments, translateSegments } from "../../core/pipeline.js";
+import type { ProviderConfig } from "../../core/config.js";
+import { type ProgressEvent, planRequests, selectSegments, translateSegments } from "../../core/pipeline.js";
 import type { Segment } from "../../core/types.js";
 import { extractSegments } from "../../formats/extract.js";
 import { createProvider } from "../../providers/factory.js";
+import { estimateUsage, type UsageEstimate } from "../../providers/usage.js";
 import { loadMemory, memoryFilePath, saveMemory } from "../../storage/memory-store.js";
 import { type Command, EXIT, UsageError } from "../command.js";
 import { formatCount, formatDuration, plural, quote } from "../format.js";
@@ -31,13 +33,15 @@ export const translateCommand: Command = {
     const chars = todo.reduce((sum, segment) => sum + segment.source.length, 0);
 
     if (options["dry-run"] === true) {
-      const batches = Math.ceil(todo.length / config.translation.batchSize);
+      const plan = planRequests(segments, memory, config, { retryFailed, ...(limit !== undefined ? { limit } : {}) });
       io.out(
         `Would translate ${plural(todo.length, "text")} (${formatCount(chars)} characters) ` +
-          `in ${plural(batches, "batch", "batches")} with ${config.provider.model}.`,
+          `in ${plural(plan.length, "batch", "batches")} with ${config.provider.model}.`,
       );
       for (const segment of todo.slice(0, DRY_RUN_PREVIEW)) io.out(`  ${quote(segment.source)}`);
       if (todo.length > DRY_RUN_PREVIEW) io.out(`  ... and ${formatCount(todo.length - DRY_RUN_PREVIEW)} more`);
+      if (plan.length > 0)
+        for (const line of usageLines(config.provider, estimateUsage(config.provider, plan))) io.out(line);
       return EXIT.ok;
     }
 
@@ -84,6 +88,24 @@ export const translateCommand: Command = {
 
 const FAILURE_HINT =
   'Run "tradforge export" to review the failures, or "tradforge translate --retry" to try them again.';
+
+/** Two significant digits: an estimate does not deserve more, and tiny costs stay readable (0.00041). */
+const roughAmount = new Intl.NumberFormat("en-US", { maximumSignificantDigits: 2 });
+
+function usageLines(provider: ProviderConfig, usage: UsageEstimate): string[] {
+  const lines = [
+    `Estimated use: about ${formatCount(usage.inputTokens)} tokens sent and ${formatCount(usage.outputTokens)} ` +
+      `received (${plural(usage.requests, "request")}, retries not included).`,
+  ];
+  if (provider.type === "ollama") lines.push("Local model: no cost.");
+  else if (usage.cost !== undefined && provider.pricing !== undefined) {
+    lines.push(
+      `Estimated cost: about ${roughAmount.format(usage.cost)} (${formatCount(provider.pricing.inputPerMillion)} ` +
+        `per million tokens sent, ${formatCount(provider.pricing.outputPerMillion)} received).`,
+    );
+  } else lines.push("Add provider.pricing to estimate the cost.");
+  return lines;
+}
 
 function progressLine(event: ProgressEvent): string {
   const left =

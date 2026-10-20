@@ -319,6 +319,20 @@ describe("parseConfig", () => {
     ).toEqual(["provider.baseUrl", "provider.apiKeyEnv", "provider.responseFormat"]);
   });
 
+  it("keeps the prices per million tokens, used to estimate the cost of a run", () => {
+    const provider = { type: "openai-compatible", model: "m" };
+    const config = parseConfig({
+      ...minimal,
+      provider: { ...provider, pricing: { inputPerMillion: 0.4, outputPerMillion: 1.6 } },
+    });
+    expect(config.provider).toMatchObject({ pricing: { inputPerMillion: 0.4, outputPerMillion: 1.6 } });
+    expect(parseConfig({ ...minimal, provider }).provider).not.toHaveProperty("pricing");
+    expect(
+      problemPaths({ ...minimal, provider: { ...provider, pricing: { inputPerMillion: -1, outputPerMillion: "1" } } }),
+    ).toEqual(["provider.pricing.inputPerMillion", "provider.pricing.outputPerMillion"]);
+    expect(problemPaths({ ...minimal, provider: { ...provider, pricing: 3 } })).toEqual(["provider.pricing"]);
+  });
+
   it("rejects glossary entries that are not strings", () => {
     expect(problemPaths({ ...minimal, translation: { glossary: { NPC: 1, HP: "PV" } } })).toEqual([
       "translation.glossary.NPC",
