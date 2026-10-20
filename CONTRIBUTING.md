@@ -47,8 +47,14 @@ You do not need Ollama to work on tradforge: the tests use a mock provider and a
    occurrences (see the JSON and Lua readers).
 3. Write a writer in `src/formats/<format>/writer.ts`: it follows the structure of the source file and replaces the
    texts that have a translation.
-4. Register both in `src/formats/readers.ts` and `src/formats/writers.ts` — TypeScript will tell you if you forget.
-5. Test the edge cases, and add a round-trip test: what the writer writes, the reader must read back.
+4. Register both in `src/formats/readers.ts` and `src/formats/writers.ts`, and give its file extensions in
+   `FORMAT_EXTENSIONS` (`src/formats/detect.ts`) — TypeScript will tell you if you forget. A generic extension
+   (`.txt`, `.xml`, `.yml`) stays empty: teach `detectSources` to recognise the format by its path instead.
+5. Set `Occurrence.group` so that texts that belong together (a conversation, a scene) are translated in one batch.
+6. If the format has its own markup, add a placeholder syntax in `src/core/validation/placeholders.ts` and bring it
+   with the format in `FORMAT_PLACEHOLDERS` (`src/core/config.ts`) rather than turning it on for everyone.
+7. Test the edge cases, and add a round-trip test: what the writer writes, the reader must read back. If you can,
+   check it on real files too (counting results, never copying their texts into the repository).
 
 ## Adding an engine
 

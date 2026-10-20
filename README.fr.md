@@ -130,14 +130,16 @@ langues et les sources sont obligatoires.
 | Réglage | Signification | Par défaut |
 | --- | --- | --- |
 | `workDir` | Dossier de la mémoire de traduction. **À versionner** : il contient tout le travail. | `.tradforge` |
-| `sources[].format` | `json` ou `lua` | obligatoire |
+| `sources[].format` | `json`, `lua`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` ou `rimworld-xml` (voir [Formats pris en charge](#formats-pris-en-charge)) | obligatoire |
 | `sources[].include` | Motifs de fichiers, relatifs au fichier de configuration | obligatoire |
 | `sources[].priority` | Plus petit = traduit en premier (peut être négatif) | `0` |
 | `sources[].context` | Indique au modèle comment les textes sont utilisés | aucun |
 | `sources[].group` | Quels textes vont ensemble et restent dans un même lot : `auto` (même objet JSON ; lignes Lua sans ligne vide entre elles), `none`, `file`, ou `{ "keyPattern": "^Dialog_(\\w+)_" }` (clés ayant le même premier groupe capturé) | `auto` |
-| `sources[].output.path` | Où écrire les traductions. `{dir}`, `{name}`, `{ext}` viennent du fichier source, `{lang}` est la langue cible | `{dir}/{name}.{lang}{ext}` |
+| `sources[].encoding` | Encodage des fichiers source : `auto` (marque d'ordre des octets, puis UTF-8 valide, puis `windows-1252`), `utf-8`, `windows-1251`… | `auto` |
+| `sources[].output.path` | Où écrire les traductions. `{dir}`, `{name}`, `{ext}` viennent du fichier source ; `{stem}` est le nom sans son suffixe de langue (`UI_EN` → `UI`) ; `{lang}` est la langue cible, `{LANG}` la même en majuscules, `{language}` son nom anglais (`french`) | `{dir}/{name}.{lang}{ext}` |
 | `sources[].output.asciiOnly` | Échappe les accents (`é` → `\u00e9` en JSON, `\195\169` en Lua) pour les programmes qui lisent mal l'UTF-8 | `false` |
 | `sources[].output.untranslated` | `keep-source` ou `omit` (clés JSON uniquement) | `keep-source` |
+| `sources[].output.encoding` | Encodage des fichiers traduits : `utf-8`, `utf-8-bom` (exigé par les jeux Paradox), `utf-16le`, `windows-1252`, `windows-1251`… Un caractère impossible à écrire est une erreur, jamais un `?` | `utf-8` |
 | `provider` | Serveur Ollama et modèle | `mistral-small` sur `localhost:11434` |
 | `translation.batchSize` | Textes envoyés au modèle par requête | `20` |
 | `translation.instructions` | Ton, public, conventions, envoyés avec chaque lot | aucune |
@@ -145,7 +147,7 @@ langues et les sources sont obligatoires.
 | `translation.contextLines` | Lignes envoyées avant et après chaque lot, avec leur traduction si elle est connue, comme contexte seulement (`0` : aucune) | `3` |
 | `translation.typography` | Corrige la typographie de la langue cible (français : espaces insécables avant `; : ! ?` et dans `« »`) | `true` |
 | `translation.reuse` | Réutilise la traduction d'un texte légèrement modifié : copiée si seule la ponctuation a changé, montrée au modèle sinon | `true` |
-| `validation.placeholders` | Syntaxes de variables à protéger : `braces` `{name}`, `printf` `%s`, `markup` `<b>` | les trois |
+| `validation.placeholders` | Syntaxes de variables à protéger : `braces` `{name}`, `printf` `%s`, `positional` `%1`, `bbcode` `[img=x]`, `ass` `{\an8}`, `timestamp` `<00:00:01.500>`, `markup` `<b>`. Les syntaxes `paradox`, `renpy` et `rimworld` arrivent automatiquement avec leur format | toutes sauf celles des formats |
 | `validation.glossary` | Refuse une traduction qui n'utilise pas la traduction du glossaire pour un terme présent dans la source | `true` |
 
 > **VS Code :** pour que l'éditeur ne signale plus les commentaires comme des erreurs, ajoutez
@@ -153,13 +155,29 @@ langues et les sources sont obligatoires.
 
 ## Formats pris en charge
 
+### Formats de fichiers
+
 | Format | Lecture | Écriture |
 | --- | --- | --- |
-| **JSON** | toutes les chaînes, objets et tableaux imbriqués (`menu.quit`, `tips.0`) | même structure, même indentation, mêmes fins de ligne ; échappements `\u` en option |
-| **Lua** | chaînes littérales de tout type (`"..."`, `'...'`, `[[...]]`, `[==[...]==]`, tous les échappements), en ignorant les commentaires et les **chaînes qui ressemblent à du code** (`"idle"`, `"media/ui/icon.png"`, `"hp=%d"`) | chaînes remplacées sur place, le reste du fichier conservé à l'octet près ; échappements `\ddd` en option |
+| **JSON** `.json` (`json`) | toutes les chaînes, objets et tableaux imbriqués (`menu.quit`, `tips.0`) ; aussi les traductions de Project Zomboid Build 42 | même structure, même indentation, mêmes fins de ligne ; échappements `\u` en option |
+| **Lua** `.lua` (`lua`) | chaînes littérales de tout type (`"..."`, `'...'`, `[[...]]`, `[==[...]==]`, tous les échappements), en ignorant les commentaires et les **chaînes qui ressemblent à du code** (`"idle"`, `"media/ui/icon.png"`, `"hp=%d"`) | chaînes remplacées sur place, le reste du fichier conservé à l'octet près ; échappements `\ddd` en option |
+| **SubRip** `.srt` (`srt`), **WebVTT** `.vtt` (`vtt`) | un texte par réplique, les répliques à moins de 2 s d'écart regroupées en scène ; balises, codes `{\an8}`, blocs NOTE/STYLE | textes remplacés sur place, numéros et minutages intacts ; `film.en.srt` → `film.fr.srt` |
 
-D'autres formats arrivent : sous-titres (`.srt`, `.vtt`), Project Zomboid, Ren'Py, RimWorld, Paradox, YAML, gettext
-`.po`, Android, iOS, XLIFF, Markdown… Voir la [feuille de route](#feuille-de-route).
+### Dialectes de moteurs et de jeux
+
+Ce sont de vrais types de fichiers, avec leurs propres règles : un `.yml` Paradox n'est pas du YAML valide, un `.txt`
+Project Zomboid est une table proche du Lua, un `.xml` RimWorld suit un schéma fixe. tradforge les lit comme le moteur.
+
+| Format | Type de fichier | Lecture | Écriture |
+| --- | --- | --- | --- |
+| **Scripts Ren'Py** (`renpy`) | `.rpy` | dialogues, narration, choix de menu, chaînes `_()` ; un groupe par label | copies traduites des scripts, écrites dans un dossier séparé ; balises `{b}` et interpolations `[nom]` protégées |
+| **Tables de traduction Project Zomboid**, Build 41 (`zomboid-txt`) | `.txt` | `Translate/EN/UI_EN.txt`, lues comme le jeu les lit (texte entre le premier et le dernier guillemet, suites `..`, lignes abîmées ignorées) | `Translate/FR/UI_FR.txt`, table renommée, codes de langue du jeu (`PTBR`, `CH`…), anciens encodages |
+| **Localisation Paradox** (`paradox-yml`) | `.yml`, dialecte Paradox | `localisation/english/*_l_english.yml` : Crusader Kings, Europa Universalis, Hearts of Iron, Stellaris, Victoria | en-tête `l_french:`, noms de langue du jeu (`braz_por`), UTF-8 avec BOM ; `$VAR$`, `§Y§!`, `£icône£`, `[Scope.Fonction]` protégés |
+| **Données de langue RimWorld** (`rimworld-xml`) | `.xml`, racine `<LanguageData>` | `Languages/English/Keyed/` et `DefInjected/`, listes `<li>`, `\n` littéraux | `Languages/French/…`, XML échappé correctement ; symboles de grammaire `[PAWN_nameDef]` et têtes de règles protégés |
+
+`tradforge init` les reconnaît tous dans un dossier (par extension, ou par chemin pour les dialectes dont l'extension
+est générique) et propose les bons chemins de sortie. D'autres formats arrivent : YAML, gettext `.po`, Android, iOS, XLIFF, Markdown… Voir la
+[feuille de route](#feuille-de-route).
 
 ## Fonctionnement
 
@@ -207,7 +225,11 @@ des textes écrits pour tradforge.
 
 ## Limites
 
-- Deux formats pour l'instant (JSON, Lua) et un seul moteur (Ollama).
+- Un seul moteur pour l'instant (Ollama).
+- Les jeux Ren'Py reçoivent des copies traduites de leurs scripts, pas une traduction `game/tl/` que le joueur pourrait
+  choisir.
+- Les dossiers de langue de RimWorld sont nommés d'après le nom anglais de la langue (`French`) : renommez-les si votre
+  mod utilise un autre nom.
 - Les règles de typographie n'existent pour l'instant que pour le français (France et Canada).
 - La vérification du glossaire cherche seulement le terme attendu dans la traduction : elle ne comprend pas la
   grammaire.
@@ -216,12 +238,11 @@ des textes écrits pour tradforge.
 
 ## Feuille de route
 
-1. **Formats de jeux et sous-titres** : Project Zomboid, Ren'Py, RimWorld, Paradox, `.srt`, `.vtt`.
-2. **Moteurs et vitesse** : API compatibles OpenAI, Claude, Gemini, DeepL, lots en parallèle, estimation des coûts.
-3. **Qualité** : `tradforge compare` (plusieurs modèles côte à côte), retraduction inverse des lignes suspectes.
-4. **Formats d'applications** : XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
-5. **Application de bureau** : ouvrir un fichier ou un dossier, traduire, relire — sans ligne de commande.
-6. **Documents bureautiques** : `.docx`, `.odt`, `.pptx`, `.xlsx`.
+1. **Moteurs et vitesse** : API compatibles OpenAI, Claude, Gemini, DeepL, lots en parallèle, estimation des coûts.
+2. **Qualité** : `tradforge compare` (plusieurs modèles côte à côte), retraduction inverse des lignes suspectes.
+3. **Formats d'applications** : XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
+4. **Application de bureau** : ouvrir un fichier ou un dossier, traduire, relire — sans ligne de commande.
+5. **Documents bureautiques** : `.docx`, `.odt`, `.pptx`, `.xlsx`.
 
 ## Contribuer
 

@@ -7,6 +7,23 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- Six new formats, all recognised by `init`:
+  - `srt` and `vtt` subtitles: one text per cue, cues less than 2 seconds apart translated together as a scene;
+  - `renpy`: dialogue, menu choices and `_()` strings of Ren'Py scripts (`.rpy`), written as translated copies;
+  - `zomboid-txt`: Project Zomboid Build 41 translation tables (`.txt`), read the way the game reads them; Build 42
+    files are JSON;
+  - `paradox-yml`: Paradox localisation files (`.yml`, Paradox dialect), with their language names and the required
+    UTF-8 BOM;
+  - `rimworld-xml`: Keyed and DefInjected language files of RimWorld (`.xml`, `<LanguageData>` root), with a small
+    XML parser of our own.
+- Legacy encodings: `sources[].encoding` (`auto` by default) and `output.encoding` (`utf-8-bom`, `utf-16le`,
+  `windows-1252`, `windows-1251`...). A character the output encoding cannot hold is an error, never a `?`.
+- Output path placeholders `{stem}` (name without its language suffix), `{LANG}` (capitals) and `{language}`
+  (English name).
+- Placeholder syntaxes `positional` (`%1`), `bbcode` (`[img=x]`), `ass` (`{\an8}`) and `timestamp`
+  (`<00:00:01.500>`), on by default; `paradox`, `renpy` and `rimworld`, on automatically for their formats
+  (`paradox-yml`, `renpy`, `rimworld-xml`) only.
+
 - Conversations: texts are translated in the order of their files, and each batch is sent with its neighbouring
   lines (and their translation when known) as context, so that the tone and the form of address stay consistent
   (`translation.contextLines`, default 3).

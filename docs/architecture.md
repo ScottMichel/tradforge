@@ -18,8 +18,8 @@ The code is split in two layers ("hexagonal architecture", or ports and adapters
 
 | Port (in `src/core`) | Adapters | Folder |
 | --- | --- | --- |
-| `Reader` — extract texts from one file | JSON, Lua | `src/formats/<format>/reader.ts` |
-| `Writer` — write the translated version of one file | JSON, Lua | `src/formats/<format>/writer.ts` |
+| `Reader` — extract texts from one file | JSON, Lua, SRT, WebVTT, Ren'Py, Project Zomboid, Paradox, RimWorld | `src/formats/<format>/reader.ts` |
+| `Writer` — write the translated version of one file | the same formats | `src/formats/<format>/writer.ts` |
 | `Provider` — translate a batch of texts | Ollama, mock | `src/providers/<engine>/provider.ts` |
 | — | Translation memory on disk, CSV review | `src/storage` |
 | — | Command line (drives the core) | `src/cli` |
@@ -88,3 +88,4 @@ The reasons behind the main choices are recorded as Architecture Decision Record
 4. [Staleness is derived, not stored](adr/0004-staleness-is-derived.md)
 5. [Locale-independent ordering](adr/0005-locale-independent-ordering.md)
 6. [Translate in file order, with neighbouring lines as context](adr/0006-translate-in-file-order.md)
+7. [Legacy encodings, and placeholder syntaxes that come with their format](adr/0007-encodings-and-format-placeholders.md)
