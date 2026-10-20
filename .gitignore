@@ -6,3 +6,6 @@ coverage/
 
 # Local handoff notes for Claude Code (not versioned)
 CLAUDE.md
+
+# Working copies of parallel agents (Claude Code)
+.claude/worktrees/
