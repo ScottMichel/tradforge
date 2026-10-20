@@ -138,6 +138,7 @@ sources are required.
 | `sources[].output.encoding` | Encoding of the translated files: `utf-8`, `utf-8-bom` (required by Paradox games), `utf-16le`, `windows-1252`, `windows-1251`... A character the encoding cannot hold is an error, never a `?` | `utf-8` |
 | `provider` | The engine and its model: see [Engines](#engines) | Ollama, `mistral-small` on `localhost:11434` |
 | `translation.batchSize` | Texts sent to the model in one request | `20` |
+| `translation.concurrency` | Batches sent at the same time. Keep `1` for a local model (the graphics card is already busy); try `4` to `8` with a remote API, within its rate limits. Batches sent together see fewer translated neighbours as context | `1` |
 | `translation.instructions` | Tone, audience, conventions, sent with every batch | none |
 | `translation.glossary` | Terms that must always be translated the same way (only the terms used in a batch are sent) | `{}` |
 | `translation.contextLines` | Lines sent before and after each batch, with their translation when known, for context only (`0`: none) | `3` |
@@ -239,7 +240,7 @@ texts written for tradforge.
 
 ## Limitations
 
-- Two kinds of engines for now: Ollama and OpenAI-compatible APIs. Batches are sent one at a time.
+- Two kinds of engines for now: Ollama and OpenAI-compatible APIs.
 - Ren'Py games get translated copies of their scripts, not a `game/tl/` translation the player can switch to.
 - RimWorld language folders are named after the English language name (`French`): rename them if your mod uses
   another name.
@@ -249,7 +250,7 @@ texts written for tradforge.
 
 ## Roadmap
 
-1. **Engines and speed**: Claude, Gemini, DeepL, parallel batches, rate limits, cost estimates.
+1. **Engines and speed**: Claude, Gemini, DeepL, rate limits, cost estimates.
 2. **Quality**: `tradforge compare` (models side by side), back-translation of suspicious lines.
 3. **Application formats**: XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
 4. **Desktop application**: open a file or a folder, translate, review — no command line needed.

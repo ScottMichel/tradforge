@@ -7,6 +7,8 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `translation.concurrency`: several batches sent at the same time, for remote APIs. Saves of the memory never
+  overlap; an interruption or a fatal error lets the batches in flight finish and keeps them.
 - `openai-compatible` engine: OpenAI, Mistral, OpenRouter, Groq, LM Studio, vLLM... (`provider.baseUrl`,
   `provider.apiKeyEnv`, `provider.responseFormat`). The API key is read from an environment variable; a key written in
   the configuration is refused, and keys are never shown in messages.

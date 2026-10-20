@@ -111,25 +111,13 @@ export async function translateSegments(options: PipelineOptions): Promise<Pipel
   if (tally.reused > 0) await options.save();
 
   const run: Run = { options, tally, previous, neighbours: new Neighbours(options.segments) };
+  const save = oneAtATime(options.save);
+  const queue = chunkByGroup(todo, config.translation.batchSize);
+  let next = 0;
   let interrupted = false;
+  let fatal: { readonly error: unknown } | undefined;
 
-  for (const batch of chunkByGroup(todo, config.translation.batchSize)) {
-    if (isAborted(signal)) {
-      interrupted = true;
-      break;
-    }
-    try {
-      await translateWithRetries(batch, run);
-    } catch (error) {
-      if (isAborted(signal)) {
-        interrupted = true;
-        break;
-      }
-      throw error; // ProviderUnavailableError and other fatal errors stop the run
-    } finally {
-      await options.save(); // whatever happened, keep what this batch achieved
-    }
-
+  const reportProgress = () => {
     const elapsedMs = now() - start;
     const remainingMs =
       tally.chars > 0 ? Math.round((elapsedMs * (totalChars - tally.chars)) / tally.chars) : undefined;
@@ -141,7 +129,40 @@ export async function translateSegments(options: PipelineOptions): Promise<Pipel
       elapsedMs,
       ...(remainingMs !== undefined ? { remainingMs } : {}),
     });
-  }
+  };
+
+  /**
+   * Takes the next batch of the queue as soon as it is free. Several workers share one queue, so that a slow
+   * batch never holds the others up. JavaScript runs one piece of code at a time: next++ cannot be raced.
+   */
+  const worker = async () => {
+    while (fatal === undefined) {
+      const batch = queue[next++];
+      if (batch === undefined) return;
+      if (isAborted(signal)) {
+        interrupted = true;
+        return;
+      }
+      try {
+        await translateWithRetries(batch, run);
+      } catch (error) {
+        if (isAborted(signal)) {
+          interrupted = true;
+          return;
+        }
+        // ProviderUnavailableError and other fatal errors stop the run: no new batch starts, those in flight end.
+        fatal ??= { error };
+        return;
+      } finally {
+        await save(); // whatever happened, keep what this batch achieved
+      }
+      reportProgress();
+    }
+  };
+
+  const workers = Math.min(config.translation.concurrency, queue.length);
+  await Promise.all(Array.from({ length: workers }, worker));
+  if (fatal !== undefined) throw fatal.error;
 
   return {
     total: selected.length,
@@ -402,6 +423,19 @@ function groupRuns(segments: readonly Segment[]): Segment[][] {
     else runs.push([segment]);
   }
   return runs;
+}
+
+/**
+ * Runs the calls one after the other, never at the same time: two batches that end together must not write the
+ * memory file at once. Each call waits for the previous one, even if it failed.
+ */
+function oneAtATime(task: () => Promise<void>): () => Promise<void> {
+  let last: Promise<void> = Promise.resolve();
+  return () => {
+    const current = last.then(task, task);
+    last = current.catch(() => {}); // a failed save is reported to its caller, not to the next one
+    return current;
+  };
 }
 
 /**

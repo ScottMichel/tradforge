@@ -42,7 +42,7 @@ describe("parseConfig", () => {
         },
       ],
       provider: { type: "ollama", model: "mistral-small", host: "http://localhost:11434" },
-      translation: { batchSize: 20, glossary: {}, contextLines: 3, typography: true, reuse: true },
+      translation: { batchSize: 20, concurrency: 1, glossary: {}, contextLines: 3, typography: true, reuse: true },
       validation: {
         placeholders: ["braces", "printf", "positional", "bbcode", "ass", "timestamp", "markup"],
         glossary: true,
@@ -86,6 +86,12 @@ describe("parseConfig", () => {
     ).toEqual(["sources[0].encoding", "sources[0].output.encoding"]);
   });
 
+  it("keeps the number of batches sent at once, at least 1", () => {
+    expect(parseConfig({ ...minimal, translation: { concurrency: 4 } }).translation.concurrency).toBe(4);
+    expect(problemPaths({ ...minimal, translation: { concurrency: 0 } })).toEqual(["translation.concurrency"]);
+    expect(problemPaths({ ...minimal, translation: { concurrency: 2.5 } })).toEqual(["translation.concurrency"]);
+  });
+
   it("rejects wrong grouping rules and phase B settings", () => {
     expect(
       problemPaths({
@@ -118,6 +124,7 @@ describe("parseConfig", () => {
     expect(config.provider).toStrictEqual({ type: "ollama", model: "qwen3", host: "http://localhost:11434" });
     expect(config.translation).toStrictEqual({
       batchSize: 5,
+      concurrency: 1,
       instructions: "Casual tone.",
       glossary: { NPC: "PNJ" },
       contextLines: 3,

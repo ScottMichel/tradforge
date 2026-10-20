@@ -102,6 +102,11 @@ export type ProviderConfig = OllamaProviderConfig | OpenAiCompatibleProviderConf
 export interface TranslationConfig {
   /** Number of segments sent to the model in one request. */
   readonly batchSize: number;
+  /**
+   * Batches sent at the same time. 1 suits a local model, whose graphics card is already busy; remote APIs spend
+   * most of their time waiting for the network and go faster with 4 or 8.
+   */
+  readonly concurrency: number;
   /** Extra instructions for the model (tone, audience...). */
   readonly instructions?: string;
   /** Terms that must always be translated the same way. */
@@ -377,6 +382,7 @@ function parseOpenAiCompatible(value: Record<string, unknown>, report: Report): 
 
 const DEFAULT_TRANSLATION: TranslationConfig = {
   batchSize: DEFAULT_BATCH_SIZE,
+  concurrency: 1,
   glossary: {},
   contextLines: 3,
   typography: true,
@@ -390,6 +396,13 @@ function parseTranslation(value: unknown, report: Report): TranslationConfig {
     return { ...DEFAULT_TRANSLATION, glossary: {} };
   }
   const batchSize = parseInteger(value.batchSize, "translation.batchSize", report, DEFAULT_BATCH_SIZE, 1);
+  const concurrency = parseInteger(
+    value.concurrency,
+    "translation.concurrency",
+    report,
+    DEFAULT_TRANSLATION.concurrency,
+    1,
+  );
   const instructions =
     value.instructions === undefined ? undefined : parseString(value.instructions, "translation.instructions", report);
   const glossary = parseGlossary(value.glossary, report);
@@ -404,6 +417,7 @@ function parseTranslation(value: unknown, report: Report): TranslationConfig {
   const reuse = parseBoolean(value.reuse, "translation.reuse", report, DEFAULT_TRANSLATION.reuse);
   return {
     batchSize,
+    concurrency,
     ...(instructions !== undefined ? { instructions } : {}),
     glossary,
     contextLines,

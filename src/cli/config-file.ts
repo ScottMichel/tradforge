@@ -158,6 +158,8 @@ export function renderConfig(draft: ConfigDraft): string {
   "translation": {
     // Texts sent to the model in one request.
     "batchSize": 20,
+    // Batches sent at the same time: 1 for a local model, 4 to 8 for a remote API.
+    "concurrency": 1,
     // Sent to the model with every batch: tone, audience, conventions...
     "instructions": "Video game texts. Keep a natural, casual tone.",
     // Terms that must always be translated the same way.

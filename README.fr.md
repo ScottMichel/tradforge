@@ -143,6 +143,7 @@ langues et les sources sont obligatoires.
 | `sources[].output.encoding` | Encodage des fichiers traduits : `utf-8`, `utf-8-bom` (exigé par les jeux Paradox), `utf-16le`, `windows-1252`, `windows-1251`… Un caractère impossible à écrire est une erreur, jamais un `?` | `utf-8` |
 | `provider` | Le moteur et son modèle : voir [Moteurs](#moteurs) | Ollama, `mistral-small` sur `localhost:11434` |
 | `translation.batchSize` | Textes envoyés au modèle par requête | `20` |
+| `translation.concurrency` | Lots envoyés en même temps. Gardez `1` pour un modèle local (la carte graphique est déjà occupée) ; essayez `4` à `8` avec une API distante, dans la limite de son débit. Des lots envoyés ensemble voient moins de voisins déjà traduits en contexte | `1` |
 | `translation.instructions` | Ton, public, conventions, envoyés avec chaque lot | aucune |
 | `translation.glossary` | Termes toujours traduits de la même façon (seuls ceux présents dans un lot sont envoyés) | `{}` |
 | `translation.contextLines` | Lignes envoyées avant et après chaque lot, avec leur traduction si elle est connue, comme contexte seulement (`0` : aucune) | `3` |
@@ -245,7 +246,7 @@ des textes écrits pour tradforge.
 
 ## Limites
 
-- Deux sortes de moteurs pour l'instant : Ollama et les API compatibles OpenAI. Les lots sont envoyés un par un.
+- Deux sortes de moteurs pour l'instant : Ollama et les API compatibles OpenAI.
 - Les jeux Ren'Py reçoivent des copies traduites de leurs scripts, pas une traduction `game/tl/` que le joueur pourrait
   choisir.
 - Les dossiers de langue de RimWorld sont nommés d'après le nom anglais de la langue (`French`) : renommez-les si votre
@@ -258,7 +259,7 @@ des textes écrits pour tradforge.
 
 ## Feuille de route
 
-1. **Moteurs et vitesse** : Claude, Gemini, DeepL, lots en parallèle, limites de débit, estimation des coûts.
+1. **Moteurs et vitesse** : Claude, Gemini, DeepL, limites de débit, estimation des coûts.
 2. **Qualité** : `tradforge compare` (plusieurs modèles côte à côte), retraduction inverse des lignes suspectes.
 3. **Formats d'applications** : XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
 4. **Application de bureau** : ouvrir un fichier ou un dossier, traduire, relire — sans ligne de commande.

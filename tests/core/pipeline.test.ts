@@ -312,3 +312,139 @@ function withFailure(): TranslationMemory {
   memory.recordFailure("Three", "empty");
   return memory;
 }
+
+describe("translateSegments with several batches at once", () => {
+  const parallel = parseConfig({
+    sourceLanguage: "en",
+    targetLanguage: "fr",
+    sources: [{ format: "json", include: ["*.json"] }],
+    translation: { batchSize: 1, concurrency: 3 },
+  });
+  const many = ["One", "Two", "Three", "Four", "Five", "Six", "Seven"];
+
+  /** Answers after a short wait, and records how many requests were open at the same time. */
+  function slowProvider(fail?: (source: string) => Error | undefined) {
+    const stats = { open: 0, maxOpen: 0, sent: [] as string[] };
+    const provider: Provider = {
+      model: "slow",
+      translateBatch: async (request, signal) => {
+        stats.open++;
+        stats.maxOpen = Math.max(stats.maxOpen, stats.open);
+        stats.sent.push(...request.items.map((item) => item.source));
+        try {
+          // Different waits, so that batches finish in another order than they started.
+          await new Promise((resolve) => setTimeout(resolve, 2 + (request.items[0]?.source.length ?? 0)));
+          signal?.throwIfAborted();
+          const error = request.items.map((item) => fail?.(item.source)).find((e) => e !== undefined);
+          if (error !== undefined) throw error;
+          return new Map(request.items.map((item) => [item.id, `[fr] ${item.source}`]));
+        } finally {
+          stats.open--;
+        }
+      },
+    };
+    return { provider, stats };
+  }
+
+  const translate = (overrides: Partial<PipelineOptions>) =>
+    translateSegments({
+      segments: many.map((source) => segment(source)),
+      memory: new TranslationMemory({ languages: parallel }),
+      provider: createMockProvider(),
+      config: parallel,
+      save: async () => {},
+      ...overrides,
+    });
+
+  it("keeps up to concurrency batches in flight, never more, and translates everything", async () => {
+    const { provider, stats } = slowProvider();
+    const memory = new TranslationMemory({ languages: parallel });
+    const summary = await translate({ provider, memory });
+    expect(stats.maxOpen).toBe(3);
+    expect(summary).toMatchObject({ total: 7, translated: 7, failed: 0, interrupted: false });
+    expect(memory.entryList().map((entry) => entry.target)).toEqual(
+      expect.arrayContaining(many.map((source) => `[fr] ${source}`)),
+    );
+  });
+
+  it("sends one batch at a time by default", async () => {
+    const { provider, stats } = slowProvider();
+    await translate({ provider, config: { ...parallel, translation: { ...parallel.translation, concurrency: 1 } } });
+    expect(stats.maxOpen).toBe(1);
+    expect(stats.sent).toEqual(many);
+  });
+
+  it("starts the batches in file order", async () => {
+    const { provider, stats } = slowProvider();
+    await translate({ provider });
+    expect(stats.sent).toEqual(many);
+  });
+
+  it("never runs two saves at the same time, and saves after every batch", async () => {
+    const { provider } = slowProvider();
+    const saves = { count: 0, open: 0, maxOpen: 0 };
+    await translate({
+      provider,
+      save: async () => {
+        saves.open++;
+        saves.maxOpen = Math.max(saves.maxOpen, saves.open);
+        await new Promise((resolve) => setTimeout(resolve, 3));
+        saves.open--;
+        saves.count++;
+      },
+    });
+    expect(saves).toMatchObject({ count: 7, maxOpen: 1 });
+  });
+
+  it("reports progress that only goes up", async () => {
+    const { provider } = slowProvider();
+    const events: ProgressEvent[] = [];
+    await translate({ provider, onProgress: (event) => events.push(event) });
+    expect(events.map((event) => event.done)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  });
+
+  it("stops every batch when interrupted, keeps what was done, and resumes without redoing it", async () => {
+    const controller = new AbortController();
+    const memory = new TranslationMemory({ languages: parallel });
+    const first = slowProvider();
+    const summary = await translate({
+      provider: first.provider,
+      memory,
+      signal: controller.signal,
+      onProgress: (event) => {
+        if (event.done === 2) controller.abort(new Error("Ctrl+C"));
+      },
+    });
+    expect(summary.interrupted).toBe(true);
+    expect(summary.translated).toBeLessThan(7);
+    expect(summary.failed).toBe(0); // an interrupted batch is not a failure: it is translated next time
+
+    const second = slowProvider();
+    const rest = await translate({ provider: second.provider, memory });
+    expect(rest).toMatchObject({ alreadyDone: summary.translated, translated: 7 - summary.translated });
+    expect(new Set([...first.stats.sent, ...second.stats.sent])).toEqual(new Set(many));
+    expect(second.stats.sent.filter((source) => memory.get(source)?.target === undefined)).toEqual([]);
+  });
+
+  it("stops on a fatal error once the batches in flight are done and saved", async () => {
+    const { provider, stats } = slowProvider((source) =>
+      source === "Two" ? new ProviderUnavailableError("the server stopped") : undefined,
+    );
+    const memory = new TranslationMemory({ languages: parallel });
+    let saves = 0;
+    await expect(
+      translate({
+        provider,
+        memory,
+        save: async () => {
+          saves++;
+        },
+      }),
+    ).rejects.toThrow(ProviderUnavailableError);
+    // "One" and "Three" were sent with "Two": they finish and are kept. Nothing new starts after the error.
+    expect(memory.get("One")?.target).toBe("[fr] One");
+    expect(memory.get("Three")?.target).toBe("[fr] Three");
+    expect(stats.sent.length).toBeLessThan(7);
+    expect(saves).toBe(stats.sent.length);
+  });
+});
