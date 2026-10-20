@@ -1,7 +1,7 @@
 import { isObject } from "../../core/json.js";
 import { BatchError, type Provider, ProviderUnavailableError, type TranslationRequest } from "../../core/provider.js";
 import { buildSystemPrompt, buildUserMessage } from "../llm/prompt.js";
-import { parseTranslations } from "../llm/response.js";
+import { parseTranslations, RESPONSE_SCHEMA } from "../llm/response.js";
 
 export interface OllamaOptions {
   /** e.g. http://localhost:11434 */
@@ -17,22 +17,6 @@ const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 
 /** Low temperature: faithful, repeatable translations rather than creative ones. */
 const MODEL_OPTIONS = { temperature: 0.3, num_ctx: 8192 };
-
-/** JSON schema given to Ollama: the model can only produce an answer of this shape. */
-const RESPONSE_SCHEMA = {
-  type: "object",
-  properties: {
-    translations: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: { id: { type: "integer" }, translation: { type: "string" } },
-        required: ["id", "translation"],
-      },
-    },
-  },
-  required: ["translations"],
-};
 
 /** Provider for a local Ollama server, through its /api/chat endpoint. */
 export function createOllamaProvider(options: OllamaOptions): Provider {

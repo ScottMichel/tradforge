@@ -46,7 +46,8 @@ traduction d'un gros mod de jeu (voir [l'étude de cas](#étude-de-cas)) et tran
   fichier de sortie par un beaucoup plus petit (l'accident classique du « lancé depuis le mauvais dossier »), sauf avec
   `--force`.
 - **Local et gratuit** : fonctionne avec [Ollama](https://ollama.com) sur votre machine. Pas de clé d'API, aucun coût
-  par phrase, vos textes ne quittent jamais votre ordinateur.
+  par phrase, vos textes ne quittent jamais votre ordinateur. Ou n'importe quelle API compatible OpenAI (OpenAI,
+  Mistral, OpenRouter, Groq…) si vous préférez.
 - **Aucune dépendance à l'exécution** : seulement Node.js.
 
 ## Démarrage rapide
@@ -140,7 +141,7 @@ langues et les sources sont obligatoires.
 | `sources[].output.asciiOnly` | Échappe les accents (`é` → `\u00e9` en JSON, `\195\169` en Lua) pour les programmes qui lisent mal l'UTF-8 | `false` |
 | `sources[].output.untranslated` | `keep-source` ou `omit` (clés JSON uniquement) | `keep-source` |
 | `sources[].output.encoding` | Encodage des fichiers traduits : `utf-8`, `utf-8-bom` (exigé par les jeux Paradox), `utf-16le`, `windows-1252`, `windows-1251`… Un caractère impossible à écrire est une erreur, jamais un `?` | `utf-8` |
-| `provider` | Serveur Ollama et modèle | `mistral-small` sur `localhost:11434` |
+| `provider` | Le moteur et son modèle : voir [Moteurs](#moteurs) | Ollama, `mistral-small` sur `localhost:11434` |
 | `translation.batchSize` | Textes envoyés au modèle par requête | `20` |
 | `translation.instructions` | Ton, public, conventions, envoyés avec chaque lot | aucune |
 | `translation.glossary` | Termes toujours traduits de la même façon (seuls ceux présents dans un lot sont envoyés) | `{}` |
@@ -178,6 +179,25 @@ Project Zomboid est une table proche du Lua, un `.xml` RimWorld suit un schéma 
 `tradforge init` les reconnaît tous dans un dossier (par extension, ou par chemin pour les dialectes dont l'extension
 est générique) et propose les bons chemins de sortie. D'autres formats arrivent : YAML, gettext `.po`, Android, iOS, XLIFF, Markdown… Voir la
 [feuille de route](#feuille-de-route).
+
+## Moteurs
+
+| `provider.type` | Réglages | Pour |
+| --- | --- | --- |
+| `ollama` (par défaut) | `model` (`mistral-small`), `host` (`http://localhost:11434`) | un modèle local, gratuit, hors ligne |
+| `openai-compatible` | `model` (obligatoire), `baseUrl` (`https://api.openai.com/v1`), `apiKeyEnv` (`OPENAI_API_KEY`), `responseFormat` (`json-schema`) | OpenAI, Mistral, OpenRouter, Groq, et les serveurs locaux comme LM Studio ou vLLM |
+
+```jsonc
+"provider": { "type": "openai-compatible", "model": "mistral-small-latest", "baseUrl": "https://api.mistral.ai/v1", "apiKeyEnv": "MISTRAL_API_KEY" }
+```
+
+La clé d'API est lue dans la variable d'environnement nommée par `apiKeyEnv` (`export MISTRAL_API_KEY=...`, ou
+`$env:MISTRAL_API_KEY = "..."` dans PowerShell). tradforge refuse une clé écrite dans le fichier de configuration,
+qui est souvent commité, et n'affiche jamais la clé dans ses messages. Les serveurs locaux n'en ont pas besoin.
+
+`responseFormat` indique comment la réponse est contrainte : `json-schema` (la réponse doit suivre le schéma de
+tradforge), `json-object` (n'importe quel JSON) ou `none` (les consignes seules), pour les serveurs qui refusent les
+schémas.
 
 ## Fonctionnement
 
@@ -225,7 +245,7 @@ des textes écrits pour tradforge.
 
 ## Limites
 
-- Un seul moteur pour l'instant (Ollama).
+- Deux sortes de moteurs pour l'instant : Ollama et les API compatibles OpenAI. Les lots sont envoyés un par un.
 - Les jeux Ren'Py reçoivent des copies traduites de leurs scripts, pas une traduction `game/tl/` que le joueur pourrait
   choisir.
 - Les dossiers de langue de RimWorld sont nommés d'après le nom anglais de la langue (`French`) : renommez-les si votre
@@ -238,7 +258,7 @@ des textes écrits pour tradforge.
 
 ## Feuille de route
 
-1. **Moteurs et vitesse** : API compatibles OpenAI, Claude, Gemini, DeepL, lots en parallèle, estimation des coûts.
+1. **Moteurs et vitesse** : Claude, Gemini, DeepL, lots en parallèle, limites de débit, estimation des coûts.
 2. **Qualité** : `tradforge compare` (plusieurs modèles côte à côte), retraduction inverse des lignes suspectes.
 3. **Formats d'applications** : XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
 4. **Application de bureau** : ouvrir un fichier ou un dossier, traduire, relire — sans ligne de commande.

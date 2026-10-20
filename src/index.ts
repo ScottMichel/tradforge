@@ -1,9 +1,12 @@
 export type {
   ConfigProblem,
   GroupRule,
+  OllamaProviderConfig,
+  OpenAiCompatibleProviderConfig,
   OutputConfig,
   ProviderConfig,
   ProviderType,
+  ResponseFormat,
   SourceConfig,
   SourceFormat,
   TradforgeConfig,
@@ -20,6 +23,7 @@ export {
   OUTPUT_PLACEHOLDERS,
   PROVIDER_TYPES,
   parseConfig,
+  RESPONSE_FORMATS,
   SOURCE_FORMATS,
   UNTRANSLATED_MODES,
 } from "./core/config.js";
@@ -97,11 +101,14 @@ export { srtWriter } from "./formats/srt/writer.js";
 export { vttReader } from "./formats/vtt/reader.js";
 export { vttWriter } from "./formats/vtt/writer.js";
 export { WRITERS } from "./formats/writers.js";
+export type { ProviderDependencies } from "./providers/factory.js";
 export { createProvider } from "./providers/factory.js";
 export type { MockOptions, MockProvider } from "./providers/mock/provider.js";
 export { createMockProvider } from "./providers/mock/provider.js";
 export type { OllamaOptions } from "./providers/ollama/provider.js";
 export { createOllamaProvider } from "./providers/ollama/provider.js";
+export type { OpenAiCompatibleOptions } from "./providers/openai-compatible/provider.js";
+export { createOpenAiCompatibleProvider } from "./providers/openai-compatible/provider.js";
 export { CsvError } from "./storage/csv.js";
 export { decodeText, EncodingError, encodeText } from "./storage/encoding.js";
 export { loadMemory, MemoryFileError, saveMemory } from "./storage/memory-store.js";

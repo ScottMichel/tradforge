@@ -42,7 +42,8 @@ into guarantees:
 - **Safe output**: translated files keep the structure of the originals; tradforge refuses to replace a large output
   file with a much smaller one (the classic "ran it from the wrong folder" accident) unless you pass `--force`.
 - **Local and free**: runs with [Ollama](https://ollama.com) on your machine. No API key, no cost per sentence, your
-  texts never leave your computer.
+  texts never leave your computer. Or use any OpenAI-compatible API (OpenAI, Mistral, OpenRouter, Groq...) when you
+  prefer.
 - **Zero runtime dependencies**: only Node.js.
 
 ## Quick start
@@ -135,7 +136,7 @@ sources are required.
 | `sources[].output.asciiOnly` | Escape accents (`é` → `\u00e9` in JSON, `\195\169` in Lua) for programs that read UTF-8 badly | `false` |
 | `sources[].output.untranslated` | `keep-source` or `omit` (JSON keys only) | `keep-source` |
 | `sources[].output.encoding` | Encoding of the translated files: `utf-8`, `utf-8-bom` (required by Paradox games), `utf-16le`, `windows-1252`, `windows-1251`... A character the encoding cannot hold is an error, never a `?` | `utf-8` |
-| `provider` | Ollama server and model | `mistral-small` on `localhost:11434` |
+| `provider` | The engine and its model: see [Engines](#engines) | Ollama, `mistral-small` on `localhost:11434` |
 | `translation.batchSize` | Texts sent to the model in one request | `20` |
 | `translation.instructions` | Tone, audience, conventions, sent with every batch | none |
 | `translation.glossary` | Terms that must always be translated the same way (only the terms used in a batch are sent) | `{}` |
@@ -173,6 +174,24 @@ file is a Lua-like table, a RimWorld `.xml` file follows a fixed schema. tradfor
 `tradforge init` recognises all of them in a folder (by extension, or by path for the dialects whose extension is
 generic) and proposes the right output paths. More formats are on the way: YAML, gettext `.po`, Android, iOS, XLIFF, Markdown… See the
 [roadmap](#roadmap).
+
+## Engines
+
+| `provider.type` | Settings | For |
+| --- | --- | --- |
+| `ollama` (default) | `model` (`mistral-small`), `host` (`http://localhost:11434`) | a local model, free, offline |
+| `openai-compatible` | `model` (required), `baseUrl` (`https://api.openai.com/v1`), `apiKeyEnv` (`OPENAI_API_KEY`), `responseFormat` (`json-schema`) | OpenAI, Mistral, OpenRouter, Groq, and local servers such as LM Studio or vLLM |
+
+```jsonc
+"provider": { "type": "openai-compatible", "model": "mistral-small-latest", "baseUrl": "https://api.mistral.ai/v1", "apiKeyEnv": "MISTRAL_API_KEY" }
+```
+
+The API key is read from the environment variable named by `apiKeyEnv` (`export MISTRAL_API_KEY=...`, or
+`$env:MISTRAL_API_KEY = "..."` in PowerShell). tradforge refuses a key written in the configuration file, since that
+file is usually committed, and never shows the key in its messages. Local servers need no key.
+
+`responseFormat` tells how the answer is constrained: `json-schema` (the answer must follow tradforge's schema),
+`json-object` (any JSON) or `none` (the instructions alone), for servers that refuse schemas.
 
 ## How it works
 
@@ -220,7 +239,7 @@ texts written for tradforge.
 
 ## Limitations
 
-- One engine for now (Ollama).
+- Two kinds of engines for now: Ollama and OpenAI-compatible APIs. Batches are sent one at a time.
 - Ren'Py games get translated copies of their scripts, not a `game/tl/` translation the player can switch to.
 - RimWorld language folders are named after the English language name (`French`): rename them if your mod uses
   another name.
@@ -230,7 +249,7 @@ texts written for tradforge.
 
 ## Roadmap
 
-1. **Engines and speed**: OpenAI-compatible APIs, Claude, Gemini, DeepL, parallel batches, cost estimates.
+1. **Engines and speed**: Claude, Gemini, DeepL, parallel batches, rate limits, cost estimates.
 2. **Quality**: `tradforge compare` (models side by side), back-translation of suspicious lines.
 3. **Application formats**: XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
 4. **Desktop application**: open a file or a folder, translate, review — no command line needed.

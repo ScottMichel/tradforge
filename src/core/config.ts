@@ -19,8 +19,15 @@ export const SOURCE_FORMATS = [
 ] as const;
 export type SourceFormat = (typeof SOURCE_FORMATS)[number];
 
-export const PROVIDER_TYPES = ["ollama"] as const;
+export const PROVIDER_TYPES = ["ollama", "openai-compatible"] as const;
 export type ProviderType = (typeof PROVIDER_TYPES)[number];
+
+/**
+ * How an OpenAI-compatible server is asked for JSON. json-schema: the answer must follow our schema (OpenAI,
+ * Mistral, OpenRouter, LM Studio, vLLM). json-object: any JSON (older servers). none: the prompt alone asks for it.
+ */
+export const RESPONSE_FORMATS = ["json-schema", "json-object", "none"] as const;
+export type ResponseFormat = (typeof RESPONSE_FORMATS)[number];
 
 /** What to do with a text that has no translation: keep the source text, or leave it out (JSON keys only). */
 export const UNTRANSLATED_MODES = ["keep-source", "omit"] as const;
@@ -71,11 +78,26 @@ export interface SourceConfig {
   readonly output: OutputConfig;
 }
 
-export interface ProviderConfig {
-  readonly type: ProviderType;
+/** A local model served by Ollama. */
+export interface OllamaProviderConfig {
+  readonly type: "ollama";
   readonly model: string;
   readonly host: string;
 }
+
+/** Any server that speaks the OpenAI chat completions protocol: OpenAI, Mistral, OpenRouter, Groq, LM Studio, vLLM... */
+export interface OpenAiCompatibleProviderConfig {
+  readonly type: "openai-compatible";
+  readonly model: string;
+  /** e.g. https://api.openai.com/v1, http://localhost:1234/v1 */
+  readonly baseUrl: string;
+  /** Name of the environment variable that holds the API key. The key itself never goes in the configuration. */
+  readonly apiKeyEnv: string;
+  readonly responseFormat: ResponseFormat;
+}
+
+/** Discriminated by type: each engine has its own settings. */
+export type ProviderConfig = OllamaProviderConfig | OpenAiCompatibleProviderConfig;
 
 export interface TranslationConfig {
   /** Number of segments sent to the model in one request. */
@@ -130,7 +152,7 @@ export class ConfigError extends Error {
 const DEFAULT_WORK_DIR = ".tradforge";
 const DEFAULT_BATCH_SIZE = 20;
 const DEFAULT_PRIORITY = 0;
-const DEFAULT_PROVIDER: ProviderConfig = {
+const DEFAULT_PROVIDER: OllamaProviderConfig = {
   type: "ollama",
   model: "mistral-small",
   host: "http://localhost:11434",
@@ -304,10 +326,52 @@ function parseProvider(value: unknown, report: Report): ProviderConfig {
     report("provider", "must be an object");
     return DEFAULT_PROVIDER;
   }
+  const type = parseChoice(PROVIDER_TYPES, value.type, "provider.type", report, DEFAULT_PROVIDER.type);
+  switch (type) {
+    case "ollama":
+      return {
+        type,
+        model: parseString(value.model, "provider.model", report, DEFAULT_PROVIDER.model),
+        host: parseString(value.host, "provider.host", report, DEFAULT_PROVIDER.host),
+      };
+    case "openai-compatible":
+      return parseOpenAiCompatible(value, report);
+  }
+}
+
+const DEFAULT_BASE_URL = "https://api.openai.com/v1";
+const DEFAULT_API_KEY_ENV = "OPENAI_API_KEY";
+/** The usual shape of an environment variable name, which also works on Windows. */
+const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+function parseOpenAiCompatible(value: Record<string, unknown>, report: Report): OpenAiCompatibleProviderConfig {
+  const baseUrl = parseString(value.baseUrl, "provider.baseUrl", report, DEFAULT_BASE_URL);
+  if (baseUrl !== "" && !/^https?:\/\/[^/]/.test(baseUrl)) {
+    report("provider.baseUrl", "must start with http:// or https://");
+  }
+  const apiKeyEnv = parseString(value.apiKeyEnv, "provider.apiKeyEnv", report, DEFAULT_API_KEY_ENV);
+  if (apiKeyEnv !== "" && !ENV_NAME.test(apiKeyEnv)) {
+    report("provider.apiKeyEnv", "must be the name of an environment variable, such as OPENAI_API_KEY");
+  }
+  if (value.apiKey !== undefined) {
+    // The configuration file is often committed: a key written there ends up public. Never echo it back.
+    report(
+      "provider.apiKey",
+      `never write an API key in the configuration: put it in the ${apiKeyEnv || DEFAULT_API_KEY_ENV} environment variable`,
+    );
+  }
   return {
-    type: parseChoice(PROVIDER_TYPES, value.type, "provider.type", report, DEFAULT_PROVIDER.type),
-    model: parseString(value.model, "provider.model", report, DEFAULT_PROVIDER.model),
-    host: parseString(value.host, "provider.host", report, DEFAULT_PROVIDER.host),
+    type: "openai-compatible",
+    model: parseString(value.model, "provider.model", report),
+    baseUrl,
+    apiKeyEnv,
+    responseFormat: parseChoice(
+      RESPONSE_FORMATS,
+      value.responseFormat,
+      "provider.responseFormat",
+      report,
+      "json-schema",
+    ),
   };
 }
 

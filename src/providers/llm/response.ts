@@ -1,6 +1,27 @@
 import { isObject } from "../../core/json.js";
 import { BatchError } from "../../core/provider.js";
 
+/**
+ * JSON schema of the answer, given to the engines that can enforce it: the model can only produce this shape.
+ * additionalProperties: false and every property required, as OpenAI's strict mode demands.
+ */
+export const RESPONSE_SCHEMA = {
+  type: "object",
+  properties: {
+    translations: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { id: { type: "integer" }, translation: { type: "string" } },
+        required: ["id", "translation"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["translations"],
+  additionalProperties: false,
+} as const;
+
 /** Some models wrap their JSON in a Markdown code block despite the instructions. */
 const CODE_BLOCK = /^\s*```(?:json)?\s*([\s\S]*?)\s*```\s*$/;
 

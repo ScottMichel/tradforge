@@ -261,6 +261,57 @@ describe("parseConfig", () => {
     ]);
   });
 
+  it("reads an OpenAI-compatible provider, with the default address, key variable and answer format", () => {
+    const config = parseConfig({ ...minimal, provider: { type: "openai-compatible", model: "gpt-5-mini" } });
+    expect(config.provider).toStrictEqual({
+      type: "openai-compatible",
+      model: "gpt-5-mini",
+      baseUrl: "https://api.openai.com/v1",
+      apiKeyEnv: "OPENAI_API_KEY",
+      responseFormat: "json-schema",
+    });
+
+    const local = parseConfig({
+      ...minimal,
+      provider: {
+        type: "openai-compatible",
+        model: "qwen3-8b",
+        baseUrl: "http://localhost:1234/v1",
+        apiKeyEnv: "LM_STUDIO_KEY",
+        responseFormat: "json-object",
+      },
+    });
+    expect(local.provider).toMatchObject({ baseUrl: "http://localhost:1234/v1", responseFormat: "json-object" });
+  });
+
+  it("requires a model for an OpenAI-compatible provider: there is no sensible default", () => {
+    expect(problemPaths({ ...minimal, provider: { type: "openai-compatible" } })).toEqual(["provider.model"]);
+  });
+
+  it("refuses an API key written in the configuration, and says where to put it", () => {
+    const error = configErrorOf({
+      ...minimal,
+      provider: { type: "openai-compatible", model: "m", apiKeyEnv: "GROQ_API_KEY", apiKey: "secret" },
+    });
+    expect(error.problems).toEqual([{ path: "provider.apiKey", message: expect.stringContaining("GROQ_API_KEY") }]);
+    expect(error.message).not.toContain("secret");
+  });
+
+  it("rejects a wrong address, key variable name or answer format", () => {
+    expect(
+      problemPaths({
+        ...minimal,
+        provider: {
+          type: "openai-compatible",
+          model: "m",
+          baseUrl: "localhost:1234",
+          apiKeyEnv: "my key",
+          responseFormat: "xml",
+        },
+      }),
+    ).toEqual(["provider.baseUrl", "provider.apiKeyEnv", "provider.responseFormat"]);
+  });
+
   it("rejects glossary entries that are not strings", () => {
     expect(problemPaths({ ...minimal, translation: { glossary: { NPC: 1, HP: "PV" } } })).toEqual([
       "translation.glossary.NPC",

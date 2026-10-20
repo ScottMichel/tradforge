@@ -7,6 +7,9 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `openai-compatible` engine: OpenAI, Mistral, OpenRouter, Groq, LM Studio, vLLM... (`provider.baseUrl`,
+  `provider.apiKeyEnv`, `provider.responseFormat`). The API key is read from an environment variable; a key written in
+  the configuration is refused, and keys are never shown in messages.
 - Six new formats, all recognised by `init`:
   - `srt` and `vtt` subtitles: one text per cue, cues less than 2 seconds apart translated together as a scene;
   - `renpy`: dialogue, menu choices and `_()` strings of Ren'Py scripts (`.rpy`), written as translated copies;

@@ -148,6 +148,11 @@ export function renderConfig(draft: ConfigDraft): string {
   "sources": ${indent(JSON.stringify(sources, null, 2), "  ")},
 
   // Local model served by Ollama (https://ollama.com). Install it with: ollama pull mistral-small
+  // Any OpenAI-compatible API works too (OpenAI, Mistral, OpenRouter, Groq, LM Studio, vLLM):
+  //   { "type": "openai-compatible", "model": "gpt-5-mini", "baseUrl": "https://api.openai.com/v1",
+  //     "apiKeyEnv": "OPENAI_API_KEY" }
+  // The API key is read from that environment variable: never write it in this file.
+  // "responseFormat": "json-schema" (default), or "json-object" / "none" for servers that refuse schemas.
   "provider": { "type": "ollama", "model": "mistral-small", "host": "http://localhost:11434" },
 
   "translation": {
