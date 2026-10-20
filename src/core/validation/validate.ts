@@ -9,6 +9,7 @@ export type IssueCode =
   | "markers-changed"
   | "whitespace-changed"
   | "untranslated"
+  | "glossary-ignored"
   | "too-long";
 
 export interface ValidationIssue {
@@ -30,6 +31,8 @@ export interface ValidationOptions {
   readonly maxLengthSlack: number;
   /** An identical translation is only suspicious from this many words. */
   readonly minWordsForUntranslated: number;
+  /** A term found in the source (whole word, any case) must appear translated as given. Empty: no check. */
+  readonly glossary: Readonly<Record<string, string>>;
 }
 
 export const DEFAULT_VALIDATION_OPTIONS: ValidationOptions = {
@@ -37,6 +40,7 @@ export const DEFAULT_VALIDATION_OPTIONS: ValidationOptions = {
   maxLengthRatio: 2.2,
   maxLengthSlack: 25,
   minWordsForUntranslated: 4,
+  glossary: {},
 };
 
 /** One check. Returns no issue when the translation passes it. */
@@ -100,6 +104,28 @@ const checkUntranslated: Validator = ({ source, target }, { placeholders, minWor
     : [];
 };
 
+const checkGlossary: Validator = ({ source, target }, { glossary }) => {
+  const lowerTarget = target.toLowerCase();
+  // The translation only has to contain the expected term: "PNJs" or "PNJ" both follow "NPC" → "PNJ".
+  const ignored = Object.entries(glossary).filter(
+    ([term, translation]) => containsWord(source, term) && !lowerTarget.includes(translation.toLowerCase()),
+  );
+  return ignored.length > 0
+    ? [
+        {
+          code: "glossary-ignored",
+          message: `glossary not followed: ${ignored.map(([term, translation]) => `"${term}" → "${translation}"`).join(", ")}`,
+        },
+      ]
+    : [];
+};
+
+/** The term as a whole word (letters or digits do not continue it on either side), whatever its case. */
+function containsWord(text: string, term: string): boolean {
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, "iu").test(text);
+}
+
 const checkLength: Validator = ({ source, target }, { maxLengthRatio, maxLengthSlack }) => {
   const limit = Math.floor(source.length * maxLengthRatio + maxLengthSlack);
   return target.length > limit
@@ -115,6 +141,7 @@ const VALIDATORS: readonly Validator[] = [
   checkMarkers,
   checkWhitespace,
   checkUntranslated,
+  checkGlossary,
   checkLength,
 ];
 

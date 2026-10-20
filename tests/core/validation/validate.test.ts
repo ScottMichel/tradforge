@@ -76,6 +76,19 @@ describe("validateTranslation", () => {
     expect(codes("Yes", "x".repeat(32))).toEqual(["too-long"]);
   });
 
+  it("reports a glossary term that was not translated as required", () => {
+    const glossary = { NPC: "PNJ", "health bar": "barre de vie" };
+    const [issue] = issues("Talk to the NPC", "Parlez au personnage", { glossary });
+    expect(issue?.code).toBe("glossary-ignored");
+    expect(issue?.message).toContain('"NPC" → "PNJ"');
+    expect(codes("Talk to the NPCs", "Parlez aux PNJs", { glossary })).toEqual([]);
+    expect(codes("Watch your Health Bar", "Surveille ta barre de vie", { glossary })).toEqual([]);
+  });
+
+  it("only checks glossary terms found as whole words", () => {
+    expect(codes("The NPCompany logo", "Le logo de NPCompany", { glossary: { NPC: "PNJ" } })).toEqual([]);
+  });
+
   it("reports every problem, in a fixed order", () => {
     expect(codes("Hello {name}\n", "Bonjour {nom}")).toEqual([
       "placeholder-missing",
