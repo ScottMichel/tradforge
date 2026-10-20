@@ -23,7 +23,7 @@ export const initCommand: Command = {
     }
     const sourceLanguage = options.from ?? "en";
     const targetLanguage = options.to ?? "fr";
-    const { sources, skipped } = await detectSources(path.dirname(file), sourceLanguage);
+    const { sources, skipped } = await detectSources(path.dirname(file), sourceLanguage, targetLanguage);
     await writeFileAtomic(file, renderConfig({ sourceLanguage, targetLanguage, sources }));
 
     const shown = displayPath(io.cwd, file);

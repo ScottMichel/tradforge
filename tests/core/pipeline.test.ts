@@ -250,6 +250,16 @@ describe("translateSegments: quality rules", () => {
     expect(accepted.summary.translated).toBe(1);
   });
 
+  it("checks the placeholders of the formats the project uses", async () => {
+    const provider = createMockProvider({ translate: () => "Le forgeron arrive." });
+    const json = await run({ provider, segments: [segment("The smith of $PROVINCE$ arrives.")] });
+    expect(json.summary.translated).toBe(1);
+
+    const paradox = parseConfig({ ...rawConfig(), sources: [{ format: "paradox-yml", include: ["l/*.yml"] }] });
+    const strict = await run({ provider, segments: [segment("The smith of $PROVINCE$ arrives.")], config: paradox });
+    expect(strict.memory.getFailure("The smith of $PROVINCE$ arrives.")?.reason).toContain("$PROVINCE$");
+  });
+
   it("masks placeholders for engines that ask for it, and puts them back", async () => {
     const provider = createMockProvider({ protectPlaceholders: true });
     const { memory } = await run({ provider, segments: [segment("Hello {name}")] });

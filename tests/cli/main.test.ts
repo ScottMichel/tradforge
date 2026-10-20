@@ -88,7 +88,7 @@ describe("the command line", () => {
     await createFile("game/data/stats.json", JSON.stringify({ speed: "fast" }));
     const result = await cli("init --to de");
     expect(result.code).toBe(EXIT.ok);
-    expect(result.out).toContain("game/locales/EN/*.json (1 file) → game/locales/{lang}/{name}{ext}");
+    expect(result.out).toContain("game/locales/EN/*.json (1 file) → game/locales/{LANG}/{name}{ext}");
     expect(result.out).toContain("game/data/stats.json: no language marker");
 
     const config = await read("tradforge.config.json");

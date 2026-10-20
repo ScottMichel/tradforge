@@ -14,6 +14,8 @@ export type {
 export {
   ConfigError,
   DEFAULT_OUTPUT,
+  effectivePlaceholders,
+  FORMAT_PLACEHOLDERS,
   GROUP_MODES,
   OUTPUT_PLACEHOLDERS,
   PROVIDER_TYPES,
@@ -55,7 +57,11 @@ export type {
 } from "./core/types.js";
 export { fixTypography } from "./core/typography.js";
 export type { PlaceholderSyntax } from "./core/validation/placeholders.js";
-export { PLACEHOLDER_SYNTAXES, placeholderPattern } from "./core/validation/placeholders.js";
+export {
+  DEFAULT_PLACEHOLDER_SYNTAXES,
+  PLACEHOLDER_SYNTAXES,
+  placeholderPattern,
+} from "./core/validation/placeholders.js";
 export type {
   IssueCode,
   TranslationPair,
@@ -73,9 +79,23 @@ export { jsonReader } from "./formats/json/reader.js";
 export { jsonWriter } from "./formats/json/writer.js";
 export { luaReader } from "./formats/lua/reader.js";
 export { luaWriter } from "./formats/lua/writer.js";
+export { paradoxLanguage } from "./formats/paradox/languages.js";
+export { paradoxReader } from "./formats/paradox/reader.js";
+export { paradoxWriter } from "./formats/paradox/writer.js";
 export type { OutputLanguages, ProjectFile } from "./formats/project.js";
 export { listProjectFiles, OutputError, outputPath } from "./formats/project.js";
+export { pzLanguageCode } from "./formats/pz/languages.js";
+export { pzReader } from "./formats/pz/reader.js";
+export { pzWriter } from "./formats/pz/writer.js";
 export { READERS } from "./formats/readers.js";
+export { renpyReader } from "./formats/renpy/reader.js";
+export { renpyWriter } from "./formats/renpy/writer.js";
+export { rimworldReader } from "./formats/rimworld/reader.js";
+export { rimworldWriter } from "./formats/rimworld/writer.js";
+export { srtReader } from "./formats/srt/reader.js";
+export { srtWriter } from "./formats/srt/writer.js";
+export { vttReader } from "./formats/vtt/reader.js";
+export { vttWriter } from "./formats/vtt/writer.js";
 export { WRITERS } from "./formats/writers.js";
 export { createProvider } from "./providers/factory.js";
 export type { MockOptions, MockProvider } from "./providers/mock/provider.js";

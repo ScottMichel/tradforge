@@ -7,6 +7,7 @@ import {
   CONFIG_TEMPLATE,
   ConfigFileError,
   openProject,
+  renderConfig,
   stripJsonComments,
 } from "../../src/cli/config-file.js";
 
@@ -45,6 +46,24 @@ describe("openProject", () => {
     expect(project.root).toBe(root);
     expect(project.config.targetLanguage).toBe("fr");
     expect(project.workDir).toBe(path.join(root, ".tradforge"));
+  });
+
+  it("writes detected sources, with the output encoding their format requires", async () => {
+    const text = renderConfig({
+      sourceLanguage: "en",
+      targetLanguage: "fr",
+      sources: [
+        {
+          format: "paradox-yml",
+          include: ["l/*_l_english.yml"],
+          output: "l/{stem}_l_french{ext}",
+          encoding: "utf-8-bom",
+        },
+      ],
+    });
+    await writeFile(path.join(root, CONFIG_FILE), text);
+    const { config } = await openProject(root);
+    expect(config.sources[0]).toMatchObject({ format: "paradox-yml", output: { encoding: "utf-8-bom" } });
   });
 
   it("takes the project root from the folder of an explicit config file", async () => {

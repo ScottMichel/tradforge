@@ -1,4 +1,4 @@
-import { findTokens, PLACEHOLDER_SYNTAXES, type PlaceholderSyntax, removeTokens } from "./placeholders.js";
+import { DEFAULT_PLACEHOLDER_SYNTAXES, findTokens, type PlaceholderSyntax, removeTokens } from "./placeholders.js";
 
 export type IssueCode =
   | "empty"
@@ -36,7 +36,7 @@ export interface ValidationOptions {
 }
 
 export const DEFAULT_VALIDATION_OPTIONS: ValidationOptions = {
-  placeholders: PLACEHOLDER_SYNTAXES,
+  placeholders: DEFAULT_PLACEHOLDER_SYNTAXES,
   maxLengthRatio: 2.2,
   maxLengthSlack: 25,
   minWordsForUntranslated: 4,

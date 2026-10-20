@@ -102,6 +102,8 @@ export interface ConfigDraft {
     readonly format: string;
     readonly include: readonly string[];
     readonly output: string;
+    /** Output encoding the format requires (Paradox: utf-8-bom). */
+    readonly encoding?: string;
   }[];
 }
 
@@ -121,7 +123,7 @@ export function renderConfig(draft: ConfigDraft): string {
       : draft.sources.map((source) => ({
           format: source.format,
           include: source.include,
-          output: { path: source.output },
+          output: { path: source.output, ...(source.encoding !== undefined ? { encoding: source.encoding } : {}) },
         }));
 
   return `{
@@ -132,7 +134,9 @@ export function renderConfig(draft: ConfigDraft): string {
   // Folder where tradforge keeps its translation memory. Worth committing: it holds all the work.
   "workDir": ".tradforge",
 
-  // Files to translate. Formats: "json", "lua". Check the output paths before running "tradforge build".
+  // Files to translate. Formats: "json", "lua", "srt", "vtt", "renpy" (Ren'Py scripts),
+  // "zomboid-txt" (Project Zomboid Build 41 tables), "paradox-yml" (Paradox localisation), "rimworld-xml"
+  // (RimWorld language files). Check the output paths before running "tradforge build".
   // Lower "priority" = translated first (default 0). "context" helps the model choose the right meaning.
   // "group": "auto" (default), "none", "file", or { "keyPattern": "^Dialog_(\\\\w+)_" } to keep conversations together.
   // Output path placeholders: {dir}, {name}, {ext} of the source file, {stem} = name without its "_en" suffix,

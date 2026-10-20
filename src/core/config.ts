@@ -1,9 +1,22 @@
 import { INPUT_ENCODINGS, type InputEncoding, TEXT_ENCODINGS, type TextEncoding } from "./encodings.js";
 import { isObject } from "./json.js";
-import { PLACEHOLDER_SYNTAXES, type PlaceholderSyntax } from "./validation/placeholders.js";
+import {
+  DEFAULT_PLACEHOLDER_SYNTAXES,
+  PLACEHOLDER_SYNTAXES,
+  type PlaceholderSyntax,
+} from "./validation/placeholders.js";
 
 /** Every format a reader exists for. Single source of truth for validation and types. */
-export const SOURCE_FORMATS = ["json", "lua"] as const;
+export const SOURCE_FORMATS = [
+  "json",
+  "lua",
+  "paradox-yml",
+  "renpy",
+  "rimworld-xml",
+  "srt",
+  "vtt",
+  "zomboid-txt",
+] as const;
 export type SourceFormat = (typeof SOURCE_FORMATS)[number];
 
 export const PROVIDER_TYPES = ["ollama"] as const;
@@ -359,7 +372,7 @@ function parseGlossary(value: unknown, report: Report): Record<string, string> {
 }
 
 function parseValidation(value: unknown, report: Report): ValidationConfig {
-  if (value === undefined) return { placeholders: [...PLACEHOLDER_SYNTAXES], glossary: true };
+  if (value === undefined) return { placeholders: [...DEFAULT_PLACEHOLDER_SYNTAXES], glossary: true };
   if (!isObject(value)) {
     report("validation", "must be an object");
     return { placeholders: [], glossary: true };
@@ -370,7 +383,7 @@ function parseValidation(value: unknown, report: Report): ValidationConfig {
 }
 
 function parsePlaceholderSyntaxes(value: unknown, report: Report): PlaceholderSyntax[] {
-  if (value === undefined) return [...PLACEHOLDER_SYNTAXES];
+  if (value === undefined) return [...DEFAULT_PLACEHOLDER_SYNTAXES];
   if (!Array.isArray(value)) {
     report("validation.placeholders", `must be an array of ${PLACEHOLDER_SYNTAXES.join(", ")}`);
     return [];
@@ -378,4 +391,19 @@ function parsePlaceholderSyntaxes(value: unknown, report: Report): PlaceholderSy
   return value.map((syntax: unknown, index) =>
     parseChoice(PLACEHOLDER_SYNTAXES, syntax, `validation.placeholders[${index}]`, report),
   );
+}
+
+/** Placeholder syntaxes that a format brings with it, on top of the configured ones. */
+export const FORMAT_PLACEHOLDERS: Readonly<Partial<Record<SourceFormat, readonly PlaceholderSyntax[]>>> = {
+  "paradox-yml": ["paradox"],
+  renpy: ["renpy", "printf"],
+  "rimworld-xml": ["rimworld"],
+};
+
+/** The placeholder syntaxes to check: the configured ones, plus those of the formats the project uses. */
+export function effectivePlaceholders(config: Pick<TradforgeConfig, "sources" | "validation">): PlaceholderSyntax[] {
+  const syntaxes = new Set(config.validation.placeholders);
+  for (const source of config.sources)
+    for (const syntax of FORMAT_PLACEHOLDERS[source.format] ?? []) syntaxes.add(syntax);
+  return [...syntaxes];
 }

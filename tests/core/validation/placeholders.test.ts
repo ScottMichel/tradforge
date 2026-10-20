@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_PLACEHOLDER_SYNTAXES,
   findTokens,
   PLACEHOLDER_SYNTAXES,
   placeholderPattern,
@@ -41,6 +42,57 @@ describe("findTokens: numbered and bracket placeholders", () => {
       "[color=255,0,0]",
       "[/color]",
     ]);
+  });
+});
+
+describe("findTokens: subtitle codes", () => {
+  it("finds ASS override codes, not braces without a backslash", () => {
+    expect(findTokens("{\\an8}{\\i1}Hi{\\i0} {\\c&H00FFFF&} {\\pos(320,50)} {name} {} { \\ }", "ass")).toEqual([
+      "{\\an8}",
+      "{\\i1}",
+      "{\\i0}",
+      "{\\c&H00FFFF&}",
+      "{\\pos(320,50)}",
+    ]);
+  });
+
+  it("finds WebVTT inline timestamps, not other numbers in angle brackets", () => {
+    expect(findTokens("<00:00:12.800>Hi <01:02.500>you <123:00:00.000> <5> <00:00:12,800>", "timestamp")).toEqual([
+      "<00:00:12.800>",
+      "<01:02.500>",
+      "<123:00:00.000>",
+    ]);
+  });
+});
+
+describe("findTokens: Paradox localisation", () => {
+  it.each([
+    ["The smith of $PROVINCE$ asks for §Ycoal§!.", ["$PROVINCE$", "§Y", "§!"]],
+    ["Costs $VALUE|=+0$ and $VAL|%2+$, not $$ dollars", ["$VALUE|=+0$", "$VAL|%2+$"]],
+    ["Buy coal (£gold£ 10), £icon_manpower|1 men, 5¤", ["£gold£", "£icon_manpower|1", "¤"]],
+    ["Pay @gold_icon! now, [Root.GetName] at [GetDateText]", ["@gold_icon!", "[Root.GetName]", "[GetDateText]"]],
+    ["#bold Strong#! words, issue #3", ["#bold", "#!"]],
+  ])("finds the codes of %j", (text, tokens) => {
+    expect(findTokens(text, "paradox")).toEqual(tokens);
+  });
+
+  it("is not a default syntax: elsewhere, a word in brackets is text to translate", () => {
+    expect(DEFAULT_PLACEHOLDER_SYNTAXES).not.toContain("paradox");
+    expect(PLACEHOLDER_SYNTAXES).toContain("paradox");
+  });
+});
+
+describe("findTokens: RimWorld", () => {
+  it("finds grammar symbols and the rule head at the start of a text", () => {
+    expect(findTokens("[PAWN_nameDef] waves at [RECIPIENT_labelShort].", "rimworld")).toEqual([
+      "[PAWN_nameDef]",
+      "[RECIPIENT_labelShort]",
+    ]);
+    expect(findTokens("r_logentry(p=2)->[PAWN_nameDef] sings", "rimworld")).toEqual([
+      "r_logentry(p=2)->",
+      "[PAWN_nameDef]",
+    ]);
+    expect(findTokens("A [ b ] c, and an arrow -> here", "rimworld")).toEqual([]);
   });
 });
 

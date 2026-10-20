@@ -1,4 +1,4 @@
-import type { TradforgeConfig } from "./config.js";
+import { effectivePlaceholders, type TradforgeConfig } from "./config.js";
 import { diffSources } from "./diff.js";
 import type { TranslationMemory } from "./memory.js";
 import { ProtectionError, protectPlaceholders, restorePlaceholders } from "./protection.js";
@@ -15,7 +15,10 @@ import { fixTypography } from "./typography.js";
 import { type ValidationIssue, validateTranslation } from "./validation/validate.js";
 
 /** The parts of the configuration the pipeline needs. */
-export type PipelineConfig = Pick<TradforgeConfig, "sourceLanguage" | "targetLanguage" | "translation" | "validation">;
+export type PipelineConfig = Pick<
+  TradforgeConfig,
+  "sourceLanguage" | "targetLanguage" | "sources" | "translation" | "validation"
+>;
 
 export interface PipelineOptions {
   /** Unique texts of the project, sorted by priority then file order (see groupOccurrences). */
@@ -240,7 +243,7 @@ async function translateGroup(group: readonly Segment[], run: Run): Promise<Reje
   const { config, provider, memory } = run.options;
   const shields =
     provider.protectPlaceholders === true
-      ? group.map((segment) => protectPlaceholders(segment.source, config.validation.placeholders))
+      ? group.map((segment) => protectPlaceholders(segment.source, effectivePlaceholders(config)))
       : undefined;
 
   let answer: ReadonlyMap<number, string>;
@@ -308,14 +311,16 @@ function buildRequest(
 
 /** The finishing touches applied to every translation before it is checked: the typography of the language. */
 function polish(target: string, config: PipelineConfig): string {
-  return config.translation.typography ? fixTypography(target, config.targetLanguage) : target;
+  return config.translation.typography
+    ? fixTypography(target, config.targetLanguage, effectivePlaceholders(config))
+    : target;
 }
 
 function check(source: string, target: string, config: PipelineConfig): ValidationIssue[] {
   return validateTranslation(
     { source, target },
     {
-      placeholders: config.validation.placeholders,
+      placeholders: effectivePlaceholders(config),
       glossary: config.validation.glossary ? config.translation.glossary : {},
     },
   );
