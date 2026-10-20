@@ -1,9 +1,11 @@
+import { PLACEHOLDER_SYNTAXES, placeholderPattern } from "./validation/placeholders.js";
+
 /** U+00A0. Game fonts often lack the narrow U+202F, so the common non-breaking space is the safe choice. */
 const NBSP = "\u{a0}";
 const SPACES = "[ \\u{a0}\\u{202f}]*";
 
 /** Placeholders, tags and URLs: their punctuation must never be touched. */
-const PROTECTED = /https?:\/\/\S+|\{[^{}\s]*\}|%(?:\d+\$)?[-+#0]*\d*(?:\.\d+)?[a-zA-Z%]|<[^<>]*>/g;
+const PROTECTED = new RegExp(`https?://\\S+|${placeholderPattern(PLACEHOLDER_SYNTAXES).source}`, "g");
 /** Private use characters stand for the protected parts while the rules run. */
 const PRIVATE_USE = /[\u{e000}-\u{f8ff}]/u;
 const FIRST_PRIVATE_USE = 0xe000;

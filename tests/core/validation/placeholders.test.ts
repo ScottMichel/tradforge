@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { findTokens, removeTokens } from "../../../src/core/validation/placeholders.js";
+import {
+  findTokens,
+  PLACEHOLDER_SYNTAXES,
+  placeholderPattern,
+  removeTokens,
+} from "../../../src/core/validation/placeholders.js";
 
 describe("findTokens", () => {
   it("finds brace placeholders", () => {
@@ -21,6 +26,32 @@ describe("findTokens", () => {
       "<br/>",
       "<RGB:1,0,0>",
       "<LINE>",
+    ]);
+  });
+});
+
+describe("findTokens: numbered and bracket placeholders", () => {
+  it("finds numbered placeholders, without taking printf ones twice", () => {
+    expect(findTokens("%1 gave %2 to %1, %1$s stays printf, 100% sure", "positional")).toEqual(["%1", "%2", "%1"]);
+  });
+
+  it("finds bracket tags with a value and closing bracket tags, not words in brackets", () => {
+    expect(findTokens("[img=music] Hi [color=255,0,0]you[/color] [Note] [b]", "bbcode")).toEqual([
+      "[img=music]",
+      "[color=255,0,0]",
+      "[/color]",
+    ]);
+  });
+});
+
+describe("placeholderPattern", () => {
+  it("matches the tokens of several syntaxes at once", () => {
+    expect("Hi {name}, %1 <b>x</b> [img=a]".match(placeholderPattern(PLACEHOLDER_SYNTAXES))).toEqual([
+      "{name}",
+      "%1",
+      "<b>",
+      "</b>",
+      "[img=a]",
     ]);
   });
 });
