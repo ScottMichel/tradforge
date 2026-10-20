@@ -17,6 +17,7 @@ const write = (content: string, options: Partial<WriterInput["options"]> = {}) =
     content,
     translate: (source) => translations.get(source),
     options: { asciiOnly: false, untranslated: "keep-source", ...options },
+    languages: { source: "en", target: "fr" },
   });
 
 const source = `{

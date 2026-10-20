@@ -32,12 +32,18 @@ describe("parseConfig", () => {
           include: ["locales/en/*.json"],
           priority: 0,
           group: "auto",
-          output: { path: "{dir}/{name}.{lang}{ext}", asciiOnly: false, untranslated: "keep-source" },
+          output: {
+            path: "{dir}/{name}.{lang}{ext}",
+            asciiOnly: false,
+            untranslated: "keep-source",
+            encoding: "utf-8",
+          },
+          encoding: "auto",
         },
       ],
       provider: { type: "ollama", model: "mistral-small", host: "http://localhost:11434" },
       translation: { batchSize: 20, glossary: {}, contextLines: 3, typography: true, reuse: true },
-      validation: { placeholders: ["braces", "printf", "markup"], glossary: true },
+      validation: { placeholders: ["braces", "printf", "positional", "bbcode", "markup"], glossary: true },
     });
   });
 
@@ -54,6 +60,27 @@ describe("parseConfig", () => {
     expect(config.sources.map((source) => source.group)).toEqual(["file", { keyPattern: "^(dialog_\\w+)_\\d+$" }]);
     expect(config.translation).toMatchObject({ contextLines: 0, typography: false, reuse: false });
     expect(config.validation.glossary).toBe(false);
+  });
+
+  it("keeps the encodings of the source files and of the outputs, and rejects unknown ones", () => {
+    const config = parseConfig({
+      ...minimal,
+      sources: [
+        {
+          format: "json",
+          include: ["a"],
+          encoding: "windows-1251",
+          output: { path: "{stem}{ext}", encoding: "utf-8-bom" },
+        },
+      ],
+    });
+    expect(config.sources[0]).toMatchObject({ encoding: "windows-1251", output: { encoding: "utf-8-bom" } });
+    expect(
+      problemPaths({
+        ...minimal,
+        sources: [{ format: "json", include: ["a"], encoding: "latin9", output: { encoding: "auto" } }],
+      }),
+    ).toEqual(["sources[0].encoding", "sources[0].output.encoding"]);
   });
 
   it("rejects wrong grouping rules and phase B settings", () => {
@@ -144,9 +171,10 @@ describe("parseConfig", () => {
         priority: -1,
         context: "NPC dialogue lines",
         group: "auto",
+        encoding: "auto",
         output: DEFAULT_OUTPUT,
       },
-      { format: "json", include: ["ui/*.json"], priority: 5, group: "auto", output: DEFAULT_OUTPUT },
+      { format: "json", include: ["ui/*.json"], priority: 5, group: "auto", encoding: "auto", output: DEFAULT_OUTPUT },
     ]);
   });
 
@@ -192,6 +220,7 @@ describe("parseConfig", () => {
       path: "locales/{lang}/{name}{ext}",
       asciiOnly: true,
       untranslated: "omit",
+      encoding: "utf-8",
     });
   });
 
@@ -200,7 +229,7 @@ describe("parseConfig", () => {
       problemPaths({
         ...minimal,
         sources: [
-          { format: "json", include: ["a"], output: { path: "out/{language}/{name}.json" } },
+          { format: "json", include: ["a"], output: { path: "out/{locale}/{name}.json" } },
           { format: "json", include: ["b"], output: { path: "C:/out/{name}.json", asciiOnly: "yes" } },
           { format: "json", include: ["c"], output: { path: "/out/{name}.json", untranslated: "drop" } },
         ],

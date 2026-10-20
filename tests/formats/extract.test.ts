@@ -57,6 +57,26 @@ describe("extractSegments", () => {
     ]);
   });
 
+  it("reads legacy encodings: detected automatically, or as configured", async () => {
+    const target = path.join(root, "old", "en.json");
+    await mkdir(path.dirname(target), { recursive: true });
+    // "Café" in windows-1252: the é is the single byte 0xE9, which is not valid UTF-8.
+    await writeFile(target, Uint8Array.from([...Buffer.from('{"a": "Caf'), 0xe9, ...Buffer.from('"}')]));
+    const auto = parseConfig({
+      sourceLanguage: "en",
+      targetLanguage: "fr",
+      sources: [{ format: "json", include: ["old/*.json"] }],
+    });
+    expect((await extractSegments(root, auto)).map((s) => s.source)).toEqual(["Café"]);
+
+    const cyrillic = parseConfig({
+      sourceLanguage: "en",
+      targetLanguage: "fr",
+      sources: [{ format: "json", include: ["old/*.json"], encoding: "windows-1251" }],
+    });
+    expect((await extractSegments(root, cyrillic)).map((s) => s.source)).toEqual(["Cafй"]);
+  });
+
   it("applies the grouping rule of each source", async () => {
     await createFile("dialogs/en.json", JSON.stringify({ Dialog_Bob_1: "Hi", Dialog_Bob_2: "Bye", Title: "Camp" }));
     const config = parseConfig({

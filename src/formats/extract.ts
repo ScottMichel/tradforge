@@ -4,6 +4,7 @@ import type { TradforgeConfig } from "../core/config.js";
 import { groupRule } from "../core/groups.js";
 import { groupOccurrences } from "../core/segments.js";
 import type { Occurrence, Segment } from "../core/types.js";
+import { decodeText } from "../storage/encoding.js";
 import { listProjectFiles } from "./project.js";
 import { READERS } from "./readers.js";
 
@@ -18,7 +19,7 @@ export async function extractOccurrences(root: string, config: TradforgeConfig):
   const rules = new Map(config.sources.map((source) => [source, groupRule(source.group)]));
   // The project files never include the work directory nor the translations written by a build.
   for (const { source, file } of await listProjectFiles(root, config)) {
-    const content = await readFile(path.join(root, file), "utf8");
+    const content = decodeText(await readFile(path.join(root, file)), source.encoding);
     const found = READERS[source.format].read({
       file,
       content,

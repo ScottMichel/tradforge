@@ -9,14 +9,30 @@ import { extractSegments } from "../../src/formats/extract.js";
 import { listProjectFiles, OutputError, outputPath } from "../../src/formats/project.js";
 
 describe("outputPath", () => {
+  const languages = { source: "en", target: "fr" };
+
   it("fills the placeholders from the source file and the target language", () => {
-    expect(outputPath("{dir}/{name}.{lang}{ext}", "locales/en/ui.json", "fr")).toBe("locales/en/ui.fr.json");
-    expect(outputPath("locales/{lang}/{name}{ext}", "locales/en/ui.json", "fr")).toBe("locales/fr/ui.json");
-    expect(outputPath("{dir}/{name}.{lang}{ext}", "ui.json", "fr")).toBe("ui.fr.json");
+    expect(outputPath("{dir}/{name}.{lang}{ext}", "locales/en/ui.json", languages)).toBe("locales/en/ui.fr.json");
+    expect(outputPath("locales/{lang}/{name}{ext}", "locales/en/ui.json", languages)).toBe("locales/fr/ui.json");
+    expect(outputPath("{dir}/{name}.{lang}{ext}", "ui.json", languages)).toBe("ui.fr.json");
+  });
+
+  it("offers the language in capitals, and the file name without its language suffix", () => {
+    const template = "Translate/{LANG}/{stem}_{LANG}{ext}";
+    expect(outputPath(template, "Translate/EN/UI_EN.txt", languages)).toBe("Translate/FR/UI_FR.txt");
+    expect(outputPath("{dir}/{stem}.{lang}{ext}", "i18n/menu.en.json", languages)).toBe("i18n/menu.fr.json");
+    expect(outputPath("{stem}-{LANG}{ext}", "readme.txt", { source: "en", target: "pt-BR" })).toBe("readme-PT_BR.txt");
+  });
+
+  it("offers the English name of the language, as some games name their folders", () => {
+    const template = "localisation/{language}/{stem}_l_{language}{ext}";
+    expect(outputPath(template, "localisation/english/ui_l_english.yml", languages)).toBe(
+      "localisation/french/ui_l_french.yml",
+    );
   });
 
   it("does not fill a placeholder that comes from a file name", () => {
-    expect(outputPath("out/{name}-{lang}{ext}", "{lang}.json", "fr")).toBe("out/{lang}-fr.json");
+    expect(outputPath("out/{name}-{lang}{ext}", "{lang}.json", languages)).toBe("out/{lang}-fr.json");
   });
 });
 
@@ -86,6 +102,22 @@ describe("buildProject", () => {
     const config = configWith([{ format: "json", include: ["locales/en/*.json"], output }]);
     await expect(buildProject(root, config, memory)).rejects.toThrow(OutputError);
     await expect(buildProject(root, config, memory)).rejects.toThrow(message);
+  });
+
+  it("writes the outputs in the configured encoding, and refuses characters it cannot hold", async () => {
+    const legacy = configWith([
+      { format: "json", include: ["locales/en/*.json"], output: { path: "out/{name}{ext}", encoding: "windows-1252" } },
+    ]);
+    const accents = new TranslationMemory({ languages: { sourceLanguage: "en", targetLanguage: "fr" } });
+    accents.recordMachine("Welcome", "Bienvenue à l'été", "m");
+    await buildProject(root, legacy, accents);
+    const bytes = await readFile(path.join(root, "out/ui.json"));
+    expect(bytes.includes(0xe9)).toBe(true); // é as the single windows-1252 byte
+    expect(bytes.includes(0xc3)).toBe(false); // and not as UTF-8
+
+    accents.recordMachine("Quit", "終了", "m");
+    await expect(buildProject(root, legacy, accents)).rejects.toThrow(OutputError);
+    await expect(buildProject(root, legacy, accents)).rejects.toThrow(/out\/ui\.json.*"終".*windows-1252/);
   });
 
   it("refuses to replace a big output with a much smaller one, unless forced", async () => {

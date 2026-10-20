@@ -8,6 +8,8 @@ export interface WriterInput {
   /** The translation of a source text, or undefined if there is none yet. */
   readonly translate: (source: string) => string | undefined;
   readonly options: Pick<OutputConfig, "asciiOnly" | "untranslated">;
+  /** Some formats name the language inside the file (Paradox: "l_english:" becomes "l_french:"). */
+  readonly languages: { readonly source: string; readonly target: string };
 }
 
 export interface WriterOutput {

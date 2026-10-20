@@ -1,3 +1,4 @@
+import { INPUT_ENCODINGS, type InputEncoding, TEXT_ENCODINGS, type TextEncoding } from "./encodings.js";
 import { isObject } from "./json.js";
 import { PLACEHOLDER_SYNTAXES, type PlaceholderSyntax } from "./validation/placeholders.js";
 
@@ -13,7 +14,7 @@ export const UNTRANSLATED_MODES = ["keep-source", "omit"] as const;
 export type UntranslatedMode = (typeof UNTRANSLATED_MODES)[number];
 
 /** Placeholders of an output path template, e.g. "locales/{lang}/{name}{ext}". */
-export const OUTPUT_PLACEHOLDERS = ["dir", "name", "ext", "lang"] as const;
+export const OUTPUT_PLACEHOLDERS = ["dir", "name", "stem", "ext", "lang", "LANG", "language"] as const;
 
 export interface OutputConfig {
   /** Path of the translated file, relative to the project root. {dir}, {name} and {ext} come from the source file. */
@@ -21,6 +22,8 @@ export interface OutputConfig {
   /** Escape every non-ASCII character, for games that read UTF-8 badly. */
   readonly asciiOnly: boolean;
   readonly untranslated: UntranslatedMode;
+  /** Encoding of the translated files: a game may expect a legacy code page such as windows-1252. */
+  readonly encoding: TextEncoding;
 }
 
 /** Next to the source file: locales/en/ui.json → locales/en/ui.fr.json. Never overwrites the source. */
@@ -28,6 +31,7 @@ export const DEFAULT_OUTPUT: OutputConfig = {
   path: "{dir}/{name}.{lang}{ext}",
   asciiOnly: false,
   untranslated: "keep-source",
+  encoding: "utf-8",
 };
 
 /**
@@ -48,6 +52,8 @@ export interface SourceConfig {
   /** Hint for the translator about how these texts are used. */
   readonly context?: string;
   readonly group: GroupRule;
+  /** Encoding of the source files. auto: byte order mark, then valid UTF-8, then windows-1252. */
+  readonly encoding: InputEncoding;
   /** Where and how to write the translated files. */
   readonly output: OutputConfig;
 }
@@ -186,6 +192,7 @@ function parseSource(value: unknown, path: string, report: Report): SourceConfig
       include: [],
       priority: DEFAULT_PRIORITY,
       group: "auto",
+      encoding: "auto",
       output: DEFAULT_OUTPUT,
     };
   }
@@ -195,8 +202,9 @@ function parseSource(value: unknown, path: string, report: Report): SourceConfig
   const priority = parseInteger(value.priority, `${path}.priority`, report, DEFAULT_PRIORITY);
   const context = value.context === undefined ? undefined : parseString(value.context, `${path}.context`, report);
   const group = parseGroupRule(value.group, `${path}.group`, report);
+  const encoding = parseChoice(INPUT_ENCODINGS, value.encoding, `${path}.encoding`, report, "auto");
   const output = parseOutput(value.output, `${path}.output`, report);
-  return { format, include, priority, ...(context !== undefined ? { context } : {}), group, output };
+  return { format, include, priority, ...(context !== undefined ? { context } : {}), group, encoding, output };
 }
 
 function parseGroupRule(value: unknown, path: string, report: Report): GroupRule {
@@ -239,7 +247,8 @@ function parseOutput(value: unknown, path: string, report: Report): OutputConfig
     report,
     DEFAULT_OUTPUT.untranslated,
   );
-  return { path: template, asciiOnly, untranslated };
+  const encoding = parseChoice(TEXT_ENCODINGS, value.encoding, `${path}.encoding`, report, DEFAULT_OUTPUT.encoding);
+  return { path: template, asciiOnly, untranslated, encoding };
 }
 
 /** Reports the first problem of an output path template: an absolute path, or an unknown placeholder. */

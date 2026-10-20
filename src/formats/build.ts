@@ -5,7 +5,8 @@ import type { TradforgeConfig } from "../core/config.js";
 import type { TranslationMemory } from "../core/memory.js";
 import type { WriterOutput } from "../core/writer.js";
 import { writeFileAtomic } from "../storage/atomic.js";
-import { readFileIfExists } from "../storage/read.js";
+import { decodeText, EncodingError, encodeText } from "../storage/encoding.js";
+import { readBytesIfExists } from "../storage/read.js";
 import { listProjectFiles, OutputError } from "./project.js";
 import { WRITERS } from "./writers.js";
 
@@ -32,7 +33,9 @@ interface PlannedFile {
   readonly file: string;
   readonly output: string;
   readonly result: WriterOutput;
-  readonly existing: string | undefined;
+  /** The translated file, encoded as configured. */
+  readonly bytes: Uint8Array;
+  readonly existing: Uint8Array | undefined;
 }
 
 /**
@@ -48,22 +51,38 @@ export async function buildProject(
   const translate = (source: string) => memory.get(source)?.target;
 
   const plans: PlannedFile[] = [];
+  const unencodable: string[] = [];
   for (const { source, file, output } of await listProjectFiles(root, config)) {
-    const content = await readFile(path.join(root, file), "utf8");
-    const result = WRITERS[source.format].write({ file, content, translate, options: source.output });
-    plans.push({ file, output, result, existing: await readFileIfExists(path.join(root, output)) });
+    const content = decodeText(await readFile(path.join(root, file)), source.encoding);
+    const languages = { source: config.sourceLanguage, target: config.targetLanguage };
+    const result = WRITERS[source.format].write({ file, content, translate, options: source.output, languages });
+    let bytes: Uint8Array;
+    try {
+      bytes = encodeText(result.content, source.output.encoding);
+    } catch (error) {
+      if (!(error instanceof EncodingError)) throw error;
+      unencodable.push(`  - ${output}: ${error.message}`);
+      continue;
+    }
+    plans.push({ file, output, result, bytes, existing: await readBytesIfExists(path.join(root, output)) });
+  }
+  if (unencodable.length > 0) {
+    throw new OutputError(
+      `some translations cannot be written in the chosen encoding, nothing was written:\n${unencodable.join("\n")}\n` +
+        'Choose another "output.encoding" (such as "utf-8"), or correct these translations.',
+    );
   }
   plans.sort((a, b) => compareCodeUnits(a.output, b.output));
 
   if (options.force !== true) checkSizes(plans);
 
   const report: BuiltFile[] = [];
-  for (const { file, output, result, existing } of plans) {
-    const written = existing !== result.content; // an identical file is left untouched
+  for (const { file, output, result, bytes, existing } of plans) {
+    const written = existing === undefined || !Buffer.from(existing).equals(bytes); // identical files stay untouched
     if (written) {
       const target = path.join(root, output);
       await mkdir(path.dirname(target), { recursive: true });
-      await writeFileAtomic(target, result.content);
+      await writeFileAtomic(target, bytes);
     }
     report.push({ source: file, output, translated: result.translated, untranslated: result.untranslated, written });
   }
@@ -72,10 +91,10 @@ export async function buildProject(
 
 /** The guard born from a real accident: a 98,000-entry file replaced by a 20-entry one. */
 function checkSizes(plans: readonly PlannedFile[]): void {
-  const shrunk = plans.flatMap(({ output, result, existing }) => {
+  const shrunk = plans.flatMap(({ output, bytes, existing }) => {
     if (existing === undefined) return [];
-    const before = Buffer.byteLength(existing);
-    const after = Buffer.byteLength(result.content);
+    const before = existing.length;
+    const after = bytes.length;
     return before >= MIN_GUARDED_BYTES && after < before * MIN_SIZE_RATIO
       ? [`  - ${output}: ${before} → ${after} bytes`]
       : [];

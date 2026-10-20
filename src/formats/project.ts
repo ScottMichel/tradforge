@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { SourceConfig, TradforgeConfig } from "../core/config.js";
+import { languageName } from "../core/languages.js";
 import { findFiles } from "./files.js";
 
 /** An output path is wrong: it would overwrite a source, leave the project, or be shared by two files. */
@@ -17,20 +18,44 @@ export interface ProjectFile {
   readonly output: string;
 }
 
-const PLACEHOLDER = /\{(dir|name|ext|lang)\}/g;
+const PLACEHOLDER = /\{(dir|name|stem|ext|lang|LANG|language)\}/g;
 
-/** Fills an output template: "{dir}/{name}.{lang}{ext}" + "locales/en/ui.json" + "fr" → "locales/en/ui.fr.json". */
-export function outputPath(template: string, file: string, language: string): string {
+export interface OutputLanguages {
+  readonly source: string;
+  readonly target: string;
+}
+
+/**
+ * Fills an output template from the source file and the languages:
+ * {dir} {name} {ext} of the file, {lang} the target language, {LANG} the same in capitals (pt-BR → PT_BR),
+ * {stem} the name without its source language suffix (UI_EN → UI, menu.en → menu).
+ */
+export function outputPath(template: string, file: string, languages: OutputLanguages): string {
   const ext = path.posix.extname(file);
+  const name = path.posix.basename(file, ext);
   const values = new Map([
     ["dir", path.posix.dirname(file)],
-    ["name", path.posix.basename(file, ext)],
+    ["name", name],
+    ["stem", stemOf(name, languages.source)],
     ["ext", ext],
-    ["lang", language],
+    ["lang", languages.target],
+    ["LANG", languages.target.toUpperCase().replaceAll("-", "_")],
+    ["language", languageName(languages.target).toLowerCase().replaceAll(" ", "_")],
   ]);
   // One pass: a value that contains "{lang}" (from a file name) is not filled in again.
   const filled = template.replace(PLACEHOLDER, (_match, key: string) => values.get(key) ?? "");
   return path.posix.normalize(filled);
+}
+
+/**
+ * The name without a trailing marker of the source language, whatever its case: "_EN", ".en", "-en",
+ * and the "_l_english" of Paradox games.
+ */
+function stemOf(name: string, sourceLanguage: string): string {
+  const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const code = escapeRegExp(sourceLanguage);
+  const englishName = escapeRegExp(languageName(sourceLanguage).toLowerCase());
+  return name.replace(new RegExp(`(?:[._-]${code}|_l_${englishName})$`, "i"), "");
 }
 
 /**
@@ -41,7 +66,10 @@ export async function listProjectFiles(root: string, config: TradforgeConfig): P
   const found: ProjectFile[] = [];
   for (const source of config.sources) {
     for (const file of await findFiles(root, source.include, { exclude: [config.workDir] })) {
-      const output = outputPath(source.output.path, file, config.targetLanguage);
+      const output = outputPath(source.output.path, file, {
+        source: config.sourceLanguage,
+        target: config.targetLanguage,
+      });
       if (output === file) {
         throw new OutputError(`${file}: the output path "${source.output.path}" would overwrite its source file`);
       }

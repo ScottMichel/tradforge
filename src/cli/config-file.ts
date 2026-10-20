@@ -135,7 +135,10 @@ export function renderConfig(draft: ConfigDraft): string {
   // Files to translate. Formats: "json", "lua". Check the output paths before running "tradforge build".
   // Lower "priority" = translated first (default 0). "context" helps the model choose the right meaning.
   // "group": "auto" (default), "none", "file", or { "keyPattern": "^Dialog_(\\\\w+)_" } to keep conversations together.
-  // Output path placeholders: {dir}, {name}, {ext} of the source file, {lang} = targetLanguage.
+  // Output path placeholders: {dir}, {name}, {ext} of the source file, {stem} = name without its "_en" suffix,
+  // {lang} = targetLanguage, {LANG} = the same in capitals, {language} = its English name ("french").
+  // "encoding" of the source files: "auto" (default), "utf-8", "windows-1252"...
+  // "output.encoding": "utf-8" (default), "utf-8-bom", "utf-16le", "windows-1252"... for games that expect one.
   // "asciiOnly": escape accents, for games that display UTF-8 badly.
   // "untranslated": "keep-source" or "omit" (JSON keys only).
   "sources": ${indent(JSON.stringify(sources, null, 2), "  ")},

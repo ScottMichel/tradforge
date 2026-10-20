@@ -23,6 +23,8 @@ export {
 } from "./core/config.js";
 export type { ChangedSource, DiffOptions, SourceDiff } from "./core/diff.js";
 export { diffSources, similarity } from "./core/diff.js";
+export type { InputEncoding, TextEncoding } from "./core/encodings.js";
+export { INPUT_ENCODINGS, TEXT_ENCODINGS } from "./core/encodings.js";
 export { groupRule } from "./core/groups.js";
 export { languageName } from "./core/languages.js";
 export type { ImportOutcome, MemoryLanguages, MemoryOptions, MemoryStats, RecordOutcome } from "./core/memory.js";
@@ -53,7 +55,7 @@ export type {
 } from "./core/types.js";
 export { fixTypography } from "./core/typography.js";
 export type { PlaceholderSyntax } from "./core/validation/placeholders.js";
-export { PLACEHOLDER_SYNTAXES } from "./core/validation/placeholders.js";
+export { PLACEHOLDER_SYNTAXES, placeholderPattern } from "./core/validation/placeholders.js";
 export type {
   IssueCode,
   TranslationPair,
@@ -71,7 +73,7 @@ export { jsonReader } from "./formats/json/reader.js";
 export { jsonWriter } from "./formats/json/writer.js";
 export { luaReader } from "./formats/lua/reader.js";
 export { luaWriter } from "./formats/lua/writer.js";
-export type { ProjectFile } from "./formats/project.js";
+export type { OutputLanguages, ProjectFile } from "./formats/project.js";
 export { listProjectFiles, OutputError, outputPath } from "./formats/project.js";
 export { READERS } from "./formats/readers.js";
 export { WRITERS } from "./formats/writers.js";
@@ -81,6 +83,7 @@ export { createMockProvider } from "./providers/mock/provider.js";
 export type { OllamaOptions } from "./providers/ollama/provider.js";
 export { createOllamaProvider } from "./providers/ollama/provider.js";
 export { CsvError } from "./storage/csv.js";
+export { decodeText, EncodingError, encodeText } from "./storage/encoding.js";
 export { loadMemory, MemoryFileError, saveMemory } from "./storage/memory-store.js";
 export type { ImportResult, ReviewStatus } from "./storage/review.js";
 export { exportReviewCsv, importReviewCsv } from "./storage/review.js";
