@@ -5,6 +5,33 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Conversations: texts are translated in the order of their files, and each batch is sent with its neighbouring
+  lines (and their translation when known) as context, so that the tone and the form of address stay consistent
+  (`translation.contextLines`, default 3).
+- Conversation groups kept in one batch: guessed from the structure (same JSON object, Lua lines with no blank line
+  between them) or set per source with `sources[].group` (`auto`, `none`, `file`, or a `keyPattern`).
+- French typography fixed automatically: non-breaking spaces before `; : ! ?` and inside `« »`, Canadian French
+  rules included, placeholders, tags, URLs and times left alone (`translation.typography`).
+- Glossary check: a translation that ignores the glossary is rejected (`validation.glossary`).
+- Reuse of slightly changed texts: when only the punctuation changed, the old translation is adapted without the
+  model; otherwise it is shown to the model as a hint (`translation.reuse`).
+- Placeholder protection for engines that cannot be told to keep placeholders: they are replaced with numbered tags
+  before the request and put back after.
+- `init` finds the text files of the folder (JSON files with a language marker in their path, Lua files), fills the
+  configuration with them and explains what it left out; new `--from` and `--to` options.
+- A hygiene test rejects invisible characters (unusual spaces, byte order marks, control characters) in the code.
+
+### Changed
+
+- Texts are no longer sorted alphabetically before translation, but kept in the order of their files.
+- The `translate` summary tells how many translations were reused.
+
+### Fixed
+
+- The JSON writer used an invisible character in a regular expression; it now uses a readable escape.
+
 ## [0.1.0] - not published yet
 
 First version.

@@ -31,7 +31,13 @@ traduction d'un gros mod de jeu (voir [l'étude de cas](#étude-de-cas)) et tran
   rien de laissé en anglais, aucune longueur absurde. Une traduction refusée est retentée par groupes plus petits,
   puis notée en échec avec sa raison.
 - **Mémoire de traduction** : chaque texte unique n'est traduit qu'une fois, même s'il apparaît 300 fois. Relancez
-  après une mise à jour : seuls les nouveaux textes sont envoyés au modèle.
+  après une mise à jour : seuls les nouveaux textes sont envoyés au modèle, et un texte dont seule la ponctuation a
+  changé réutilise son ancienne traduction.
+- **Conversations cohérentes** : les textes sont traduits dans l'ordre de leurs fichiers, une conversation reste dans
+  un même lot, et chaque lot est accompagné de ses lignes voisines — et de leur traduction — comme contexte. Le ton et
+  le tutoiement ou le vouvoiement restent les mêmes d'une ligne à l'autre.
+- **Typographie et glossaire** : la typographie française est corrigée automatiquement (espaces insécables avant
+  `; : ! ?`), et une traduction qui ignore le glossaire est refusée.
 - **Aucun travail perdu** : la mémoire est enregistrée de façon atomique après chaque lot. Un Ctrl+C, un plantage ou une
   coupure de courant ne la corrompent jamais ; le lancement suivant reprend là où il s'était arrêté.
 - **Relecture humaine protégée** : une traduction corrigée par une personne n'est jamais écrasée par le modèle.
@@ -63,7 +69,7 @@ traduction d'un gros mod de jeu (voir [l'étude de cas](#étude-de-cas)) et tran
 3. **Dans le dossier de votre projet :**
 
    ```sh
-   tradforge init        # crée tradforge.config.json, chaque réglage expliqué
+   tradforge init        # trouve vos fichiers de textes, écrit tradforge.config.json avec chaque réglage expliqué
    tradforge status      # combien de textes, combien déjà traduits
    tradforge translate   # traduit ce qui manque (Ctrl+C pour arrêter, relancez pour reprendre)
    tradforge build       # écrit les fichiers traduits
@@ -76,7 +82,7 @@ dialogues en Lua : `cd examples/game`, puis `tradforge translate --dry-run`.
 
 | Commande | Rôle |
 | --- | --- |
-| `init [--force]` | Crée un `tradforge.config.json` commenté |
+| `init [--from <langue>] [--to <langue>] [--force]` | Trouve les fichiers de textes du dossier et crée un `tradforge.config.json` commenté |
 | `status` | Textes du projet : traduits, relus, en échec, à traduire, obsolètes |
 | `extract [--json]` | Trouve les textes à traduire, sans les traduire |
 | `diff` | Textes nouveaux, retirés et *légèrement modifiés* depuis la dernière traduction |
@@ -104,6 +110,7 @@ langues et les sources sont obligatoires.
       "include": ["locales/en/*.json"],
       "priority": 0,
       "context": "User interface",
+      "group": "auto",
       "output": { "path": "locales/{lang}/{name}{ext}", "asciiOnly": false, "untranslated": "keep-source" }
     }
   ],
@@ -111,9 +118,12 @@ langues et les sources sont obligatoires.
   "translation": {
     "batchSize": 20,
     "instructions": "Video game texts. Keep a natural, casual tone.",
-    "glossary": { "NPC": "PNJ" }
+    "glossary": { "NPC": "PNJ" },
+    "contextLines": 3,
+    "typography": true,
+    "reuse": true
   },
-  "validation": { "placeholders": ["braces", "printf", "markup"] }
+  "validation": { "placeholders": ["braces", "printf", "markup"], "glossary": true }
 }
 ```
 
@@ -124,14 +134,19 @@ langues et les sources sont obligatoires.
 | `sources[].include` | Motifs de fichiers, relatifs au fichier de configuration | obligatoire |
 | `sources[].priority` | Plus petit = traduit en premier (peut être négatif) | `0` |
 | `sources[].context` | Indique au modèle comment les textes sont utilisés | aucun |
+| `sources[].group` | Quels textes vont ensemble et restent dans un même lot : `auto` (même objet JSON ; lignes Lua sans ligne vide entre elles), `none`, `file`, ou `{ "keyPattern": "^Dialog_(\\w+)_" }` (clés ayant le même premier groupe capturé) | `auto` |
 | `sources[].output.path` | Où écrire les traductions. `{dir}`, `{name}`, `{ext}` viennent du fichier source, `{lang}` est la langue cible | `{dir}/{name}.{lang}{ext}` |
-| `sources[].output.asciiOnly` | Échappe les accents (`é` → `é` en JSON, `\195\169` en Lua) pour les programmes qui lisent mal l'UTF-8 | `false` |
+| `sources[].output.asciiOnly` | Échappe les accents (`é` → `\u00e9` en JSON, `\195\169` en Lua) pour les programmes qui lisent mal l'UTF-8 | `false` |
 | `sources[].output.untranslated` | `keep-source` ou `omit` (clés JSON uniquement) | `keep-source` |
 | `provider` | Serveur Ollama et modèle | `mistral-small` sur `localhost:11434` |
 | `translation.batchSize` | Textes envoyés au modèle par requête | `20` |
 | `translation.instructions` | Ton, public, conventions, envoyés avec chaque lot | aucune |
 | `translation.glossary` | Termes toujours traduits de la même façon (seuls ceux présents dans un lot sont envoyés) | `{}` |
+| `translation.contextLines` | Lignes envoyées avant et après chaque lot, avec leur traduction si elle est connue, comme contexte seulement (`0` : aucune) | `3` |
+| `translation.typography` | Corrige la typographie de la langue cible (français : espaces insécables avant `; : ! ?` et dans `« »`) | `true` |
+| `translation.reuse` | Réutilise la traduction d'un texte légèrement modifié : copiée si seule la ponctuation a changé, montrée au modèle sinon | `true` |
 | `validation.placeholders` | Syntaxes de variables à protéger : `braces` `{name}`, `printf` `%s`, `markup` `<b>` | les trois |
+| `validation.glossary` | Refuse une traduction qui n'utilise pas la traduction du glossaire pour un terme présent dans la source | `true` |
 
 > **VS Code :** pour que l'éditeur ne signale plus les commentaires comme des erreurs, ajoutez
 > `"files.associations": { "tradforge.config.json": "jsonc" }` à vos paramètres.
@@ -150,10 +165,11 @@ D'autres formats arrivent : sous-titres (`.srt`, `.vtt`), Project Zomboid, Ren'P
 
 ```text
 fichiers du projet ──► trouver (motifs include ; jamais le dossier de travail ni les traductions déjà produites)
-                   ──► lire (un lecteur par format) ──► regrouper les textes identiques
-                   ──► retirer ce que la mémoire connaît ──► lots, par priorité
-                   ──► modèle (consignes + glossaire + contexte, réponse JSON imposée)
-                   ──► valider ──► refusée ? nouvel essai : un quart du lot, puis le texte seul, puis échec noté
+                   ──► lire (un lecteur par format) ──► fusionner les textes identiques, garder l'ordre et les conversations
+                   ──► retirer ce que la mémoire connaît ; réutiliser la traduction des textes dont seule la ponctuation a changé
+                   ──► lots, par priorité, sans couper les conversations
+                   ──► modèle (consignes + glossaire + lignes voisines + anciennes versions, réponse JSON imposée)
+                   ──► typographie ──► valider ──► refusée ? nouvel essai : un quart du lot, puis seul, puis échec noté
                    ──► mémoire (enregistrement atomique après chaque lot)
                    ──► construire (un écrivain par format ; tout est préparé et vérifié avant la moindre écriture)
 ```
@@ -192,23 +208,20 @@ des textes écrits pour tradforge.
 ## Limites
 
 - Deux formats pour l'instant (JSON, Lua) et un seul moteur (Ollama).
-- Les textes sont traduits par lots, sans la conversation qui les entoure : le ton peut varier d'une ligne à l'autre.
-- Le glossaire est transmis au modèle mais pas encore vérifié.
-- `diff` montre les textes légèrement modifiés mais ne réutilise pas encore automatiquement leur ancienne traduction.
+- Les règles de typographie n'existent pour l'instant que pour le français (France et Canada).
+- La vérification du glossaire cherche seulement le terme attendu dans la traduction : elle ne comprend pas la
+  grammaire.
 - Dans les fichiers JSON produits, les clés numériques (`"1"`, `"42"`) apparaissent en premier : une règle de
   JavaScript, le contenu est inchangé.
 
 ## Feuille de route
 
-1. **Traduction plus intelligente** : lots dans l'ordre du fichier avec les lignes voisines comme contexte, groupes de
-   conversation, protection des variables, typographie française, vérification du glossaire, réutilisation automatique
-   des textes légèrement modifiés, détection des formats.
-2. **Formats de jeux et sous-titres** : Project Zomboid, Ren'Py, RimWorld, Paradox, `.srt`, `.vtt`.
-3. **Moteurs et vitesse** : API compatibles OpenAI, Claude, Gemini, DeepL, lots en parallèle, estimation des coûts.
-4. **Qualité** : `tradforge compare` (plusieurs modèles côte à côte), retraduction inverse des lignes suspectes.
-5. **Formats d'applications** : XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
-6. **Application de bureau** : ouvrir un fichier ou un dossier, traduire, relire — sans ligne de commande.
-7. **Documents bureautiques** : `.docx`, `.odt`, `.pptx`, `.xlsx`.
+1. **Formats de jeux et sous-titres** : Project Zomboid, Ren'Py, RimWorld, Paradox, `.srt`, `.vtt`.
+2. **Moteurs et vitesse** : API compatibles OpenAI, Claude, Gemini, DeepL, lots en parallèle, estimation des coûts.
+3. **Qualité** : `tradforge compare` (plusieurs modèles côte à côte), retraduction inverse des lignes suspectes.
+4. **Formats d'applications** : XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
+5. **Application de bureau** : ouvrir un fichier ou un dossier, traduire, relire — sans ligne de commande.
+6. **Documents bureautiques** : `.docx`, `.odt`, `.pptx`, `.xlsx`.
 
 ## Contribuer
 
