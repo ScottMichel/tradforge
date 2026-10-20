@@ -59,5 +59,11 @@ function detectIndent(content: string): string {
 
 /** \u escapes for every character above ASCII; characters outside the BMP become two escaped surrogates. */
 function escapeNonAscii(json: string): string {
-  return json.replace(/[\u0080-￿]/g, (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`);
+  // With the u flag a character outside the BMP comes as one match of two UTF-16 units: escape each unit.
+  return json.replace(/[\u{80}-\u{10ffff}]/gu, (char) =>
+    char
+      .split("")
+      .map((unit) => `\\u${unit.charCodeAt(0).toString(16).padStart(4, "0")}`)
+      .join(""),
+  );
 }
