@@ -94,29 +94,51 @@ function endOfString(text: string, start: number): number {
   return text.length; // unterminated: JSON.parse will report it
 }
 
+export interface ConfigDraft {
+  readonly sourceLanguage: string;
+  readonly targetLanguage: string;
+  /** Sources found by detection. Without them, a commented example source is written. */
+  readonly sources?: readonly {
+    readonly format: string;
+    readonly include: readonly string[];
+    readonly output: string;
+  }[];
+}
+
 /** Written by "tradforge init": a working starting point that explains every setting. */
-export const CONFIG_TEMPLATE = `{
+export function renderConfig(draft: ConfigDraft): string {
+  const sources =
+    draft.sources === undefined || draft.sources.length === 0
+      ? [
+          {
+            format: "json",
+            include: [`locales/${draft.sourceLanguage}/*.json`],
+            priority: 0,
+            context: "User interface",
+            output: { path: "locales/{lang}/{name}{ext}", asciiOnly: false, untranslated: "keep-source" },
+          },
+        ]
+      : draft.sources.map((source) => ({
+          format: source.format,
+          include: source.include,
+          output: { path: source.output },
+        }));
+
+  return `{
   // Language of the texts in your project, and language to translate them into.
-  "sourceLanguage": "en",
-  "targetLanguage": "fr",
+  "sourceLanguage": ${JSON.stringify(draft.sourceLanguage)},
+  "targetLanguage": ${JSON.stringify(draft.targetLanguage)},
 
   // Folder where tradforge keeps its translation memory. Worth committing: it holds all the work.
   "workDir": ".tradforge",
 
-  // Files to translate. Formats: "json", "lua".
-  // Lower "priority" = translated first. "context" helps the model choose the right meaning.
+  // Files to translate. Formats: "json", "lua". Check the output paths before running "tradforge build".
+  // Lower "priority" = translated first (default 0). "context" helps the model choose the right meaning.
+  // "group": "auto" (default), "none", "file", or { "keyPattern": "^Dialog_(\\\\w+)_" } to keep conversations together.
   // Output path placeholders: {dir}, {name}, {ext} of the source file, {lang} = targetLanguage.
   // "asciiOnly": escape accents, for games that display UTF-8 badly.
   // "untranslated": "keep-source" or "omit" (JSON keys only).
-  "sources": [
-    {
-      "format": "json",
-      "include": ["locales/en/*.json"],
-      "priority": 0,
-      "context": "User interface",
-      "output": { "path": "locales/{lang}/{name}{ext}", "asciiOnly": false, "untranslated": "keep-source" }
-    }
-  ],
+  "sources": ${indent(JSON.stringify(sources, null, 2), "  ")},
 
   // Local model served by Ollama (https://ollama.com). Install it with: ollama pull mistral-small
   "provider": { "type": "ollama", "model": "mistral-small", "host": "http://localhost:11434" },
@@ -127,10 +149,26 @@ export const CONFIG_TEMPLATE = `{
     // Sent to the model with every batch: tone, audience, conventions...
     "instructions": "Video game texts. Keep a natural, casual tone.",
     // Terms that must always be translated the same way.
-    "glossary": { "NPC": "PNJ" }
+    "glossary": { "NPC": "PNJ" },
+    // Lines sent before and after each batch, for context only (0 = none).
+    "contextLines": 3,
+    // Typography of the target language (French: non-breaking space before ; : ! ?).
+    "typography": true,
+    // Reuse the translation of a text that only changed slightly.
+    "reuse": true
   },
 
   // Placeholder syntaxes that translations must keep: "braces" {name}, "printf" %s, "markup" <b>.
-  "validation": { "placeholders": ["braces", "printf", "markup"] }
+  // "glossary": reject a translation that does not follow the glossary.
+  "validation": { "placeholders": ["braces", "printf", "markup"], "glossary": true }
 }
 `;
+}
+
+/** The commented example configuration, for a project whose files were not detected. */
+export const CONFIG_TEMPLATE = renderConfig({ sourceLanguage: "en", targetLanguage: "fr" });
+
+/** Indents every line but the first: the value is placed after a key on the first line. */
+function indent(text: string, prefix: string): string {
+  return text.replaceAll("\n", `\n${prefix}`);
+}

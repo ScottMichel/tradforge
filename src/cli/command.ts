@@ -12,6 +12,8 @@ export const OPTIONS = {
   "dry-run": { type: "boolean" },
   keep: { type: "boolean" },
   json: { type: "boolean" },
+  from: { type: "string" },
+  to: { type: "string" },
 } as const;
 
 export type OptionName = keyof typeof OPTIONS;
@@ -30,6 +32,8 @@ export const OPTION_HELP: Readonly<Record<OptionName, string>> = {
   "dry-run": "--dry-run            Show what would be translated, without calling the model",
   keep: "--keep               Do not replace translations that already exist",
   json: "--json               Print the texts as JSON",
+  from: "--from <lang>        Language of the texts (default: en)",
+  to: "--to <lang>          Language to translate into (default: fr)",
 };
 
 export interface CliOptions {
@@ -43,6 +47,8 @@ export interface CliOptions {
   readonly "dry-run"?: boolean | undefined;
   readonly keep?: boolean | undefined;
   readonly json?: boolean | undefined;
+  readonly from?: string | undefined;
+  readonly to?: string | undefined;
 }
 
 export interface CommandContext {
