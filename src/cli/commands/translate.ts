@@ -71,7 +71,9 @@ export const translateCommand: Command = {
       return EXIT.interrupted;
     }
     io.out(
-      `Done: ${formatCount(summary.translated)} translated, ${formatCount(summary.failed)} failed. ` +
+      `Done: ${formatCount(summary.translated)} translated` +
+        (summary.reused > 0 ? ` (${formatCount(summary.reused)} reused from slightly changed texts)` : "") +
+        `, ${formatCount(summary.failed)} failed. ` +
         `Memory saved in ${displayPath(io.cwd, memoryFilePath(workDir))}.`,
     );
     if (summary.failed > 0) io.out(FAILURE_HINT);

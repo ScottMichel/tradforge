@@ -83,7 +83,7 @@ function chatRequest(model: string, request: TranslationRequest) {
     options: MODEL_OPTIONS,
     messages: [
       { role: "system", content: buildSystemPrompt(request) },
-      { role: "user", content: buildUserMessage(request.items) },
+      { role: "user", content: buildUserMessage(request) },
     ],
   };
 }

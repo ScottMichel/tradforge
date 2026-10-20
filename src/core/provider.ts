@@ -1,8 +1,22 @@
+/** An older version of a text and its translation: a hint to keep the same wording. */
+export interface PreviousTranslation {
+  readonly source: string;
+  readonly translation: string;
+}
+
 /** One text of a batch. The id links the answer back to the text. */
 export interface TranslationItem {
   readonly id: number;
   readonly source: string;
   readonly context?: string;
+  readonly previous?: PreviousTranslation;
+}
+
+/** A line around the batch, sent for context only: never to translate, never returned. */
+export interface ContextLine {
+  readonly source: string;
+  /** Known when the line is already translated: it keeps the tone and the form of address consistent. */
+  readonly translation?: string;
 }
 
 export interface TranslationRequest {
@@ -12,6 +26,8 @@ export interface TranslationRequest {
   /** Project instructions (tone, audience...). */
   readonly instructions?: string;
   readonly glossary?: Readonly<Record<string, string>>;
+  /** Lines just before and just after the items, in the same file. */
+  readonly surrounding?: { readonly before: readonly ContextLine[]; readonly after: readonly ContextLine[] };
 }
 
 /**
@@ -21,6 +37,11 @@ export interface TranslationRequest {
 export interface Provider {
   /** Recorded in the memory with each translation. */
   readonly model: string;
+  /**
+   * True for engines that cannot be told to keep placeholders (such as DeepL): the pipeline then replaces them
+   * with <x id="n"/> tags before the request, and puts them back after.
+   */
+  readonly protectPlaceholders?: boolean;
   readonly translateBatch: (request: TranslationRequest, signal?: AbortSignal) => Promise<ReadonlyMap<number, string>>;
 }
 

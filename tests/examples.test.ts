@@ -10,8 +10,8 @@ describe("the example project", () => {
     expect(sources).toHaveLength(13);
     expect(sources.slice(0, 3)).toEqual([
       "*yawns* Another one. Welcome to the camp.",
-      "Don't go back to town before nightfall.",
       "You look tired, %s.\nGet some rest by the fire.",
+      "Don't go back to town before nightfall.",
     ]);
     expect(sources).not.toContain("idle");
     expect(sources).not.toContain("media/ui/portraits/guard.png");

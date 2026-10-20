@@ -32,7 +32,26 @@ describe("luaReader", () => {
       location: { file, line: 1 },
       priority: 3,
       context: "dialogue",
+      group: `${file}#1`,
     });
+  });
+
+  it("groups the texts written on consecutive lines, like the lines of a dialogue", () => {
+    const content = [
+      'say("Welcome to the camp")',
+      'say("Get some rest by the fire")',
+      'local state = "idle"',
+      'say("Rest well tonight")',
+      "",
+      "",
+      'say("Back to town before nightfall")',
+    ].join("\n");
+    expect(read(content).map((o) => [o.location.line, o.group])).toEqual([
+      [1, `${file}#1`],
+      [2, `${file}#1`],
+      [4, `${file}#1`],
+      [7, `${file}#7`],
+    ]);
   });
 
   it("omits the context when none is given", () => {

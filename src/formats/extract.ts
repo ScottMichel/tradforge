@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { TradforgeConfig } from "../core/config.js";
+import { groupRule } from "../core/groups.js";
 import { groupOccurrences } from "../core/segments.js";
 import type { Occurrence, Segment } from "../core/types.js";
 import { listProjectFiles } from "./project.js";
@@ -14,6 +15,7 @@ export async function extractSegments(root: string, config: TradforgeConfig): Pr
 /** Every text found in the project, source by source, file by file (in sorted order). */
 export async function extractOccurrences(root: string, config: TradforgeConfig): Promise<Occurrence[]> {
   const occurrences: Occurrence[] = [];
+  const rules = new Map(config.sources.map((source) => [source, groupRule(source.group)]));
   // The project files never include the work directory nor the translations written by a build.
   for (const { source, file } of await listProjectFiles(root, config)) {
     const content = await readFile(path.join(root, file), "utf8");
@@ -23,8 +25,9 @@ export async function extractOccurrences(root: string, config: TradforgeConfig):
       priority: source.priority,
       ...(source.context !== undefined ? { context: source.context } : {}),
     });
+    const regroup = rules.get(source) ?? ((occurrence: Occurrence) => occurrence);
     // A loop, not push(...found): spreading passes one argument per item, and huge files overflow the stack.
-    for (const occurrence of found) occurrences.push(occurrence);
+    for (const occurrence of found) occurrences.push(regroup(occurrence));
   }
   return occurrences;
 }

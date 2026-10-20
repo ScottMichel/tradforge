@@ -45,11 +45,41 @@ describe("buildSystemPrompt", () => {
 
 describe("buildUserMessage", () => {
   it("sends the texts as JSON, with their id and context", () => {
-    expect(JSON.parse(buildUserMessage(request().items))).toEqual({
+    expect(JSON.parse(buildUserMessage(request()))).toEqual({
       texts: [
         { id: 0, text: "Talk to the NPC", context: "quest log" },
         { id: 1, text: "Hello {name}" },
       ],
     });
+  });
+
+  it("adds the surrounding lines and the previous versions, when there are some", () => {
+    const message = buildUserMessage(
+      request({
+        items: [{ id: 0, source: "Quit the game?", previous: { source: "Quit game?", translation: "Quitter ?" } }],
+        surrounding: { before: [{ source: "Leaving?", translation: "Tu pars ?" }], after: [{ source: "Bye." }] },
+      }),
+    );
+    expect(JSON.parse(message)).toEqual({
+      before: [{ text: "Leaving?", translation: "Tu pars ?" }],
+      texts: [{ id: 0, text: "Quit the game?", previous: { text: "Quit game?", translation: "Quitter ?" } }],
+      after: [{ text: "Bye." }],
+    });
+  });
+});
+
+describe("buildSystemPrompt with context", () => {
+  it("explains the surrounding lines and the previous versions only when they are sent", () => {
+    const plain = buildSystemPrompt(request());
+    expect(plain).not.toContain('"before"');
+    expect(plain).not.toContain('"previous"');
+    const rich = buildSystemPrompt(
+      request({
+        items: [{ id: 0, source: "Hi", previous: { source: "Hi!", translation: "Salut !" } }],
+        surrounding: { before: [{ source: "Hey" }], after: [] },
+      }),
+    );
+    expect(rich).toMatch(/"before" and "after".*never translate/);
+    expect(rich).toMatch(/"previous".*same wording/);
   });
 });

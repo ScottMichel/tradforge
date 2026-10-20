@@ -16,6 +16,11 @@ export interface Occurrence {
   readonly context?: string;
   /** Lower value = translated first. */
   readonly priority: number;
+  /**
+   * Texts that belong together (a conversation, a menu), e.g. "dialogues.json#bob".
+   * The pipeline keeps a group in one batch whenever it can.
+   */
+  readonly group?: string;
 }
 
 /** A unique text to translate, with every location where it appears. */
@@ -24,6 +29,8 @@ export interface Segment {
   readonly context?: string;
   readonly priority: number;
   readonly locations: readonly SourceLocation[];
+  /** Group of the first occurrence. */
+  readonly group?: string;
 }
 
 /**

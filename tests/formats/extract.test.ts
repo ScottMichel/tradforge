@@ -56,4 +56,19 @@ describe("extractSegments", () => {
       { file: "lua/dialogue.lua", line: 1 },
     ]);
   });
+
+  it("applies the grouping rule of each source", async () => {
+    await createFile("dialogs/en.json", JSON.stringify({ Dialog_Bob_1: "Hi", Dialog_Bob_2: "Bye", Title: "Camp" }));
+    const config = parseConfig({
+      sourceLanguage: "en",
+      targetLanguage: "fr",
+      sources: [{ format: "json", include: ["dialogs/*.json"], group: { keyPattern: "^Dialog_([A-Za-z]+)_" } }],
+    });
+    const groups = (await extractSegments(root, config)).map((segment) => [segment.source, segment.group]);
+    expect(groups).toEqual([
+      ["Hi", "dialogs/en.json#Bob"],
+      ["Bye", "dialogs/en.json#Bob"],
+      ["Camp", undefined],
+    ]);
+  });
 });

@@ -1,18 +1,10 @@
-import type { TranslationItem, TranslationRequest } from "../../core/provider.js";
+import { languageName } from "../../core/languages.js";
+import type { ContextLine, TranslationRequest } from "../../core/provider.js";
+
+export { languageName };
 
 /** The answer format, shown to the model. Must match RESPONSE_SCHEMA and parseTranslations. */
 export const RESPONSE_EXAMPLE = '{"translations":[{"id":0,"translation":"..."}]}';
-
-const displayNames = new Intl.DisplayNames(["en"], { type: "language" });
-
-/** "fr" → "French". Models follow a language name better than a code. */
-export function languageName(code: string): string {
-  try {
-    return displayNames.of(code) ?? code;
-  } catch {
-    return code; // not a valid language tag: keep it as written
-  }
-}
 
 /** The instructions sent once per batch. They repeat, in words, the rules the validation enforces. */
 export function buildSystemPrompt(request: TranslationRequest): string {
@@ -29,6 +21,16 @@ export function buildSystemPrompt(request: TranslationRequest): string {
     "- Keep a length comparable to the source. Do not add explanations, notes or quotes.",
     "- When a context is given, use it to choose the right meaning. Never translate the context itself.",
   ];
+  if (request.surrounding !== undefined) {
+    lines.push(
+      '- "before" and "after" are the lines around the texts, with their translation when known: use them for the meaning, the tone and the form of address, but never translate them and never return them.',
+    );
+  }
+  if (request.items.some((item) => item.previous !== undefined)) {
+    lines.push(
+      '- A text may come with "previous": an older version of it and its translation. Keep the same wording wherever the text did not change.',
+    );
+  }
 
   if (request.instructions !== undefined) {
     lines.push("", "Project instructions:", request.instructions);
@@ -48,14 +50,24 @@ export function buildSystemPrompt(request: TranslationRequest): string {
 }
 
 /** The texts to translate, as JSON: escapes keep line breaks and quotes unambiguous. */
-export function buildUserMessage(items: readonly TranslationItem[]): string {
+export function buildUserMessage(request: TranslationRequest): string {
+  const { surrounding } = request;
   return JSON.stringify({
-    texts: items.map((item) => ({
+    ...(surrounding !== undefined ? { before: surrounding.before.map(contextLine) } : {}),
+    texts: request.items.map((item) => ({
       id: item.id,
       text: item.source,
       ...(item.context !== undefined ? { context: item.context } : {}),
+      ...(item.previous !== undefined
+        ? { previous: { text: item.previous.source, translation: item.previous.translation } }
+        : {}),
     })),
+    ...(surrounding !== undefined ? { after: surrounding.after.map(contextLine) } : {}),
   });
+}
+
+function contextLine(line: ContextLine): { text: string; translation?: string } {
+  return { text: line.source, ...(line.translation !== undefined ? { translation: line.translation } : {}) };
 }
 
 /** Only the glossary terms that appear in this batch: a shorter prompt, and less to confuse the model. */

@@ -1,5 +1,6 @@
 export type {
   ConfigProblem,
+  GroupRule,
   OutputConfig,
   ProviderConfig,
   ProviderType,
@@ -13,6 +14,7 @@ export type {
 export {
   ConfigError,
   DEFAULT_OUTPUT,
+  GROUP_MODES,
   OUTPUT_PLACEHOLDERS,
   PROVIDER_TYPES,
   parseConfig,
@@ -21,15 +23,25 @@ export {
 } from "./core/config.js";
 export type { ChangedSource, DiffOptions, SourceDiff } from "./core/diff.js";
 export { diffSources, similarity } from "./core/diff.js";
+export { groupRule } from "./core/groups.js";
+export { languageName } from "./core/languages.js";
 export type { ImportOutcome, MemoryLanguages, MemoryOptions, MemoryStats, RecordOutcome } from "./core/memory.js";
-
 export { TranslationMemory } from "./core/memory.js";
 export type { PipelineConfig, PipelineOptions, PipelineSummary, ProgressEvent, Selection } from "./core/pipeline.js";
 export { selectSegments, translateSegments } from "./core/pipeline.js";
-export type { Provider, TranslationItem, TranslationRequest } from "./core/provider.js";
+export type { Protected } from "./core/protection.js";
+export { ProtectionError, protectPlaceholders, restorePlaceholders } from "./core/protection.js";
+export type {
+  ContextLine,
+  PreviousTranslation,
+  Provider,
+  TranslationItem,
+  TranslationRequest,
+} from "./core/provider.js";
 export { BatchError, ProviderUnavailableError } from "./core/provider.js";
 export type { Reader, ReaderInput } from "./core/reader.js";
 export { ReadError } from "./core/reader.js";
+export { reuseTranslation } from "./core/reuse.js";
 export { groupOccurrences } from "./core/segments.js";
 export type {
   FailedTranslation,
@@ -39,6 +51,7 @@ export type {
   TranslationEntry,
   TranslationStatus,
 } from "./core/types.js";
+export { fixTypography } from "./core/typography.js";
 export type { PlaceholderSyntax } from "./core/validation/placeholders.js";
 export { PLACEHOLDER_SYNTAXES } from "./core/validation/placeholders.js";
 export type {
@@ -51,6 +64,8 @@ export { DEFAULT_VALIDATION_OPTIONS, validateTranslation } from "./core/validati
 export type { Writer, WriterInput, WriterOutput } from "./core/writer.js";
 export type { BuildOptions, BuiltFile } from "./formats/build.js";
 export { buildProject } from "./formats/build.js";
+export type { DetectedSource, Detection, SkippedFile } from "./formats/detect.js";
+export { detectSources, FORMAT_EXTENSIONS, formatOf } from "./formats/detect.js";
 export { extractOccurrences, extractSegments } from "./formats/extract.js";
 export { jsonReader } from "./formats/json/reader.js";
 export { jsonWriter } from "./formats/json/writer.js";

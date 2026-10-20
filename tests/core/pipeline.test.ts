@@ -13,11 +13,12 @@ const config = parseConfig({
   translation: { batchSize: 2, instructions: "Casual tone.", glossary: { NPC: "PNJ" } },
 });
 
-const segment = (source: string, context?: string): Segment => ({
+const segment = (source: string, context?: string, group?: string, file = "ui.json"): Segment => ({
   source,
   priority: 0,
-  locations: [{ file: "ui.json" }],
+  locations: [{ file }],
   ...(context !== undefined ? { context } : {}),
+  ...(group !== undefined ? { group } : {}),
 });
 
 const sources = ["One", "Two", "Three", "Four", "Five"];
@@ -51,7 +52,14 @@ describe("translateSegments", () => {
     expect(batchSizes(provider)).toEqual([2, 2, 1]);
     expect(saves()).toBe(3);
     expect(memory.get("Three")).toMatchObject({ target: "[fr] Three", status: "machine", model: "mock" });
-    expect(summary).toStrictEqual({ total: 5, alreadyDone: 0, translated: 5, failed: 0, interrupted: false });
+    expect(summary).toStrictEqual({
+      total: 5,
+      alreadyDone: 0,
+      translated: 5,
+      reused: 0,
+      failed: 0,
+      interrupted: false,
+    });
   });
 
   it("sends the languages, instructions, glossary and contexts to the provider", async () => {
@@ -167,6 +175,121 @@ describe("translateSegments", () => {
       { done: 1, total: 2, translated: 1, failed: 0, elapsedMs: 1000, remainingMs: 2000 },
       { done: 2, total: 2, translated: 2, failed: 0, elapsedMs: 3000, remainingMs: 0 },
     ]);
+  });
+});
+
+describe("translateSegments: conversations", () => {
+  const sized = (batchSize: number, contextLines = 0) =>
+    parseConfig({ ...rawConfig(), translation: { batchSize, contextLines } });
+
+  it("keeps a conversation group in one batch whenever it fits", async () => {
+    const provider = createMockProvider();
+    const segments = [
+      segment("A", undefined, "g1"),
+      segment("B", undefined, "g2"),
+      segment("C", undefined, "g2"),
+      segment("D", undefined, "g2"),
+      segment("E"),
+    ];
+    await run({ provider, segments, config: sized(3) });
+    expect(batchSizes(provider)).toEqual([1, 3, 1]);
+  });
+
+  it("splits a group that is larger than a batch", async () => {
+    const provider = createMockProvider();
+    const segments = ["A", "B", "C", "D", "E"].map((source) => segment(source, undefined, "g"));
+    await run({ provider, segments, config: sized(2) });
+    expect(batchSizes(provider)).toEqual([2, 2, 1]);
+  });
+
+  it("sends the neighbouring lines of the same file, with their translation once known", async () => {
+    const provider = createMockProvider();
+    const segments = [
+      segment("a"),
+      segment("b"),
+      segment("c"),
+      segment("d"),
+      segment("x", undefined, undefined, "other.json"),
+    ];
+    await run({ provider, segments, config: sized(2, 1) });
+    expect(provider.requests.map((request) => request.surrounding)).toEqual([
+      { before: [], after: [{ source: "c" }] },
+      { before: [{ source: "b", translation: "[fr] b" }], after: [] },
+      undefined,
+    ]);
+  });
+
+  it("sends no surrounding lines when contextLines is 0", async () => {
+    const provider = createMockProvider();
+    await run({ provider, config: sized(2, 0) });
+    expect(provider.requests.every((request) => request.surrounding === undefined)).toBe(true);
+  });
+});
+
+describe("translateSegments: quality rules", () => {
+  it("fixes the typography of the target language, unless disabled", async () => {
+    const provider = createMockProvider({ translate: () => "Prêt?" });
+    const fixed = await run({ provider, segments: [segment("Ready?")] });
+    expect(fixed.memory.get("Ready?")?.target).toBe("Prêt\u{a0}?");
+
+    const raw = parseConfig({ ...rawConfig(), translation: { typography: false } });
+    const untouched = await run({ provider, segments: [segment("Ready?")], config: raw });
+    expect(untouched.memory.get("Ready?")?.target).toBe("Prêt?");
+  });
+
+  it("rejects a translation that ignores the glossary, unless the check is disabled", async () => {
+    const strict = await run({ segments: [segment("Talk to the NPC")] });
+    expect(strict.memory.getFailure("Talk to the NPC")?.reason).toContain("glossary");
+
+    const lenient = parseConfig({
+      ...rawConfig(),
+      translation: { glossary: { NPC: "PNJ" } },
+      validation: { glossary: false },
+    });
+    const accepted = await run({ segments: [segment("Talk to the NPC")], config: lenient });
+    expect(accepted.summary.translated).toBe(1);
+  });
+
+  it("masks placeholders for engines that ask for it, and puts them back", async () => {
+    const provider = createMockProvider({ protectPlaceholders: true });
+    const { memory } = await run({ provider, segments: [segment("Hello {name}")] });
+    expect(provider.requests[0]?.items[0]?.source).toBe('Hello <x id="0"/>');
+    expect(memory.get("Hello {name}")?.target).toBe("[fr] Hello {name}");
+
+    const careless = createMockProvider({ protectPlaceholders: true, translate: () => "Bonjour" });
+    const failed = await run({ provider: careless, segments: [segment("Hello {name}")] });
+    expect(failed.memory.getFailure("Hello {name}")?.reason).toContain("protected tags missing");
+  });
+});
+
+describe("translateSegments: reuse of changed texts", () => {
+  function memoryWithOldTexts(): TranslationMemory {
+    const memory = new TranslationMemory({ languages: config });
+    memory.recordMachine("Quit game", "Quitter le jeu", "m");
+    memory.recordMachine("Open the door", "Ouvrir la porte", "m");
+    return memory;
+  }
+  const segments = [segment("Quit game."), segment("Open the doors")];
+
+  it("copies the old translation when only the punctuation changed, and shows it to the model otherwise", async () => {
+    const provider = createMockProvider();
+    const { memory, summary } = await run({ provider, segments, memory: memoryWithOldTexts() });
+    expect(memory.get("Quit game.")).toMatchObject({ target: "Quitter le jeu.", model: "reuse" });
+    expect(provider.requests.flatMap((request) => request.items)).toEqual([
+      { id: 0, source: "Open the doors", previous: { source: "Open the door", translation: "Ouvrir la porte" } },
+    ]);
+    expect(summary).toMatchObject({ total: 2, translated: 2, reused: 1 });
+  });
+
+  it("can be disabled", async () => {
+    const provider = createMockProvider();
+    const noReuse = parseConfig({ ...rawConfig(), translation: { reuse: false } });
+    await run({ provider, segments, memory: memoryWithOldTexts(), config: noReuse });
+    expect(provider.requests.flatMap((request) => request.items.map((item) => item.source))).toEqual([
+      "Quit game.",
+      "Open the doors",
+    ]);
+    expect(provider.requests.flatMap((request) => request.items).some((item) => item.previous)).toBe(false);
   });
 });
 

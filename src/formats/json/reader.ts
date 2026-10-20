@@ -11,6 +11,8 @@ export const jsonReader: Reader = {
         location: path.length > 0 ? { file, key: path.join(".") } : { file },
         priority,
         ...(context !== undefined ? { context } : {}),
+        // Texts of the same object or array belong together: "dialogues.bob.0" and "dialogues.bob.1".
+        group: `${file}#${path.slice(0, -1).join(".")}`,
       });
     }
     return occurrences;

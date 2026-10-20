@@ -83,6 +83,20 @@ describe("the command line", () => {
     expect((await cli("init --force")).code).toBe(EXIT.ok);
   });
 
+  it("fills the configuration with the text files it finds, and explains what it left out", async () => {
+    await createFile("game/locales/EN/ui.json", JSON.stringify({ title: "Welcome" }));
+    await createFile("game/data/stats.json", JSON.stringify({ speed: "fast" }));
+    const result = await cli("init --to de");
+    expect(result.code).toBe(EXIT.ok);
+    expect(result.out).toContain("game/locales/EN/*.json (1 file) → game/locales/{lang}/{name}{ext}");
+    expect(result.out).toContain("game/data/stats.json: no language marker");
+
+    const config = await read("tradforge.config.json");
+    expect(config).toContain('"targetLanguage": "de"');
+    expect(config).toContain('"game/locales/EN/*.json"');
+    expect((await cli("status")).out).toMatch(/to translate\s+1/);
+  });
+
   it("explains configuration problems", async () => {
     await createFile("tradforge.config.json", '{ "targetLanguage": 3 }');
     const result = await cli("status");
@@ -136,6 +150,11 @@ describe("the command line", () => {
     expect(diff.out).toMatch(/"Quit game" → "Quit game."/);
     expect(diff.out).toContain('"Brand new"');
     expect(diff.out).toContain('"Hello {name}"');
+
+    // The changed text reuses its old translation; only the new one goes to the model.
+    expect((await cli("translate")).out).toContain("Done: 2 translated (1 reused from slightly changed texts)");
+    expect((await cli("export")).code).toBe(EXIT.ok);
+    expect(await read(".tradforge/review.csv")).toContain("Quit game.,[fr] Quit game.,machine");
   });
 
   it("translates only the texts of the given files", async () => {
@@ -180,8 +199,8 @@ describe("the command line", () => {
     await createProject();
     const segments = JSON.parse((await cli("extract --json")).out);
     expect(segments[0]).toMatchObject({
-      source: "Hello {name}",
-      locations: [{ file: "locales/en/ui.json", key: "hello" }],
+      source: "Welcome",
+      locations: [{ file: "locales/en/ui.json", key: "title" }],
     });
   });
 });

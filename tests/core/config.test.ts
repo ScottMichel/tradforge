@@ -31,13 +31,50 @@ describe("parseConfig", () => {
           format: "json",
           include: ["locales/en/*.json"],
           priority: 0,
+          group: "auto",
           output: { path: "{dir}/{name}.{lang}{ext}", asciiOnly: false, untranslated: "keep-source" },
         },
       ],
       provider: { type: "ollama", model: "mistral-small", host: "http://localhost:11434" },
-      translation: { batchSize: 20, glossary: {} },
-      validation: { placeholders: ["braces", "printf", "markup"] },
+      translation: { batchSize: 20, glossary: {}, contextLines: 3, typography: true, reuse: true },
+      validation: { placeholders: ["braces", "printf", "markup"], glossary: true },
     });
+  });
+
+  it("keeps the phase B settings: grouping, context, typography, reuse, glossary check", () => {
+    const config = parseConfig({
+      ...minimal,
+      sources: [
+        { format: "json", include: ["a"], group: "file" },
+        { format: "json", include: ["b"], group: { keyPattern: "^(dialog_\\w+)_\\d+$" } },
+      ],
+      translation: { contextLines: 0, typography: false, reuse: false },
+      validation: { glossary: false },
+    });
+    expect(config.sources.map((source) => source.group)).toEqual(["file", { keyPattern: "^(dialog_\\w+)_\\d+$" }]);
+    expect(config.translation).toMatchObject({ contextLines: 0, typography: false, reuse: false });
+    expect(config.validation.glossary).toBe(false);
+  });
+
+  it("rejects wrong grouping rules and phase B settings", () => {
+    expect(
+      problemPaths({
+        ...minimal,
+        sources: [
+          { format: "json", include: ["a"], group: "sometimes" },
+          { format: "json", include: ["b"], group: { keyPattern: "(unclosed" } },
+        ],
+        translation: { contextLines: -1, typography: "yes", reuse: 1 },
+        validation: { glossary: "strict" },
+      }),
+    ).toEqual([
+      "sources[0].group",
+      "sources[1].group.keyPattern",
+      "translation.contextLines",
+      "translation.typography",
+      "translation.reuse",
+      "validation.glossary",
+    ]);
   });
 
   it("keeps the given values and fills in the missing ones", () => {
@@ -53,6 +90,9 @@ describe("parseConfig", () => {
       batchSize: 5,
       instructions: "Casual tone.",
       glossary: { NPC: "PNJ" },
+      contextLines: 3,
+      typography: true,
+      reuse: true,
     });
   });
 
@@ -103,9 +143,10 @@ describe("parseConfig", () => {
         include: ["dialogues/*.lua"],
         priority: -1,
         context: "NPC dialogue lines",
+        group: "auto",
         output: DEFAULT_OUTPUT,
       },
-      { format: "json", include: ["ui/*.json"], priority: 5, output: DEFAULT_OUTPUT },
+      { format: "json", include: ["ui/*.json"], priority: 5, group: "auto", output: DEFAULT_OUTPUT },
     ]);
   });
 
@@ -124,6 +165,7 @@ describe("parseConfig", () => {
   it("keeps the chosen placeholder syntaxes, none included", () => {
     expect(parseConfig({ ...minimal, validation: { placeholders: ["braces"] } }).validation).toStrictEqual({
       placeholders: ["braces"],
+      glossary: true,
     });
     expect(parseConfig({ ...minimal, validation: { placeholders: [] } }).validation.placeholders).toEqual([]);
   });

@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import { groupOccurrences } from "../../src/core/segments.js";
 import type { Occurrence } from "../../src/core/types.js";
 
-const occ = (source: string, file: string, priority = 1, context?: string): Occurrence => ({
+const occ = (source: string, file: string, priority = 1, context?: string, group?: string): Occurrence => ({
   source,
   priority,
   location: { file },
   ...(context !== undefined ? { context } : {}),
+  ...(group !== undefined ? { group } : {}),
 });
 
 describe("groupOccurrences", () => {
@@ -22,14 +23,16 @@ describe("groupOccurrences", () => {
     expect(segment?.context).toBe("dialogue");
   });
 
-  it("sorts by priority, then alphabetically", () => {
-    const sources = groupOccurrences([occ("B", "f", 2), occ("C", "f", 1), occ("A", "f", 2)]).map((s) => s.source);
-    expect(sources).toEqual(["C", "A", "B"]);
+  it("sorts by priority, then keeps the order in which texts appear, so that neighbours stay together", () => {
+    const sources = groupOccurrences([occ("B", "f", 2), occ("C", "f", 1), occ("A", "f", 2), occ("B", "g", 2)]).map(
+      (s) => s.source,
+    );
+    expect(sources).toEqual(["C", "B", "A"]);
   });
 
-  it("sorts by code unit, whatever the machine locale", () => {
-    const sources = groupOccurrences([occ("b", "f"), occ("B", "f"), occ("a", "f")]).map((s) => s.source);
-    expect(sources).toEqual(["B", "a", "b"]);
+  it("keeps the conversation group of the first occurrence", () => {
+    const [segment] = groupOccurrences([occ("Hi", "a", 1, undefined, "a#bob"), occ("Hi", "b", 1, undefined, "b#x")]);
+    expect(segment?.group).toBe("a#bob");
   });
 
   it("keeps texts that only differ by case or punctuation apart", () => {

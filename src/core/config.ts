@@ -30,6 +30,15 @@ export const DEFAULT_OUTPUT: OutputConfig = {
   untranslated: "keep-source",
 };
 
+/**
+ * How texts are grouped into conversations, kept in one batch whenever possible.
+ * auto: the reader decides (same JSON object, Lua lines with no blank line between them).
+ * none: no groups. file: one group per file. keyPattern: texts whose keys give the same first capture group.
+ */
+export type GroupRule = "auto" | "none" | "file" | { readonly keyPattern: string };
+
+export const GROUP_MODES = ["auto", "none", "file"] as const;
+
 export interface SourceConfig {
   readonly format: SourceFormat;
   /** Glob patterns, relative to the project root. */
@@ -38,6 +47,7 @@ export interface SourceConfig {
   readonly priority: number;
   /** Hint for the translator about how these texts are used. */
   readonly context?: string;
+  readonly group: GroupRule;
   /** Where and how to write the translated files. */
   readonly output: OutputConfig;
 }
@@ -55,11 +65,19 @@ export interface TranslationConfig {
   readonly instructions?: string;
   /** Terms that must always be translated the same way. */
   readonly glossary: Readonly<Record<string, string>>;
+  /** Lines sent before and after each batch, as context only (with their translation when known). 0: none. */
+  readonly contextLines: number;
+  /** Fix the typography of the target language after translation (French: non-breaking spaces before ; : ! ?). */
+  readonly typography: boolean;
+  /** Reuse the translation of a slightly changed text: copied when only the punctuation changed, else shown to the model. */
+  readonly reuse: boolean;
 }
 
 export interface ValidationConfig {
   /** Placeholder syntaxes that translations must preserve. Empty disables the check. */
   readonly placeholders: readonly PlaceholderSyntax[];
+  /** Reject a translation that does not use the glossary translation of a term found in the source. */
+  readonly glossary: boolean;
 }
 
 export interface TradforgeConfig {
@@ -163,15 +181,43 @@ function parseSources(value: unknown, report: Report): SourceConfig[] {
 function parseSource(value: unknown, path: string, report: Report): SourceConfig {
   if (!isObject(value)) {
     report(path, "must be an object");
-    return { format: SOURCE_FORMATS[0], include: [], priority: DEFAULT_PRIORITY, output: DEFAULT_OUTPUT };
+    return {
+      format: SOURCE_FORMATS[0],
+      include: [],
+      priority: DEFAULT_PRIORITY,
+      group: "auto",
+      output: DEFAULT_OUTPUT,
+    };
   }
   // Parsed in field order, so that problems are reported in that order too.
   const format = parseChoice(SOURCE_FORMATS, value.format, `${path}.format`, report);
   const include = parseStringList(value.include, `${path}.include`, report);
   const priority = parseInteger(value.priority, `${path}.priority`, report, DEFAULT_PRIORITY);
   const context = value.context === undefined ? undefined : parseString(value.context, `${path}.context`, report);
+  const group = parseGroupRule(value.group, `${path}.group`, report);
   const output = parseOutput(value.output, `${path}.output`, report);
-  return { format, include, priority, ...(context !== undefined ? { context } : {}), output };
+  return { format, include, priority, ...(context !== undefined ? { context } : {}), group, output };
+}
+
+function parseGroupRule(value: unknown, path: string, report: Report): GroupRule {
+  if (value === undefined) return "auto";
+  if (isObject(value)) {
+    const keyPattern = parseString(value.keyPattern, `${path}.keyPattern`, report);
+    try {
+      new RegExp(keyPattern, "u");
+    } catch (error) {
+      report(`${path}.keyPattern`, `is not a valid regular expression (${errorMessage(error)})`);
+    }
+    return { keyPattern };
+  }
+  const mode = GROUP_MODES.find((m) => m === value);
+  if (mode !== undefined) return mode;
+  report(path, `must be one of ${GROUP_MODES.join(", ")}, or { "keyPattern": "<regular expression>" }`);
+  return "auto";
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 const TEMPLATE_PLACEHOLDER = /\{([^{}]*)\}/g;
@@ -243,17 +289,41 @@ function parseProvider(value: unknown, report: Report): ProviderConfig {
   };
 }
 
+const DEFAULT_TRANSLATION: TranslationConfig = {
+  batchSize: DEFAULT_BATCH_SIZE,
+  glossary: {},
+  contextLines: 3,
+  typography: true,
+  reuse: true,
+};
+
 function parseTranslation(value: unknown, report: Report): TranslationConfig {
-  if (value === undefined) return { batchSize: DEFAULT_BATCH_SIZE, glossary: {} };
+  if (value === undefined) return { ...DEFAULT_TRANSLATION, glossary: {} };
   if (!isObject(value)) {
     report("translation", "must be an object");
-    return { batchSize: DEFAULT_BATCH_SIZE, glossary: {} };
+    return { ...DEFAULT_TRANSLATION, glossary: {} };
   }
   const batchSize = parseInteger(value.batchSize, "translation.batchSize", report, DEFAULT_BATCH_SIZE, 1);
   const instructions =
     value.instructions === undefined ? undefined : parseString(value.instructions, "translation.instructions", report);
   const glossary = parseGlossary(value.glossary, report);
-  return { batchSize, ...(instructions !== undefined ? { instructions } : {}), glossary };
+  const contextLines = parseInteger(
+    value.contextLines,
+    "translation.contextLines",
+    report,
+    DEFAULT_TRANSLATION.contextLines,
+    0,
+  );
+  const typography = parseBoolean(value.typography, "translation.typography", report, DEFAULT_TRANSLATION.typography);
+  const reuse = parseBoolean(value.reuse, "translation.reuse", report, DEFAULT_TRANSLATION.reuse);
+  return {
+    batchSize,
+    ...(instructions !== undefined ? { instructions } : {}),
+    glossary,
+    contextLines,
+    typography,
+    reuse,
+  };
 }
 
 function parseInteger(value: unknown, path: string, report: Report, fallback: number, min?: number): number {
@@ -280,12 +350,14 @@ function parseGlossary(value: unknown, report: Report): Record<string, string> {
 }
 
 function parseValidation(value: unknown, report: Report): ValidationConfig {
-  if (value === undefined) return { placeholders: [...PLACEHOLDER_SYNTAXES] };
+  if (value === undefined) return { placeholders: [...PLACEHOLDER_SYNTAXES], glossary: true };
   if (!isObject(value)) {
     report("validation", "must be an object");
-    return { placeholders: [] };
+    return { placeholders: [], glossary: true };
   }
-  return { placeholders: parsePlaceholderSyntaxes(value.placeholders, report) };
+  const placeholders = parsePlaceholderSyntaxes(value.placeholders, report);
+  const glossary = parseBoolean(value.glossary, "validation.glossary", report, true);
+  return { placeholders, glossary };
 }
 
 function parsePlaceholderSyntaxes(value: unknown, report: Report): PlaceholderSyntax[] {

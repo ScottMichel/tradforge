@@ -6,6 +6,8 @@ export interface MockOptions {
   /** Returns true to fail the batch, like an unreadable model answer. */
   readonly failBatch?: (request: TranslationRequest) => boolean;
   readonly model?: string;
+  /** Ask the pipeline to replace placeholders with <x id="n"/> tags, like an engine without instructions. */
+  readonly protectPlaceholders?: boolean;
 }
 
 export interface MockProvider extends Provider {
@@ -20,6 +22,7 @@ export function createMockProvider(options: MockOptions = {}): MockProvider {
 
   return {
     model: options.model ?? "mock",
+    ...(options.protectPlaceholders === true ? { protectPlaceholders: true } : {}),
     requests,
     async translateBatch(request, signal) {
       signal?.throwIfAborted();

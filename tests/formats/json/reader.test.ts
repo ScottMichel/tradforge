@@ -43,7 +43,19 @@ describe("jsonReader", () => {
       location: { file: "a.json", key: "k" },
       priority: 2,
       context: "main menu",
+      group: "a.json#",
     });
+  });
+
+  it("groups the texts of the same object or array", () => {
+    const content = '{"title": "T", "bob": ["Hi", "Bye"], "menu": {"play": "Play", "sub": {"x": "X"}}}';
+    expect(read(content).map((o) => o.group)).toEqual([
+      "locales/en/ui.json#",
+      "locales/en/ui.json#bob",
+      "locales/en/ui.json#bob",
+      "locales/en/ui.json#menu",
+      "locales/en/ui.json#menu.sub",
+    ]);
   });
 
   it("omits the context when none is given", () => {
