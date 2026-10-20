@@ -194,6 +194,10 @@ file is usually committed, and never shows the key in its messages. Local server
 `responseFormat` tells how the answer is constrained: `json-schema` (the answer must follow tradforge's schema),
 `json-object` (any JSON) or `none` (the instructions alone), for servers that refuse schemas.
 
+When an API asks to slow down (HTTP 429), every batch pauses for the delay the server gives (or 1 s, 2 s, 4 s...),
+then the same batch is sent again: a rate limit is never counted as a failure. After 6 waits in a row, tradforge stops
+and advises a lower `translation.concurrency`. A used-up quota stops at once.
+
 ## How it works
 
 ```text
@@ -250,7 +254,7 @@ texts written for tradforge.
 
 ## Roadmap
 
-1. **Engines and speed**: Claude, Gemini, DeepL, rate limits, cost estimates.
+1. **Engines and speed**: Claude, Gemini, DeepL, cost estimates.
 2. **Quality**: `tradforge compare` (models side by side), back-translation of suspicious lines.
 3. **Application formats**: XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
 4. **Desktop application**: open a file or a folder, translate, review — no command line needed.

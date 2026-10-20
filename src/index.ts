@@ -35,7 +35,14 @@ export { groupRule } from "./core/groups.js";
 export { languageName } from "./core/languages.js";
 export type { ImportOutcome, MemoryLanguages, MemoryOptions, MemoryStats, RecordOutcome } from "./core/memory.js";
 export { TranslationMemory } from "./core/memory.js";
-export type { PipelineConfig, PipelineOptions, PipelineSummary, ProgressEvent, Selection } from "./core/pipeline.js";
+export type {
+  PipelineConfig,
+  PipelineOptions,
+  PipelineSummary,
+  ProgressEvent,
+  RateLimitEvent,
+  Selection,
+} from "./core/pipeline.js";
 export { selectSegments, translateSegments } from "./core/pipeline.js";
 export type { Protected } from "./core/protection.js";
 export { ProtectionError, protectPlaceholders, restorePlaceholders } from "./core/protection.js";
@@ -46,7 +53,7 @@ export type {
   TranslationItem,
   TranslationRequest,
 } from "./core/provider.js";
-export { BatchError, ProviderUnavailableError } from "./core/provider.js";
+export { BatchError, ProviderUnavailableError, RateLimitError } from "./core/provider.js";
 export type { Reader, ReaderInput } from "./core/reader.js";
 export { ReadError } from "./core/reader.js";
 export { reuseTranslation } from "./core/reuse.js";

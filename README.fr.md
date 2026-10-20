@@ -200,6 +200,10 @@ qui est souvent commité, et n'affiche jamais la clé dans ses messages. Les ser
 tradforge), `json-object` (n'importe quel JSON) ou `none` (les consignes seules), pour les serveurs qui refusent les
 schémas.
 
+Quand une API demande de ralentir (HTTP 429), tous les lots font une pause du délai donné par le serveur (sinon
+1 s, 2 s, 4 s…), puis le même lot est renvoyé : une limite de débit ne compte jamais comme un échec. Après 6 attentes
+de suite, tradforge s'arrête et conseille de baisser `translation.concurrency`. Un quota épuisé arrête tout de suite.
+
 ## Fonctionnement
 
 ```text
@@ -259,7 +263,7 @@ des textes écrits pour tradforge.
 
 ## Feuille de route
 
-1. **Moteurs et vitesse** : Claude, Gemini, DeepL, limites de débit, estimation des coûts.
+1. **Moteurs et vitesse** : Claude, Gemini, DeepL, estimation des coûts.
 2. **Qualité** : `tradforge compare` (plusieurs modèles côte à côte), retraduction inverse des lignes suspectes.
 3. **Formats d'applications** : XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
 4. **Application de bureau** : ouvrir un fichier ou un dossier, traduire, relire — sans ligne de commande.

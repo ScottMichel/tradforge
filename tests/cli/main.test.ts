@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { CliIo } from "../../src/cli/io.js";
 import { EXIT, runCli } from "../../src/cli/main.js";
-import { type Provider, ProviderUnavailableError } from "../../src/core/provider.js";
+import { type Provider, ProviderUnavailableError, RateLimitError } from "../../src/core/provider.js";
 import { createMockProvider } from "../../src/providers/mock/provider.js";
 
 let root: string;
@@ -184,6 +184,24 @@ describe("the command line", () => {
     const result = await cli("translate", { createProvider: down });
     expect(result.code).toBe(EXIT.error);
     expect(result.err).toContain("ollama serve");
+  });
+
+  it("says when it waits because of a rate limit", async () => {
+    await createProject();
+    let refused = false;
+    const busy = (): Provider => ({
+      model: "m",
+      translateBatch: async (request) => {
+        if (!refused) {
+          refused = true;
+          throw new RateLimitError("rate limit reached", 0);
+        }
+        return new Map(request.items.map((item) => [item.id, `[fr] ${item.source}`]));
+      },
+    });
+    const result = await cli("translate", { createProvider: busy });
+    expect(result.out).toContain("Rate limit reached: waiting 0 s");
+    expect(result.out).toContain("Done: 4 translated, 0 failed");
   });
 
   it("stops cleanly when interrupted, keeping what was done", async () => {

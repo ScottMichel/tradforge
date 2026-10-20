@@ -53,6 +53,21 @@ export class ProviderUnavailableError extends Error {
   }
 }
 
+/**
+ * The engine asks to slow down (HTTP 429). The batch itself is fine: the pipeline waits, then sends it again as it
+ * is, without counting an attempt.
+ */
+export class RateLimitError extends Error {
+  /** The delay the server asked for, when it said. */
+  readonly retryAfterMs: number | undefined;
+
+  constructor(message: string, retryAfterMs?: number, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "RateLimitError";
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
 /** This batch failed (unreadable answer, timeout...): retrying with smaller batches may work. */
 export class BatchError extends Error {
   constructor(message: string, options?: ErrorOptions) {

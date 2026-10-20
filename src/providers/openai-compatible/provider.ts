@@ -1,6 +1,12 @@
 import type { ResponseFormat } from "../../core/config.js";
 import { isObject } from "../../core/json.js";
-import { BatchError, type Provider, ProviderUnavailableError, type TranslationRequest } from "../../core/provider.js";
+import {
+  BatchError,
+  type Provider,
+  ProviderUnavailableError,
+  RateLimitError,
+  type TranslationRequest,
+} from "../../core/provider.js";
 import { buildSystemPrompt, buildUserMessage } from "../llm/prompt.js";
 import { parseTranslations, RESPONSE_SCHEMA } from "../llm/response.js";
 
@@ -48,6 +54,7 @@ export function createOpenAiCompatibleProvider(options: OpenAiCompatibleOptions)
           signal: signal === undefined ? timeout : AbortSignal.any([signal, timeout]),
         });
         const body = await response.text();
+        if (response.status === 429) throw rateLimitError(response.headers, body, hideKey(errorDetail(body)));
         if (!response.ok) throw httpError(response.status, hideKey(errorDetail(body)), options, baseUrl);
         return parseTranslations(
           completionContent(body),
@@ -123,7 +130,28 @@ function completionContent(body: string): string {
   return message.content;
 }
 
-/** 401/403: wrong key. 404: wrong model or address. Other 4xx: wrong request (stop). 429, 5xx: retry smaller. */
+/**
+ * 429 means "slow down", except when the quota or the credit is used up: then waiting will not help.
+ * OpenAI says how long to wait in retry-after-ms or retry-after (seconds, or an HTTP date).
+ */
+function rateLimitError(headers: Headers, body: string, detail: string): Error {
+  if (errorCode(body) === "insufficient_quota") {
+    return new ProviderUnavailableError(`the quota of this API key is used up (HTTP 429): ${detail}`);
+  }
+  return new RateLimitError(`rate limit reached (HTTP 429): ${detail}`, retryAfterMs(headers));
+}
+
+function retryAfterMs(headers: Headers): number | undefined {
+  const ms = Number(headers.get("retry-after-ms") ?? Number.NaN);
+  if (Number.isFinite(ms) && ms >= 0) return ms;
+  const value = headers.get("retry-after");
+  if (value === null) return undefined;
+  if (/^\d+(\.\d+)?$/.test(value.trim())) return Number(value) * 1000;
+  const date = Date.parse(value);
+  return Number.isNaN(date) ? undefined : Math.max(0, date - Date.now());
+}
+
+/** 401/403: wrong key. 404: wrong model or address. Other 4xx: wrong request (stop). 5xx: retry smaller. */
 function httpError(status: number, detail: string, options: OpenAiCompatibleOptions, baseUrl: string): Error {
   if (status === 401 || status === 403) {
     return new ProviderUnavailableError(
@@ -135,7 +163,6 @@ function httpError(status: number, detail: string, options: OpenAiCompatibleOpti
       `the model "${options.model}" or the address ${baseUrl} is wrong (HTTP 404): ${detail}`,
     );
   }
-  if (status === 429) return new BatchError(`rate limit reached (HTTP 429): ${detail}`);
   if (status < 500) {
     const hint =
       options.responseFormat === "none"
@@ -144,6 +171,18 @@ function httpError(status: number, detail: string, options: OpenAiCompatibleOpti
     return new ProviderUnavailableError(`the server refused the request (HTTP ${status}): ${detail}.${hint}`);
   }
   return new BatchError(`the server failed on this batch (HTTP ${status}): ${detail}`);
+}
+
+/** The machine-readable code of an OpenAI error, such as insufficient_quota. */
+function errorCode(body: string): string | undefined {
+  try {
+    const data: unknown = JSON.parse(body);
+    const error = isObject(data) ? data.error : undefined;
+    if (isObject(error) && typeof error.code === "string") return error.code;
+  } catch {
+    // not JSON: no code
+  }
+  return undefined;
 }
 
 /** OpenAI errors look like {"error": {"message": "..."}}; some servers send {"error": "..."}. */

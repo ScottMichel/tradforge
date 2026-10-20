@@ -7,6 +7,8 @@ import {
   type ContextLine,
   type PreviousTranslation,
   type Provider,
+  ProviderUnavailableError,
+  RateLimitError,
   type TranslationRequest,
 } from "./provider.js";
 import { reuseTranslation } from "./reuse.js";
@@ -37,6 +39,15 @@ export interface PipelineOptions {
   readonly retryFailed?: boolean;
   /** Injected in tests, for predictable time estimates. */
   readonly now?: () => number;
+  /** Called when the engine asks to slow down, before waiting. */
+  readonly onRateLimit?: (event: RateLimitEvent) => void;
+  /** Injected in tests, so that they never really wait. Must end early when the signal aborts. */
+  readonly sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
+}
+
+export interface RateLimitEvent {
+  /** How long every batch waits before the next request. */
+  readonly waitMs: number;
 }
 
 export interface ProgressEvent {
@@ -67,6 +78,13 @@ export interface PipelineSummary {
 /** A text gets at most this many tries per run: the whole batch, a quarter of it, then alone. */
 const MAX_ATTEMPTS = 3;
 
+/** Waits in a row for one request before giving up: the limit is too low for this concurrency. */
+const MAX_RATE_LIMIT_WAITS = 6;
+
+/** Waits when the server does not say how long: 1 s, 2 s, 4 s... at most a minute. */
+const FIRST_BACKOFF_MS = 1000;
+const MAX_BACKOFF_MS = 60_000;
+
 /** Recorded as the "model" of a translation copied from an older version of its text. */
 const REUSE_MODEL = "reuse";
 
@@ -90,6 +108,7 @@ interface Run {
   /** Old version of a changed text and its translation, shown to the model as a hint. */
   readonly previous: ReadonlyMap<string, PreviousTranslation>;
   readonly neighbours: Neighbours;
+  readonly pause: SharedPause;
 }
 
 /**
@@ -110,7 +129,13 @@ export async function translateSegments(options: PipelineOptions): Promise<Pipel
     : { todo: selected, previous: new Map() };
   if (tally.reused > 0) await options.save();
 
-  const run: Run = { options, tally, previous, neighbours: new Neighbours(options.segments) };
+  const run: Run = {
+    options,
+    tally,
+    previous,
+    neighbours: new Neighbours(options.segments),
+    pause: new SharedPause(options.sleep ?? sleep, signal),
+  };
   const save = oneAtATime(options.save);
   const queue = chunkByGroup(todo, config.translation.batchSize);
   let next = 0;
@@ -269,7 +294,7 @@ async function translateGroup(group: readonly Segment[], run: Run): Promise<Reje
 
   let answer: ReadonlyMap<number, string>;
   try {
-    answer = await provider.translateBatch(buildRequest(group, run, shields), run.options.signal);
+    answer = await requestWithPatience(group, run, shields);
   } catch (error) {
     if (error instanceof BatchError) return group.map((segment) => ({ segment, reason: error.message }));
     throw error;
@@ -301,6 +326,37 @@ async function translateGroup(group: readonly Segment[], run: Run): Promise<Reje
     run.tally.chars += segment.source.length;
   });
   return rejected;
+}
+
+/**
+ * Sends the request; on a rate limit, waits and sends the same request again. The wait is shared: every batch
+ * in flight holds its next request until it ends, rather than meeting the same limit.
+ */
+async function requestWithPatience(
+  group: readonly Segment[],
+  run: Run,
+  shields: readonly { readonly text: string }[] | undefined,
+): Promise<ReadonlyMap<number, string>> {
+  const { provider, signal, onRateLimit } = run.options;
+  for (let waits = 0; ; waits++) {
+    await run.pause.done();
+    try {
+      // Built again on each try: the neighbours translated meanwhile give a better context.
+      return await provider.translateBatch(buildRequest(group, run, shields), signal);
+    } catch (error) {
+      if (!(error instanceof RateLimitError)) throw error;
+      if (waits >= MAX_RATE_LIMIT_WAITS) {
+        throw new ProviderUnavailableError(
+          `the rate limit is still reached after ${MAX_RATE_LIMIT_WAITS} waits: lower translation.concurrency ` +
+            `or translation.batchSize, or try again later (${error.message})`,
+          { cause: error },
+        );
+      }
+      const waitMs = error.retryAfterMs ?? Math.min(FIRST_BACKOFF_MS * 2 ** waits, MAX_BACKOFF_MS);
+      if (run.pause.start(waitMs)) onRateLimit?.({ waitMs });
+      await run.pause.done();
+    }
+  }
 }
 
 /** Ids are positions in the group: the answer is matched back by position. */
@@ -423,6 +479,49 @@ function groupRuns(segments: readonly Segment[]): Segment[][] {
     else runs.push([segment]);
   }
   return runs;
+}
+
+/** One wait shared by every batch of the run. A rate limit met during a wait joins it rather than adding another. */
+class SharedPause {
+  private current: Promise<void> | undefined;
+
+  constructor(
+    private readonly wait: (ms: number, signal?: AbortSignal) => Promise<void>,
+    private readonly signal: AbortSignal | undefined,
+  ) {}
+
+  /** Starts a wait, unless one is running. True when it started one. */
+  start(ms: number): boolean {
+    if (this.current !== undefined) return false;
+    this.current = this.wait(ms, this.signal).finally(() => {
+      this.current = undefined;
+    });
+    return true;
+  }
+
+  /** Ends with the current wait, at once if there is none. Rejects if the run is interrupted meanwhile. */
+  done(): Promise<void> {
+    return this.current ?? Promise.resolve();
+  }
+}
+
+/** Waits, or rejects as soon as the signal aborts: Ctrl+C never waits for the end of a rate limit. */
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted === true) {
+      reject(signal.reason);
+      return;
+    }
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(signal?.reason);
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 /**

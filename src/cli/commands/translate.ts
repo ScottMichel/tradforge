@@ -59,6 +59,7 @@ export const translateCommand: Command = {
       config,
       save: () => saveMemory(workDir, memory),
       onProgress: (event) => io.out(progressLine(event)),
+      onRateLimit: (event) => io.out(`  Rate limit reached: waiting ${formatDuration(event.waitMs)}...`),
       retryFailed,
       ...(limit !== undefined ? { limit } : {}),
       ...(io.signal !== undefined ? { signal: io.signal } : {}),

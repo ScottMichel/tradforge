@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseConfig } from "../../src/core/config.js";
 import { TranslationMemory } from "../../src/core/memory.js";
 import { type PipelineOptions, type ProgressEvent, translateSegments } from "../../src/core/pipeline.js";
-import { type Provider, ProviderUnavailableError } from "../../src/core/provider.js";
+import { type Provider, ProviderUnavailableError, RateLimitError } from "../../src/core/provider.js";
 import type { Segment } from "../../src/core/types.js";
 import { createMockProvider, type MockProvider } from "../../src/providers/mock/provider.js";
 
@@ -446,5 +446,123 @@ describe("translateSegments with several batches at once", () => {
     expect(memory.get("Three")?.target).toBe("[fr] Three");
     expect(stats.sent.length).toBeLessThan(7);
     expect(saves).toBe(stats.sent.length);
+  });
+});
+
+describe("translateSegments under a rate limit", () => {
+  const limited = parseConfig({
+    sourceLanguage: "en",
+    targetLanguage: "fr",
+    sources: [{ format: "json", include: ["*.json"] }],
+    translation: { batchSize: 2 },
+  });
+
+  /** Refuses the first `refusals` requests with a rate limit, then translates. */
+  function busyProvider(refusals: number, retryAfterMs?: number) {
+    const sizes: number[] = [];
+    const provider: Provider = {
+      model: "busy",
+      translateBatch: async (request) => {
+        sizes.push(request.items.length);
+        if (sizes.length <= refusals) throw new RateLimitError("rate limit reached", retryAfterMs);
+        return new Map(request.items.map((item) => [item.id, `[fr] ${item.source}`]));
+      },
+    };
+    return { provider, sizes };
+  }
+
+  /** Records the waits instead of waiting. */
+  function fakeSleep() {
+    const waits: number[] = [];
+    const sleep = async (ms: number) => {
+      waits.push(ms);
+    };
+    return { sleep, waits };
+  }
+
+  const translate = (overrides: Partial<PipelineOptions>) =>
+    translateSegments({
+      segments: ["One", "Two", "Three"].map((source) => segment(source)),
+      memory: new TranslationMemory({ languages: limited }),
+      provider: createMockProvider(),
+      config: limited,
+      save: async () => {},
+      ...overrides,
+    });
+
+  it("waits the delay the server asks for, then sends the same batch again, whole", async () => {
+    const { provider, sizes } = busyProvider(2, 20_000);
+    const { sleep, waits } = fakeSleep();
+    const summary = await translate({ provider, sleep });
+    expect(waits).toEqual([20_000, 20_000]);
+    expect(sizes).toEqual([2, 2, 2, 1]); // not split into smaller batches: the batch was not the problem
+    expect(summary).toMatchObject({ translated: 3, failed: 0 });
+  });
+
+  it("waits longer and longer when the server does not say how long", async () => {
+    const { provider } = busyProvider(4);
+    const { sleep, waits } = fakeSleep();
+    await translate({ provider, sleep });
+    expect(waits).toEqual([1000, 2000, 4000, 8000]);
+  });
+
+  it("tells the caller how long it waits", async () => {
+    const { provider } = busyProvider(1, 5000);
+    const { sleep } = fakeSleep();
+    const waits: number[] = [];
+    await translate({ provider, sleep, onRateLimit: (event) => waits.push(event.waitMs) });
+    expect(waits).toEqual([5000]);
+  });
+
+  it("stops with advice when the limit is still reached after many waits", async () => {
+    const { provider } = busyProvider(100);
+    const { sleep, waits } = fakeSleep();
+    await expect(translate({ provider, sleep })).rejects.toThrow(
+      expect.objectContaining({ name: "ProviderUnavailableError", message: expect.stringMatching(/concurrency/) }),
+    );
+    expect(waits).toHaveLength(6);
+  });
+
+  it("pauses every batch in flight, not only the one that was refused", async () => {
+    let paused = false;
+    let sentDuringPause = 0;
+    let refused = false;
+    const provider: Provider = {
+      model: "shared-limit",
+      translateBatch: async (request) => {
+        if (paused) sentDuringPause++;
+        await new Promise((resolve) => setTimeout(resolve, 1));
+        if (!refused) {
+          refused = true;
+          throw new RateLimitError("rate limit reached", 50);
+        }
+        return new Map(request.items.map((item) => [item.id, `[fr] ${item.source}`]));
+      },
+    };
+    const sleep = async (ms: number) => {
+      paused = true;
+      await new Promise((resolve) => setTimeout(resolve, ms));
+      paused = false;
+    };
+    const summary = await translateSegments({
+      segments: ["A1", "B2", "C3", "D4", "E5", "F6", "G7", "H8"].map((source) => segment(source)),
+      memory: new TranslationMemory({ languages: limited }),
+      provider,
+      config: { ...limited, translation: { ...limited.translation, batchSize: 1, concurrency: 3 } },
+      save: async () => {},
+      sleep,
+    });
+    expect(summary).toMatchObject({ translated: 8, failed: 0 });
+    expect(sentDuringPause).toBe(0);
+  });
+
+  it("can be interrupted while it waits", async () => {
+    const controller = new AbortController();
+    const { provider } = busyProvider(1, 60_000);
+    setTimeout(() => controller.abort(new Error("Ctrl+C")), 10);
+    const started = Date.now();
+    const summary = await translate({ provider, signal: controller.signal }); // the real sleep, not a fake one
+    expect(summary).toMatchObject({ interrupted: true, translated: 0, failed: 0 });
+    expect(Date.now() - started).toBeLessThan(5000);
   });
 });

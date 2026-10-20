@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { BatchError, ProviderUnavailableError, type TranslationRequest } from "../../../src/core/provider.js";
+import {
+  BatchError,
+  ProviderUnavailableError,
+  RateLimitError,
+  type TranslationRequest,
+} from "../../../src/core/provider.js";
 import {
   createOpenAiCompatibleProvider,
   type OpenAiCompatibleOptions,
@@ -136,10 +141,44 @@ describe("OpenAI-compatible provider", () => {
     await expect(translating).rejects.toThrow(/responseFormat/);
   });
 
-  it("reports a server error, a rate limit or an unreadable answer as a retryable batch error", async () => {
+  it("reports a rate limit with the delay the server asks for", async () => {
+    const answers: [Record<string, string>, number | undefined][] = [
+      [{ "retry-after": "20" }, 20_000],
+      [{ "retry-after-ms": "1500", "retry-after": "2" }, 1500],
+      [{ "retry-after": new Date(Date.now() + 30_000).toUTCString() }, 30_000],
+      [{}, undefined],
+      [{ "retry-after": "soon" }, undefined],
+    ];
+    for (const [headers, expected] of answers) {
+      const { fetch } = fakeFetch(
+        () => new Response(JSON.stringify({ error: { message: "Rate limit reached" } }), { status: 429, headers }),
+      );
+      const error: unknown = await provider(fetch)
+        .translateBatch(request)
+        .catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(RateLimitError);
+      const delay = error instanceof RateLimitError ? error.retryAfterMs : -1;
+      if (expected === undefined || expected < 10_000) expect(delay).toBe(expected);
+      else expect(delay).toBeGreaterThan(expected - 2000); // an HTTP date is rounded to the second
+    }
+  });
+
+  it("stops when the quota is used up: waiting would not help", async () => {
+    const { fetch } = fakeFetch(
+      () =>
+        new Response(
+          JSON.stringify({ error: { message: "You exceeded your current quota", code: "insufficient_quota" } }),
+          { status: 429 },
+        ),
+    );
+    const translating = provider(fetch).translateBatch(request);
+    await expect(translating).rejects.toThrow(ProviderUnavailableError);
+    await expect(translating).rejects.toThrow(/quota/);
+  });
+
+  it("reports a server error or an unreadable answer as a retryable batch error", async () => {
     const answers = [
       () => new Response("Bad gateway", { status: 502 }),
-      () => apiError(429, "Rate limit reached"),
       () => new Response("<html>not json</html>"),
       () => completion("Sure! Bonjour"),
       () => new Response(JSON.stringify({ choices: [] })),
