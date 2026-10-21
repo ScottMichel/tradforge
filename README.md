@@ -128,7 +128,7 @@ sources are required.
 | Setting | Meaning | Default |
 | --- | --- | --- |
 | `workDir` | Where the translation memory lives. **Worth committing**: it holds all the work. | `.tradforge` |
-| `sources[].format` | `json`, `yaml`, `lua`, `po`, `xliff`, `android`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` or `rimworld-xml` (see [Supported formats](#supported-formats)) | required |
+| `sources[].format` | `json`, `yaml`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` or `rimworld-xml` (see [Supported formats](#supported-formats)) | required |
 | `sources[].include` | Glob patterns, relative to the configuration file | required |
 | `sources[].priority` | Lower is translated first (may be negative) | `0` |
 | `sources[].context` | Tells the model how the texts are used | none |
@@ -164,6 +164,7 @@ sources are required.
 | **gettext** `.po`, `.pot` (`po`) | every `msgid` and `msgid_plural`; `msgctxt` and `#.` notes sent as context; obsolete `#~` entries skipped | `msgstr` filled in, comments and references kept byte for byte; plural forms of the target language (`msgstr[0..n]`), `Language` and `Plural-Forms` headers, UTF-8; `fuzzy` dropped from translated entries; `forge.pot` → `fr.po` |
 | **XLIFF** 1.2 and 2.x `.xlf`, `.xliff` (`xliff`) | the source of every unit (and every segment in XLIFF 2), except `translate="no"`; inline elements (`<x/>`, `<g>`, `<ph>`, `<pc>`) kept in the text and checked; notes sent as context | targets written or added after their source, `target-language`/`trgLang` set, the rest kept byte for byte; Angular's `messages.xlf` → `messages.fr.xlf` |
 | **Android string resources** (`android`) | `res/values/strings.xml`: `<string>`, `<string-array>` items and `<plurals>` quantities, read as Android reads them (escapes, quotes, spaces); `translatable="false"` skipped; `<xliff:g>` and `<b>` kept and checked | `res/values-fr/`, `values-pt-rBR/`; escaped for Android (`\'`, `\@`...), plurals with the quantities of the target language (CLDR), non-translatable resources left out |
+| **Apple strings** `.strings` (`ios-strings`) | `en.lproj/` or `Base.lproj/`: every value, the comment above it sent as context; all escapes (`\"`, `\n`, `\U00E9`) | `fr.lproj/`, values replaced in place, comments kept; `%@` and `%ld` checked |
 | **SubRip** `.srt` (`srt`), **WebVTT** `.vtt` (`vtt`) | one text per cue, cues less than 2 s apart kept together as a scene; tags, `{\an8}` codes, NOTE/STYLE blocks | texts replaced in place, numbers and timings untouched; `movie.en.srt` → `movie.fr.srt` |
 
 ### Engine and game dialects
@@ -179,7 +180,7 @@ file is a Lua-like table, a RimWorld `.xml` file follows a fixed schema. tradfor
 | **RimWorld language data** (`rimworld-xml`) | `.xml`, `<LanguageData>` root | `Languages/English/Keyed/` and `DefInjected/`, `<li>` lists, literal `\n` | `Languages/French/...`, XML escaped correctly; grammar symbols `[PAWN_nameDef]` and rule heads protected |
 
 `tradforge init` recognises all of them in a folder (by extension, or by path for the dialects whose extension is
-generic) and proposes the right output paths. More formats are on the way: iOS, `.properties`, `.resx`, `.arb`, Markdown… See the
+generic) and proposes the right output paths. More formats are on the way: `.properties`, `.resx`, `.arb`, Markdown… See the
 [roadmap](#roadmap).
 
 ## Engines
@@ -299,6 +300,7 @@ texts written for tradforge.
   plain text: check their keywords came back untouched.
 - YAML: anchors, aliases, tags and flow mappings (`{a: b}`) are refused with the line they are on; a flow list must
   fit on one line.
+- Apple: plurals (`.stringsdict`) and string catalogs (`.xcstrings`) are not supported yet.
 - Typography rules exist for French only (France and Canada) so far.
 - A back-translation adds its own mistakes: a verdict is a pointer for a human, not a correction, and small local
   judges are strict (a synonym can be called a nuance). Negations are recognised in English, French, Spanish, German,
@@ -308,7 +310,7 @@ texts written for tradforge.
 
 ## Roadmap
 
-1. **Application formats**: iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
+1. **Application formats**: Apple `.stringsdict` and `.xcstrings`, `.properties`, `.resx`, `.arb`, Markdown, HTML.
 2. **Desktop application**: open a file or a folder, translate, review — no command line needed.
 3. **Office documents**: `.docx`, `.odt`, `.pptx`, `.xlsx`.
 

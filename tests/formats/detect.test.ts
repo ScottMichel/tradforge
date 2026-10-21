@@ -13,6 +13,7 @@ describe("formatOf", () => {
     expect(formatOf("src/locale/messages.xlf")).toBe("xliff");
     expect(formatOf("app.xliff")).toBe("xliff");
     expect(formatOf("config/locales/en.yml")).toBe("yaml");
+    expect(formatOf("App/en.lproj/Localizable.strings")).toBe("ios-strings");
     expect(formatOf("messages.en.YAML")).toBe("yaml");
     expect(formatOf("notes.txt")).toBeUndefined();
   });
@@ -263,6 +264,24 @@ describe("detectSources", () => {
         file: "app/src/main/res/values-de/strings.xml",
         reason: "Android strings of another language or configuration",
       },
+    ]);
+  });
+
+  it("proposes the .strings of the source language, or of Base, for the .lproj folder of the target language", async () => {
+    await createFiles(
+      "App/en.lproj/Localizable.strings",
+      "App/Base.lproj/Main.strings",
+      "App/de.lproj/Localizable.strings",
+      "Tools/notes.strings",
+    );
+    const { sources, skipped } = await detectSources(root, "en", "pt-BR");
+    expect(sources.map((source) => [source.format, source.include[0], source.output])).toEqual([
+      ["ios-strings", "App/Base.lproj/*.strings", "App/pt-BR.lproj/{name}{ext}"],
+      ["ios-strings", "App/en.lproj/*.strings", "App/pt-BR.lproj/{name}{ext}"],
+    ]);
+    expect(skipped).toEqual([
+      { file: "App/de.lproj/Localizable.strings", reason: "strings of another language" },
+      { file: "Tools/notes.strings", reason: "not in a <language>.lproj folder" },
     ]);
   });
 

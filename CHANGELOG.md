@@ -7,6 +7,8 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `ios-strings` format: the `.strings` files of Apple platforms (`en.lproj/`, `Base.lproj/`), the comment above each
+  entry sent as context, every escape of the format decoded and written back. `tradforge init` proposes `fr.lproj/`.
 - The `printf` placeholders include Apple's `%@` and the length modifiers of C (`%ld`, `%lld`, `%zu`).
 - `android` format: Android string resources (`res/values/strings.xml`). Strings, string array items and plural
   quantities are read as Android reads them (backslash escapes, quotes that keep spaces, merged spaces), inline

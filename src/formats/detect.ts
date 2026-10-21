@@ -11,6 +11,7 @@ import { pzLanguageCode } from "./pz/languages.js";
 /** The file extensions of each format, in lower case. Formats with a generic extension are found by their path. */
 export const FORMAT_EXTENSIONS: Readonly<Record<SourceFormat, readonly string[]>> = {
   android: [], // .xml is too generic: Android resources are recognised by their path (res/values/strings.xml)
+  "ios-strings": [".strings"],
   json: [".json"],
   lua: [".lua"],
   srt: [".srt"],
@@ -126,6 +127,12 @@ export async function detectSources(root: string, sourceLanguage: string, target
       const exchange = await xliffSuggestion(root, file, markers, sourceLanguage);
       if ("reason" in exchange) skipped.push({ file, reason: exchange.reason });
       else add(exchange);
+      continue;
+    }
+    if (format === "ios-strings") {
+      const strings = iosSuggestion(file, markers, targetLanguage);
+      if ("reason" in strings) skipped.push({ file, reason: strings.reason });
+      else add(strings);
       continue;
     }
     if (format === "yaml") {
@@ -366,6 +373,26 @@ async function androidSuggestion(
   const target = targetLanguage === undefined ? "{lang}" : androidLanguage(targetLanguage);
   const output = [...parts.slice(0, -1), `values-${target}`].join("/");
   return { format: "android", include: file, output: `${output}/{name}{ext}` };
+}
+
+/**
+ * Apple .strings files sit in a folder per language: en.lproj/Localizable.strings (or Base.lproj, or the old
+ * English.lproj). The translations go to fr.lproj/.
+ */
+function iosSuggestion(
+  file: string,
+  markers: readonly string[],
+  targetLanguage: string | undefined,
+): Suggestion | { reason: string } {
+  const folder = path.posix.dirname(file);
+  const parts = folder.split("/");
+  const language = /^(.+)\.lproj$/i.exec(parts.at(-1) ?? "")?.[1];
+  if (language === undefined) return { reason: "not in a <language>.lproj folder" };
+  if (language.toLowerCase() !== "base" && !isMarker(language, markers)) {
+    return { reason: "strings of another language" };
+  }
+  const output = [...parts.slice(0, -1), `${targetLanguage ?? "{lang}"}.lproj`].join("/");
+  return { format: "ios-strings", include: `${folder}/*.strings`, output: `${output}/{name}{ext}` };
 }
 
 /** The include pattern and output template for a file with a language marker in its path, if it has one. */

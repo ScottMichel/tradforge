@@ -9,6 +9,7 @@ import {
 /** Every format a reader exists for. Single source of truth for validation and types. */
 export const SOURCE_FORMATS = [
   "android",
+  "ios-strings",
   "json",
   "lua",
   "paradox-yml",
@@ -607,6 +608,8 @@ export const FORMAT_PLACEHOLDERS: Readonly<Partial<Record<SourceFormat, readonly
   xliff: ["markup"],
   // Android strings: %1$s placeholders, <xliff:g> and <b> tags
   android: ["printf", "markup"],
+  // Apple strings: %@, %1$@, %ld
+  "ios-strings": ["printf"],
 };
 
 /** The placeholder syntaxes to check: the configured ones, plus those of the formats the project uses. */
