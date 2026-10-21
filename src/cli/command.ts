@@ -14,6 +14,8 @@ export const OPTIONS = {
   json: { type: "boolean" },
   from: { type: "string" },
   to: { type: "string" },
+  engines: { type: "string" },
+  sample: { type: "string" },
 } as const;
 
 export type OptionName = keyof typeof OPTIONS;
@@ -34,6 +36,8 @@ export const OPTION_HELP: Readonly<Record<OptionName, string>> = {
   json: "--json               Print the texts as JSON",
   from: "--from <lang>        Language of the texts (default: en)",
   to: "--to <lang>          Language to translate into (default: fr)",
+  engines: "--engines <list>     Engines to compare, as type[:model]: ollama,gemini:gemini-flash-latest,deepl",
+  sample: "--sample <n>         Number of texts to compare them on (default: 30)",
 };
 
 export interface CliOptions {
@@ -49,6 +53,8 @@ export interface CliOptions {
   readonly json?: boolean | undefined;
   readonly from?: string | undefined;
   readonly to?: string | undefined;
+  readonly engines?: string | undefined;
+  readonly sample?: string | undefined;
 }
 
 export interface CommandContext {

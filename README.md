@@ -83,6 +83,7 @@ dialogues: `cd examples/game`, then `tradforge translate --dry-run`.
 | `extract [--json]` | Find the texts to translate, without translating them |
 | `diff` | New, removed and *slightly changed* texts since the last translation |
 | `translate [--limit <n>] [--only <path>] [--retry] [--dry-run]` | Translate what the memory does not have yet; `--dry-run` sends nothing and estimates the tokens and the cost |
+| `compare --engines <type[:model],...> [--sample <n>] [<file.csv>]` | Translate a sample with several engines, side by side, to choose one; the memory is not changed |
 | `build [--force]` | Write the translated files |
 | `export [<file.csv>]` | Write a CSV to review or complete the translations |
 | `import <file.csv> [--keep]` | Import reviewed or manual translations |
@@ -208,9 +209,22 @@ DeepL is not a language model: it gets the texts, never a prompt. tradforge repl
 DeepL's `context` parameter (not billed); the glossary becomes a DeepL glossary, named after its content and reused
 from one run to the next. DeepL bills characters, so `pricing` is `{ "perMillionCharacters": 25 }`.
 
+To choose an engine, compare them on your own texts:
+
+```sh
+tradforge compare --engines "ollama,gemini:gemini-flash-latest,deepl" --sample 30
+```
+
+Each engine translates the same sample (texts spread over the project, a quarter of them with placeholders, always
+the same ones), with the real validation, and the project memory is not changed. You get a table (translated,
+failed, time, cost of the rest of the project), the texts on which the engines disagree side by side, and every
+translation in `.tradforge/compare.csv`. An engine of the project's type keeps its settings; an Ollama model name
+keeps its colon (`ollama:qwen3:8b`).
+
 When an API asks to slow down (HTTP 429), every batch pauses for the delay the server gives (or 1 s, 2 s, 4 s...),
 then the same batch is sent again: a rate limit is never counted as a failure. After 6 waits in a row, tradforge stops
-and advises a lower `translation.concurrency`. A used-up quota stops at once.
+and advises a lower `translation.concurrency`. A used-up quota stops at once. An engine that does not answer at all,
+3 times in a row, is taken as down: smaller batches would not help.
 
 ## How it works
 
@@ -269,7 +283,7 @@ texts written for tradforge.
 
 ## Roadmap
 
-1. **Quality**: `tradforge compare` (models side by side), back-translation of suspicious lines.
+1. **Quality**: back-translation of suspicious lines.
 2. **Application formats**: XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
 3. **Desktop application**: open a file or a folder, translate, review — no command line needed.
 4. **Office documents**: `.docx`, `.odt`, `.pptx`, `.xlsx`.

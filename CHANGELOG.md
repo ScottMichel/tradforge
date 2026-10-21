@@ -7,6 +7,10 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `tradforge compare --engines <type[:model],...> [--sample <n>]`: the same sample translated by several engines,
+  with the real validation and a throwaway memory; a table (translated, failed, time, cost of the rest of the
+  project), the texts on which they disagree side by side, and a CSV of every translation.
+- An engine that does not answer 3 times in a row stops the run, instead of being retried with ever smaller batches.
 - `deepl` engine: placeholders protected as `<x id="n"/>` tags (`tag_handling: xml`), XML characters escaped,
   instructions and neighbouring lines sent as DeepL context, the glossary turned into a DeepL glossary reused across
   runs, `formality`, free and paid addresses guessed from the key, 50 texts per request, cost per character.

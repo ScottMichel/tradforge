@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { CliIo } from "../../src/cli/io.js";
 import { EXIT, runCli } from "../../src/cli/main.js";
+import type { ProviderConfig } from "../../src/core/config.js";
 import { type Provider, ProviderUnavailableError, RateLimitError } from "../../src/core/provider.js";
 import { createMockProvider } from "../../src/providers/mock/provider.js";
 
@@ -219,6 +220,49 @@ describe("the command line", () => {
     const deepl = (await cli("translate --dry-run")).out;
     expect(deepl).toContain("Estimated use: about 32 characters (1 request");
     expect(deepl).toMatch(/Estimated cost: about [\d.,]+ \(25 per million characters\)/);
+  });
+
+  it("compares engines on a sample of the project, without touching the memory", async () => {
+    await createProject();
+    const engines = (config: ProviderConfig) =>
+      createMockProvider({
+        model: config.model,
+        translate: (source) =>
+          config.model === "sloppy" && source.startsWith("Hello") ? "Salut {ami}" : `[${config.model}] ${source}`,
+      });
+    const result = await cli("compare --engines ollama:careful,ollama:sloppy --sample 10", { createProvider: engines });
+    expect(result.code).toBe(EXIT.ok);
+    expect(result.out).toContain("Comparing 2 engines on 4 texts");
+    expect(result.out).toMatch(/ollama:careful\s+4\/4\s+0\s/);
+    expect(result.out).toMatch(/ollama:sloppy\s+3\/4\s+1\s/);
+    expect(result.out).toContain("free (local)");
+    expect(result.out).toContain("[careful] Welcome"); // translations side by side
+
+    const file = await read(".tradforge/compare.csv");
+    expect(file.charCodeAt(0)).toBe(0xfeff); // byte order mark, so that Excel reads the accents right
+    const csv = file.slice(1);
+    expect(csv.split(/\r?\n/)[0]).toBe("source,ollama:careful,ollama:sloppy");
+    expect(csv).toContain("FAILED: placeholder");
+    expect((await cli("status")).out).toMatch(/to translate\s+4/); // the project memory is untouched
+  });
+
+  it("keeps the side by side view on one line per engine, even for texts with line breaks", async () => {
+    await createProject();
+    await createFile("locales/en/ui.json", JSON.stringify({ tip: "Rest.\nEat." }));
+    const result = await cli("compare --engines ollama:a,ollama:b", {
+      createProvider: (config) => createMockProvider({ translate: (source) => `[${config.model}] ${source}` }),
+    });
+    expect(result.out).toContain("ollama:a  [a] Rest.\\nEat.");
+    expect(await read(".tradforge/compare.csv")).toContain('"[a] Rest.\nEat."');
+  });
+
+  it("explains how to choose the engines to compare", async () => {
+    await createProject();
+    const missing = await cli("compare");
+    expect(missing.code).toBe(EXIT.usage);
+    expect(missing.err).toContain("--engines");
+    expect((await cli("compare --engines babelfish")).err).toContain("babelfish");
+    expect((await cli("compare --engines ollama --sample 0")).err).toContain("--sample");
   });
 
   it("says when it waits because of a rate limit", async () => {

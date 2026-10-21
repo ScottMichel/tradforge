@@ -7,6 +7,7 @@ import { MemoryFileError } from "../storage/memory-store.js";
 import { VERSION } from "../version.js";
 import { type CliOptions, type Command, EXIT, GLOBAL_OPTIONS, OPTION_HELP, OPTIONS, UsageError } from "./command.js";
 import { buildCommand } from "./commands/build.js";
+import { compareCommand } from "./commands/compare.js";
 import { diffCommand } from "./commands/diff.js";
 import { exportCommand } from "./commands/export.js";
 import { extractCommand } from "./commands/extract.js";
@@ -26,6 +27,7 @@ const COMMANDS: readonly Command[] = [
   extractCommand,
   diffCommand,
   translateCommand,
+  compareCommand,
   buildCommand,
   exportCommand,
   importCommand,

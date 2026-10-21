@@ -8,6 +8,7 @@ import { loadMemory, memoryFilePath, saveMemory } from "../../storage/memory-sto
 import { type Command, EXIT, UsageError } from "../command.js";
 import { formatCount, formatDuration, plural, quote } from "../format.js";
 import { displayPath, projectOf } from "../project.js";
+import { roughAmount } from "../usage.js";
 
 /** Texts listed by a dry run: enough to check the selection. */
 const DRY_RUN_PREVIEW = 10;
@@ -88,9 +89,6 @@ export const translateCommand: Command = {
 
 const FAILURE_HINT =
   'Run "tradforge export" to review the failures, or "tradforge translate --retry" to try them again.';
-
-/** Two significant digits: an estimate does not deserve more, and tiny costs stay readable (0.00041). */
-const roughAmount = new Intl.NumberFormat("en-US", { maximumSignificantDigits: 2 });
 
 function usageLines(provider: ProviderConfig, usage: UsageEstimate): string[] {
   const requests = `${plural(usage.requests, "request")}, retries not included`;

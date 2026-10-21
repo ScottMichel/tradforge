@@ -376,6 +376,14 @@ function parseStringList(value: unknown, path: string, report: Report): string[]
   return value.filter(isNonEmptyString);
 }
 
+/** One engine's settings, with the same defaults and checks as in a configuration file (compare --engines). */
+export function parseProviderConfig(raw: unknown): ProviderConfig {
+  const problems: ConfigProblem[] = [];
+  const provider = parseProvider(raw, (path, message) => problems.push({ path, message }));
+  if (problems.length > 0) throw new ConfigError(problems);
+  return provider;
+}
+
 function parseProvider(value: unknown, report: Report): ProviderConfig {
   if (value === undefined) return DEFAULT_PROVIDER;
   if (!isObject(value)) {

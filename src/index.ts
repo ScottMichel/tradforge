@@ -1,3 +1,5 @@
+export type { BenchmarkOptions, Engine, EngineResult } from "./core/benchmark.js";
+export { benchmarkEngines } from "./core/benchmark.js";
 export type {
   AnthropicProviderConfig,
   CharacterPricing,
@@ -33,6 +35,7 @@ export {
   OUTPUT_PLACEHOLDERS,
   PROVIDER_TYPES,
   parseConfig,
+  parseProviderConfig,
   RESPONSE_FORMATS,
   SOURCE_FORMATS,
   UNTRANSLATED_MODES,
@@ -63,10 +66,11 @@ export type {
   TranslationItem,
   TranslationRequest,
 } from "./core/provider.js";
-export { BatchError, ProviderUnavailableError, RateLimitError } from "./core/provider.js";
+export { BatchError, ProviderUnavailableError, RateLimitError, TimeoutError } from "./core/provider.js";
 export type { Reader, ReaderInput } from "./core/reader.js";
 export { ReadError } from "./core/reader.js";
 export { reuseTranslation } from "./core/reuse.js";
+export { sampleSegments } from "./core/sample.js";
 export { groupOccurrences } from "./core/segments.js";
 export type {
   FailedTranslation,

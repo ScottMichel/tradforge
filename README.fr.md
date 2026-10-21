@@ -88,6 +88,7 @@ dialogues en Lua : `cd examples/game`, puis `tradforge translate --dry-run`.
 | `extract [--json]` | Trouve les textes à traduire, sans les traduire |
 | `diff` | Textes nouveaux, retirés et *légèrement modifiés* depuis la dernière traduction |
 | `translate [--limit <n>] [--only <chemin>] [--retry] [--dry-run]` | Traduit ce que la mémoire n'a pas encore ; `--dry-run` n'envoie rien et estime les tokens et le coût |
+| `compare --engines <type[:modèle],...> [--sample <n>] [<fichier.csv>]` | Traduit un échantillon avec plusieurs moteurs, côte à côte, pour en choisir un ; la mémoire n'est pas modifiée |
 | `build [--force]` | Écrit les fichiers traduits |
 | `export [<fichier.csv>]` | Écrit un CSV pour relire ou compléter les traductions |
 | `import <fichier.csv> [--keep]` | Importe des traductions relues ou manuelles |
@@ -214,9 +215,22 @@ les balises par `<x id="0"/>` avant l'envoi et les remet après ; consignes, con
 le paramètre `context` de DeepL (non facturé) ; le glossaire devient un glossaire DeepL, nommé d'après son contenu et
 réutilisé d'un passage à l'autre. DeepL facture des caractères : `pricing` vaut donc `{ "perMillionCharacters": 25 }`.
 
+Pour choisir un moteur, comparez-les sur vos propres textes :
+
+```sh
+tradforge compare --engines "ollama,gemini:gemini-flash-latest,deepl" --sample 30
+```
+
+Chaque moteur traduit le même échantillon (des textes répartis dans tout le projet, dont un quart avec des
+variables, toujours les mêmes), avec la vraie validation, sans modifier la mémoire du projet. Vous obtenez un tableau
+(traduits, échecs, durée, coût du reste du projet), les textes sur lesquels les moteurs divergent côte à côte, et
+toutes les traductions dans `.tradforge/compare.csv`. Un moteur du même type que celui du projet garde ses réglages ;
+un nom de modèle Ollama garde son deux-points (`ollama:qwen3:8b`).
+
 Quand une API demande de ralentir (HTTP 429), tous les lots font une pause du délai donné par le serveur (sinon
 1 s, 2 s, 4 s…), puis le même lot est renvoyé : une limite de débit ne compte jamais comme un échec. Après 6 attentes
-de suite, tradforge s'arrête et conseille de baisser `translation.concurrency`. Un quota épuisé arrête tout de suite.
+de suite, tradforge s'arrête et conseille de baisser `translation.concurrency`. Un quota épuisé arrête tout de suite. Un moteur qui ne répond plus du tout, 3 fois de suite, est considéré comme en
+panne : des lots plus petits n'y changeraient rien.
 
 ## Fonctionnement
 
@@ -278,7 +292,7 @@ des textes écrits pour tradforge.
 
 ## Feuille de route
 
-1. **Qualité** : `tradforge compare` (plusieurs modèles côte à côte), retraduction inverse des lignes suspectes.
+1. **Qualité** : retraduction inverse des lignes suspectes.
 2. **Formats d'applications** : XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
 3. **Application de bureau** : ouvrir un fichier ou un dossier, traduire, relire — sans ligne de commande.
 4. **Documents bureautiques** : `.docx`, `.odt`, `.pptx`, `.xlsx`.
