@@ -30,6 +30,29 @@ export interface TranslationRequest {
   readonly surrounding?: { readonly before: readonly ContextLine[]; readonly after: readonly ContextLine[] };
 }
 
+/** How close a back-translation is to the original: the meaning kept, a nuance lost or added, or another meaning. */
+export const VERDICTS = ["same", "nuance", "different"] as const;
+export type Verdict = (typeof VERDICTS)[number];
+
+/** An original text and the back-translation of its translation, in the same language. */
+export interface ReviewItem {
+  readonly id: number;
+  readonly original: string;
+  readonly backTranslation: string;
+}
+
+export interface ReviewRequest {
+  /** The language of both texts: the source language of the project. */
+  readonly language: string;
+  readonly items: readonly ReviewItem[];
+}
+
+export interface Review {
+  readonly verdict: Verdict;
+  /** A short reason, for the human who reads it. */
+  readonly note: string;
+}
+
 /**
  * Port: a translation engine. It only translates; checking the result is the job of the validation.
  * The answer may lack some ids (the model skipped them): the caller decides what to do.
@@ -43,6 +66,11 @@ export interface Provider {
    */
   readonly protectPlaceholders?: boolean;
   readonly translateBatch: (request: TranslationRequest, signal?: AbortSignal) => Promise<ReadonlyMap<number, string>>;
+  /**
+   * Judges whether each back-translation keeps the meaning of its original. Language models can; a translation
+   * engine such as DeepL cannot, and has none. Like translateBatch, the answer may lack some ids.
+   */
+  readonly review?: (request: ReviewRequest, signal?: AbortSignal) => Promise<ReadonlyMap<number, Review>>;
 }
 
 /** The engine cannot be used at all (not running, model missing...): stop and explain. */

@@ -1,6 +1,7 @@
 import type { Provider } from "../../core/provider.js";
 import { buildSystemPrompt, buildUserMessage } from "./prompt.js";
 import { parseTranslations, RESPONSE_SCHEMA } from "./response.js";
+import { buildReviewPrompt, parseReviews, REVIEW_SCHEMA } from "./review.js";
 import { estimateTokens } from "./usage.js";
 
 /** One exchange with a language model: instructions, a message, and the JSON schema the answer must follow. */
@@ -39,6 +40,24 @@ export function createLlmProvider(model: string, complete: Complete): Provider {
         signal,
       );
       return parseTranslations(
+        text,
+        request.items.map((item) => item.id),
+      );
+    },
+    async review(request, signal) {
+      const { system, user } = buildReviewPrompt(request);
+      const text = await complete(
+        {
+          system,
+          user,
+          schemaName: "reviews",
+          schema: REVIEW_SCHEMA,
+          // A verdict and a short note per text.
+          expectedOutputTokens: 40 * request.items.length + 20,
+        },
+        signal,
+      );
+      return parseReviews(
         text,
         request.items.map((item) => item.id),
       );
