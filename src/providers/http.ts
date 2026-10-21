@@ -4,7 +4,7 @@ export interface RequestOptions {
   readonly url: string;
   readonly headers: Readonly<Record<string, string>>;
   /** Default: POST. */
-  readonly method?: "GET" | "POST";
+  readonly method?: "GET" | "POST" | "DELETE";
   /** Sent as JSON; none for a GET. */
   readonly body?: unknown;
   /** Maximum time for the whole exchange. */

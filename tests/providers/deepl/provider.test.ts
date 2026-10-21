@@ -32,9 +32,13 @@ interface Call {
  * A fake DeepL: it translates by adding "[fr] ", keeps the glossaries it was given, and answers with the handler
  * when one is given for this path.
  */
-function fakeDeepL(handlers: Record<string, () => Response> = {}) {
+function fakeDeepL(
+  handlers: Record<string, () => Response> = {},
+  account: { glossaries?: { glossary_id: string; name: string }[]; limit?: number } = {},
+) {
   const calls: Call[] = [];
-  const glossaries: { glossary_id: string; name: string }[] = [];
+  const glossaries = [...(account.glossaries ?? [])];
+  let created = 0;
   const fetch: typeof globalThis.fetch = async (input, init) => {
     const url = new URL(String(input));
     const body: unknown = init?.body === undefined ? undefined : JSON.parse(String(init.body));
@@ -42,8 +46,18 @@ function fakeDeepL(handlers: Record<string, () => Response> = {}) {
     const handler = handlers[url.pathname];
     if (handler !== undefined) return handler();
     if (url.pathname === "/v2/glossaries" && init?.method === "GET") return Response.json({ glossaries });
+    if (url.pathname.startsWith("/v2/glossaries/") && init?.method === "DELETE") {
+      const index = glossaries.findIndex((item) => url.pathname.endsWith(`/${item.glossary_id}`));
+      if (index === -1) return Response.json({ message: "Not found" }, { status: 404 });
+      glossaries.splice(index, 1);
+      return new Response(null, { status: 204 });
+    }
     if (url.pathname === "/v2/glossaries") {
-      const glossary = { glossary_id: `g${glossaries.length + 1}`, name: String((body as { name: string }).name) };
+      if (glossaries.length >= (account.limit ?? Number.POSITIVE_INFINITY)) {
+        return Response.json({ message: "Too many glossaries" }, { status: 456 });
+      }
+      created++;
+      const glossary = { glossary_id: `g${created}`, name: String((body as { name: string }).name) };
       glossaries.push(glossary);
       return Response.json(glossary, { status: 201 });
     }
@@ -213,6 +227,26 @@ describe("DeepL provider", () => {
       await provider(second.fetch).translateBatch(request(["NPC"], { glossary }));
       expect(second.calls.filter((call) => call.method === "POST" && call.url.endsWith("/glossaries"))).toEqual([]);
       expect(bodyOf(second.translateCalls()[0]).glossary_id).toBe("old");
+    });
+
+    it("makes room by deleting its own older glossaries of the pair when the account is full", async () => {
+      const mine = { glossary_id: "user", name: "My terms" };
+      const old = { glossary_id: "old", name: "tradforge en-fr 000000000000" };
+      const german = { glossary_id: "de", name: "tradforge en-de 000000000000" };
+      const { fetch, calls, glossaries, translateCalls } = fakeDeepL({}, { glossaries: [mine, old, german], limit: 3 });
+      await provider(fetch).translateBatch(request(["NPC"], { glossary }));
+
+      const deleted = calls.filter((call) => call.method === "DELETE").map((call) => call.url);
+      expect(deleted).toEqual(["https://api.deepl.com/v2/glossaries/old"]);
+      expect(glossaries.map((item) => item.glossary_id)).toEqual(["user", "de", "g1"]);
+      expect(bodyOf(translateCalls()[0]).glossary_id).toBe("g1");
+    });
+
+    it("stops with advice when the account is full of other glossaries", async () => {
+      const mine = { glossary_id: "user", name: "My terms" };
+      const { fetch } = fakeDeepL({}, { glossaries: [mine], limit: 1 });
+      const translating = provider(fetch).translateBatch(request(["NPC"], { glossary }));
+      await expect(translating).rejects.toThrow(/HTTP 456.*Too many glossaries.*translation\.glossary/);
     });
 
     it("sends no glossary when the project has none", async () => {

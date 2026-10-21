@@ -209,7 +209,8 @@ what is sent, and exact for what is received; retries are not included.
 DeepL is not a language model: it gets the texts, never a prompt. tradforge replaces placeholders and tags with
 `<x id="0"/>` before sending them and puts them back after; instructions, contexts and neighbouring lines go in
 DeepL's `context` parameter (not billed); the glossary becomes a DeepL glossary, named after its content and reused
-from one run to the next. DeepL bills characters, so `pricing` is `{ "perMillionCharacters": 25 }`.
+from one run to the next; when the account holds no more glossaries (one on a free account), the older ones
+that tradforge made for the same language pair are deleted to make room. DeepL bills characters, so `pricing` is `{ "perMillionCharacters": 25 }`.
 
 To choose an engine, compare them on your own texts:
 

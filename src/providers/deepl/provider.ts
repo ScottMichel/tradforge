@@ -90,7 +90,7 @@ export function createDeepLProvider(options: DeepLOptions): Provider {
         );
       }
       const baseUrl = (options.baseUrl ?? (apiKey.endsWith(":fx") ? FREE_URL : PAID_URL)).replace(/\/+$/, "");
-      const send = (path: string, method: "GET" | "POST", body?: unknown) =>
+      const send = (path: string, method: "GET" | "POST" | "DELETE", body?: unknown) =>
         requestJson({
           url: `${baseUrl}${path}`,
           method,
@@ -173,7 +173,7 @@ function translatedTexts(body: string, expected: number): string[] {
   return texts.filter((text) => text !== undefined);
 }
 
-type Send = (path: string, method: "GET" | "POST", body?: unknown) => Promise<HttpResponse>;
+type Send = (path: string, method: "GET" | "POST" | "DELETE", body?: unknown) => Promise<HttpResponse>;
 
 /**
  * The id of a DeepL glossary holding the project glossary. Its name is a digest of its content: a later run with
@@ -208,6 +208,9 @@ async function glossaryFor(
   return id;
 }
 
+/** DeepL's answer when the account cannot hold another glossary. */
+const TOO_MANY_GLOSSARIES = 456;
+
 async function findOrCreateGlossary(
   name: string,
   glossary: { readonly source: string; readonly target: string; readonly entries: string },
@@ -216,16 +219,30 @@ async function findOrCreateGlossary(
 ): Promise<string> {
   const listed = await send("/v2/glossaries", "GET");
   if (listed.status >= 400) throw glossaryError(listed, glossary, fail);
-  const existing = glossaryList(listed.body).find((item) => item.name === name);
+  const list = glossaryList(listed.body);
+  const existing = list.find((item) => item.name === name);
   if (existing !== undefined) return existing.id;
 
-  const created = await send("/v2/glossaries", "POST", {
-    name,
-    source_lang: glossary.source,
-    target_lang: glossary.target,
-    entries: glossary.entries,
-    entries_format: "tsv",
-  });
+  const create = () =>
+    send("/v2/glossaries", "POST", {
+      name,
+      source_lang: glossary.source,
+      target_lang: glossary.target,
+      entries: glossary.entries,
+      entries_format: "tsv",
+    });
+  let created = await create();
+  if (created.status === TOO_MANY_GLOSSARIES) {
+    // A free account holds very few glossaries. Those of tradforge for this pair are older versions of a project
+    // glossary, made again whenever needed: they make room. The other glossaries of the account are never touched.
+    const prefix = `tradforge ${glossary.source}-${glossary.target} `;
+    const stale = list.filter((item) => item.name.startsWith(prefix));
+    for (const item of stale) {
+      const removed = await send(`/v2/glossaries/${encodeURIComponent(item.id)}`, "DELETE");
+      if (removed.status >= 400 && removed.status !== 404) throw glossaryError(removed, glossary, fail);
+    }
+    if (stale.length > 0) created = await create();
+  }
   if (created.status >= 400) throw glossaryError(created, glossary, fail);
   const data: unknown = JSON.parse(created.body);
   if (!isObject(data) || typeof data.glossary_id !== "string") {

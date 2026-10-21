@@ -215,7 +215,8 @@ réel pour l'envoi, et tombait juste pour la réception ; les nouvelles tentativ
 DeepL n'est pas un modèle de langage : il reçoit les textes, jamais de prompt. tradforge remplace les variables et
 les balises par `<x id="0"/>` avant l'envoi et les remet après ; consignes, contextes et lignes voisines passent par
 le paramètre `context` de DeepL (non facturé) ; le glossaire devient un glossaire DeepL, nommé d'après son contenu et
-réutilisé d'un passage à l'autre. DeepL facture des caractères : `pricing` vaut donc `{ "perMillionCharacters": 25 }`.
+réutilisé d'un passage à l'autre ; quand le compte n'a plus de place (un seul glossaire sur un compte gratuit),
+les anciens glossaires créés par tradforge pour la même paire de langues sont supprimés pour en faire. DeepL facture des caractères : `pricing` vaut donc `{ "perMillionCharacters": 25 }`.
 
 Pour choisir un moteur, comparez-les sur vos propres textes :
 

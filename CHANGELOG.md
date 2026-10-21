@@ -76,6 +76,9 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Fixed
 
+- DeepL: a free account holds a single glossary, so changing the project glossary failed with HTTP 456. The older
+  glossaries that tradforge made for the same language pair are now deleted to make room; other glossaries are
+  never touched.
 - Placeholders that touch (`{hour}:{minute}`, `%d/%d`) are protected as one tag: a real DeepL run had put a space
   inside the time. Protected tags are numbered in the order of the text.
 - The JSON writer used an invisible character in a regular expression; it now uses a readable escape.
