@@ -7,6 +7,7 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- The `printf` placeholders include the named placeholders of Ruby (`%{count}`).
 - `xliff` format: XLIFF 1.2 and 2.x (`.xlf`, `.xliff`), as Angular and translation tools write them. Inline elements
   stay in the text and must all come back (`markup` is always checked for this format), notes go to the translator
   as context, units of several segments are translated together, and targets are written in place or added after

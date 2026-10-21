@@ -25,6 +25,10 @@ describe("findTokens", () => {
     ]);
   });
 
+  it("finds the named placeholders of Ruby, common in Rails files", () => {
+    expect(findTokens("%{count} bars for %{user.name}", "printf")).toEqual(["%{count}", "%{user.name}"]);
+  });
+
   it("does not take a plain percent sign for a placeholder", () => {
     expect(findTokens("100% sure, 50 % off", "printf")).toEqual([]);
   });
