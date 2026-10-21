@@ -1,6 +1,7 @@
 export type {
   AnthropicProviderConfig,
   ConfigProblem,
+  GeminiProviderConfig,
   GroupRule,
   OllamaProviderConfig,
   OpenAiCompatibleProviderConfig,
@@ -115,6 +116,8 @@ export type { AnthropicOptions } from "./providers/anthropic/provider.js";
 export { createAnthropicProvider } from "./providers/anthropic/provider.js";
 export type { ProviderDependencies } from "./providers/factory.js";
 export { createProvider } from "./providers/factory.js";
+export type { GeminiOptions } from "./providers/gemini/provider.js";
+export { createGeminiProvider } from "./providers/gemini/provider.js";
 export type { MockOptions, MockProvider } from "./providers/mock/provider.js";
 export { createMockProvider } from "./providers/mock/provider.js";
 export type { OllamaOptions } from "./providers/ollama/provider.js";

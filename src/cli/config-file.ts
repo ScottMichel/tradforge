@@ -152,6 +152,7 @@ export function renderConfig(draft: ConfigDraft): string {
   //   { "type": "openai-compatible", "model": "gpt-5-mini", "baseUrl": "https://api.openai.com/v1",
   //     "apiKeyEnv": "OPENAI_API_KEY" }
   // Claude: { "type": "anthropic", "model": "claude-haiku-5-5" } (key in ANTHROPIC_API_KEY).
+  // Gemini: { "type": "gemini", "model": "gemini-flash-latest" } (key in GEMINI_API_KEY).
   // The API key is read from that environment variable: never write it in this file.
   // "responseFormat": "json-schema" (default), or "json-object" / "none" for servers that refuse schemas.
   // "pricing": { "inputPerMillion": 0.4, "outputPerMillion": 1.6 } from your API's price list: "translate --dry-run"

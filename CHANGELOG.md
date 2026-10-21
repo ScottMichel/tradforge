@@ -7,6 +7,8 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `gemini` engine, through the Google generateContent API: the answer schema is converted to the OpenAPI subset
+  Gemini accepts; the delay of a rate limit is read from Google's RetryInfo, and a used-up daily quota stops the run.
 - `anthropic` engine for Claude, through the Messages API: answers are forced through a tool whose input follows
   the answer schema; an overloaded API (HTTP 529) is waited for like a rate limit.
 - `translate --dry-run` estimates the tokens sent and received, measured on the real prompt, and the cost with

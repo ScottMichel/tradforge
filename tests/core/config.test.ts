@@ -334,6 +334,17 @@ describe("parseConfig", () => {
     expect(priced.provider).toMatchObject({ pricing: { inputPerMillion: 1, outputPerMillion: 5 } });
   });
 
+  it("reads a Gemini provider, with the Google address and key variable by default", () => {
+    const config = parseConfig({ ...minimal, provider: { type: "gemini", model: "gemini-2.5-flash" } });
+    expect(config.provider).toStrictEqual({
+      type: "gemini",
+      model: "gemini-2.5-flash",
+      baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+      apiKeyEnv: "GEMINI_API_KEY",
+    });
+    expect(problemPaths({ ...minimal, provider: { type: "gemini" } })).toEqual(["provider.model"]);
+  });
+
   it("applies the same rules to every remote engine: model required, no key in the file", () => {
     expect(problemPaths({ ...minimal, provider: { type: "anthropic" } })).toEqual(["provider.model"]);
     const error = configErrorOf({ ...minimal, provider: { type: "anthropic", model: "m", apiKey: "sk-ant-secret" } });

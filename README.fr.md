@@ -188,6 +188,7 @@ est générique) et propose les bons chemins de sortie. D'autres formats arriven
 | `ollama` (par défaut) | `model` (`mistral-small`), `host` (`http://localhost:11434`) | un modèle local, gratuit, hors ligne |
 | `openai-compatible` | `model` (obligatoire), `baseUrl` (`https://api.openai.com/v1`), `apiKeyEnv` (`OPENAI_API_KEY`), `responseFormat` (`json-schema`) | OpenAI, Mistral, OpenRouter, Groq, et les serveurs locaux comme LM Studio ou vLLM |
 | `anthropic` | `model` (obligatoire, par exemple `claude-haiku-5-5`), `baseUrl` (`https://api.anthropic.com/v1`), `apiKeyEnv` (`ANTHROPIC_API_KEY`) | Claude |
+| `gemini` | `model` (obligatoire, par exemple `gemini-flash-latest`, qui suit le modèle Flash du moment), `baseUrl` (`https://generativelanguage.googleapis.com/v1beta`), `apiKeyEnv` (`GEMINI_API_KEY`) | Gemini, avec une offre gratuite pour essayer |
 
 ```jsonc
 "provider": { "type": "openai-compatible", "model": "mistral-small-latest", "baseUrl": "https://api.mistral.ai/v1", "apiKeyEnv": "MISTRAL_API_KEY" }
@@ -257,7 +258,7 @@ des textes écrits pour tradforge.
 
 ## Limites
 
-- Trois sortes de moteurs pour l'instant : Ollama, les API compatibles OpenAI et Claude.
+- Quatre sortes de moteurs pour l'instant : Ollama, les API compatibles OpenAI, Claude et Gemini.
 - Les jeux Ren'Py reçoivent des copies traduites de leurs scripts, pas une traduction `game/tl/` que le joueur pourrait
   choisir.
 - Les dossiers de langue de RimWorld sont nommés d'après le nom anglais de la langue (`French`) : renommez-les si votre
@@ -270,7 +271,7 @@ des textes écrits pour tradforge.
 
 ## Feuille de route
 
-1. **Moteurs** : Gemini, DeepL.
+1. **Moteurs** : DeepL.
 2. **Qualité** : `tradforge compare` (plusieurs modèles côte à côte), retraduction inverse des lignes suspectes.
 3. **Formats d'applications** : XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
 4. **Application de bureau** : ouvrir un fichier ou un dossier, traduire, relire — sans ligne de commande.

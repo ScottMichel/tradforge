@@ -19,7 +19,7 @@ export const SOURCE_FORMATS = [
 ] as const;
 export type SourceFormat = (typeof SOURCE_FORMATS)[number];
 
-export const PROVIDER_TYPES = ["ollama", "openai-compatible", "anthropic"] as const;
+export const PROVIDER_TYPES = ["ollama", "openai-compatible", "anthropic", "gemini"] as const;
 export type ProviderType = (typeof PROVIDER_TYPES)[number];
 
 /**
@@ -107,6 +107,11 @@ export interface AnthropicProviderConfig extends RemoteProviderSettings {
   readonly type: "anthropic";
 }
 
+/** Gemini, through the Google generateContent API. */
+export interface GeminiProviderConfig extends RemoteProviderSettings {
+  readonly type: "gemini";
+}
+
 /** In any currency, per million tokens, as API price lists show them. */
 export interface Pricing {
   readonly inputPerMillion: number;
@@ -114,7 +119,11 @@ export interface Pricing {
 }
 
 /** Discriminated by type: each engine has its own settings. */
-export type ProviderConfig = OllamaProviderConfig | OpenAiCompatibleProviderConfig | AnthropicProviderConfig;
+export type ProviderConfig =
+  | OllamaProviderConfig
+  | OpenAiCompatibleProviderConfig
+  | AnthropicProviderConfig
+  | GeminiProviderConfig;
 
 export interface TranslationConfig {
   /** Number of segments sent to the model in one request. */
@@ -372,6 +381,15 @@ function parseProvider(value: unknown, report: Report): ProviderConfig {
       return {
         type,
         ...parseRemote(value, { baseUrl: "https://api.anthropic.com/v1", apiKeyEnv: "ANTHROPIC_API_KEY" }, report),
+      };
+    case "gemini":
+      return {
+        type,
+        ...parseRemote(
+          value,
+          { baseUrl: "https://generativelanguage.googleapis.com/v1beta", apiKeyEnv: "GEMINI_API_KEY" },
+          report,
+        ),
       };
   }
 }

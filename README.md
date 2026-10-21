@@ -183,6 +183,7 @@ generic) and proposes the right output paths. More formats are on the way: YAML,
 | `ollama` (default) | `model` (`mistral-small`), `host` (`http://localhost:11434`) | a local model, free, offline |
 | `openai-compatible` | `model` (required), `baseUrl` (`https://api.openai.com/v1`), `apiKeyEnv` (`OPENAI_API_KEY`), `responseFormat` (`json-schema`) | OpenAI, Mistral, OpenRouter, Groq, and local servers such as LM Studio or vLLM |
 | `anthropic` | `model` (required, e.g. `claude-haiku-5-5`), `baseUrl` (`https://api.anthropic.com/v1`), `apiKeyEnv` (`ANTHROPIC_API_KEY`) | Claude |
+| `gemini` | `model` (required, e.g. `gemini-flash-latest`, which follows the current Flash model), `baseUrl` (`https://generativelanguage.googleapis.com/v1beta`), `apiKeyEnv` (`GEMINI_API_KEY`) | Gemini, with a free tier for trying it out |
 
 ```jsonc
 "provider": { "type": "openai-compatible", "model": "mistral-small-latest", "baseUrl": "https://api.mistral.ai/v1", "apiKeyEnv": "MISTRAL_API_KEY" }
@@ -251,7 +252,7 @@ texts written for tradforge.
 
 ## Limitations
 
-- Three kinds of engines for now: Ollama, OpenAI-compatible APIs and Claude.
+- Four kinds of engines for now: Ollama, OpenAI-compatible APIs, Claude and Gemini.
 - Ren'Py games get translated copies of their scripts, not a `game/tl/` translation the player can switch to.
 - RimWorld language folders are named after the English language name (`French`): rename them if your mod uses
   another name.
@@ -261,7 +262,7 @@ texts written for tradforge.
 
 ## Roadmap
 
-1. **Engines**: Gemini, DeepL.
+1. **Engines**: DeepL.
 2. **Quality**: `tradforge compare` (models side by side), back-translation of suspicious lines.
 3. **Application formats**: XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
 4. **Desktop application**: open a file or a folder, translate, review — no command line needed.

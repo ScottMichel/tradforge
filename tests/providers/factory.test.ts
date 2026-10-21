@@ -63,6 +63,26 @@ describe("createProvider", () => {
     expect(key).toBe("sk-ant-1");
   });
 
+  it("creates Gemini with the key of its environment variable", async () => {
+    let key: string | null = null;
+    const fetch: typeof globalThis.fetch = async (_input, init) => {
+      key = new Headers(init?.headers).get("x-goog-api-key");
+      const text = JSON.stringify({ translations: [{ id: 0, translation: "Salut" }] });
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text }] }, finishReason: "STOP" }] }));
+    };
+    const gemini = createProvider(
+      {
+        type: "gemini",
+        model: "gemini-2.5-flash",
+        baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+        apiKeyEnv: "GEMINI_API_KEY",
+      },
+      { env: { GEMINI_API_KEY: "AIza-1" }, fetch },
+    );
+    expect(await gemini.translateBatch(request)).toEqual(new Map([[0, "Salut"]]));
+    expect(key).toBe("AIza-1");
+  });
+
   it("works without a key, for local servers", async () => {
     const { fetch, seen } = recordingFetch();
     await createProvider(openAi, { env: {}, fetch }).translateBatch(request);
