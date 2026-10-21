@@ -1,5 +1,5 @@
 import { ReadError, stripBom } from "../../core/reader.js";
-import { parseXml, type XmlElement, XmlSyntaxError } from "./xml.js";
+import { parseXml, type XmlElement, XmlSyntaxError } from "../xml/parser.js";
 
 /** A text element of a RimWorld language file. */
 export interface RimWorldText {

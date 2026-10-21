@@ -1,7 +1,8 @@
 /**
- * A minimal XML parser for the language files of RimWorld: elements, attributes, text, CDATA, comments, the five
- * predefined entities and numeric character references. No namespaces, no DTD (a doctype without internal subset is
- * skipped), no external entities: what a translation file needs, and nothing that could read other files.
+ * A minimal XML parser for translation files (RimWorld language data, XLIFF): elements, attributes, text, CDATA,
+ * comments, the five predefined entities and numeric character references. No namespaces, no DTD (a doctype without
+ * internal subset is skipped), no external entities: what a translation file needs, and nothing that could read
+ * other files.
  * Every node keeps its offsets in the source, so that a writer can replace a text in place.
  */
 

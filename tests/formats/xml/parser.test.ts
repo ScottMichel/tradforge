@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseXml, type XmlElement, type XmlNode, XmlSyntaxError } from "../../../src/formats/rimworld/xml.js";
+import { parseXml, type XmlElement, type XmlNode, XmlSyntaxError } from "../../../src/formats/xml/parser.js";
 
 const elements = (nodes: readonly XmlNode[]): XmlElement[] =>
   nodes.filter((node): node is XmlElement => node.kind === "element");
