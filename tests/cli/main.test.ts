@@ -256,6 +256,43 @@ describe("the command line", () => {
     expect(await read(".tradforge/compare.csv")).toContain('"[a] Rest.\nEat."');
   });
 
+  it("checks translations by translating them back, and keeps the verdicts for the export", async () => {
+    await createProject();
+    await cli("translate");
+    expect((await cli("verify")).out).toContain("Nothing to check"); // no suspicious translation here
+
+    /** Translates back by removing "[fr] ", and finds a problem in "Play". */
+    const judging = (): Provider => ({
+      ...createMockProvider({ translate: (source) => source.replace("[fr] ", "") }),
+      review: async (request) =>
+        new Map(
+          request.items.map((item) => [
+            item.id,
+            item.original === "Play"
+              ? { verdict: "different" as const, note: "Not the same game." }
+              : { verdict: "same" as const, note: "ok" },
+          ]),
+        ),
+    });
+    const result = await cli("verify --all", { createProvider: judging });
+    expect(result.code).toBe(EXIT.ok);
+    expect(result.out).toContain("Checking 4 translations");
+    expect(result.out).toContain("Done: 4 checked: 3 same, 0 nuance, 1 different, 0 failed.");
+    expect(result.out).toMatch(/"Play"[\s\S]*back-translation: "Play"[\s\S]*Not the same game\./);
+
+    await cli("export");
+    expect(await read(".tradforge/review.csv")).toContain("different,Play,Not the same game.");
+    expect((await cli("verify --all", { createProvider: judging })).out).toContain("Nothing to check");
+  });
+
+  it("asks for a judge when the engine of the project cannot judge", async () => {
+    await createProject();
+    await cli("translate");
+    const result = await cli("verify --all"); // the mock provider has no review, like DeepL
+    expect(result.code).toBe(EXIT.usage);
+    expect(result.err).toContain("--judge");
+  });
+
   it("explains how to choose the engines to compare", async () => {
     await createProject();
     const missing = await cli("compare");

@@ -1,13 +1,13 @@
 import type { ProviderConfig } from "../../core/config.js";
 import { type ProgressEvent, planRequests, selectSegments, translateSegments } from "../../core/pipeline.js";
-import type { Segment } from "../../core/types.js";
 import { extractSegments } from "../../formats/extract.js";
 import { createProvider } from "../../providers/factory.js";
 import { estimateUsage, type UsageEstimate } from "../../providers/usage.js";
 import { loadMemory, memoryFilePath, saveMemory } from "../../storage/memory-store.js";
-import { type Command, EXIT, UsageError } from "../command.js";
+import { type Command, EXIT } from "../command.js";
 import { formatCount, formatDuration, plural, quote } from "../format.js";
 import { displayPath, projectOf } from "../project.js";
+import { onlyIn, parseLimit } from "../selection.js";
 import { roughAmount } from "../usage.js";
 
 /** Texts listed by a dry run: enough to check the selection. */
@@ -121,18 +121,4 @@ function progressLine(event: ProgressEvent): string {
       ? `, about ${formatDuration(event.remainingMs)} left`
       : "";
   return `  ${formatCount(event.done)}/${formatCount(event.total)} done, ${formatCount(event.failed)} failed${left}`;
-}
-
-function parseLimit(value: string | undefined): number | undefined {
-  if (value === undefined) return undefined;
-  if (!/^[1-9]\d*$/.test(value)) throw new UsageError("--limit must be a positive integer");
-  return Number(value);
-}
-
-/** Segments found in this file, or in the files of this folder. */
-function onlyIn(segments: readonly Segment[], only: string): Segment[] {
-  const target = only.replaceAll("\\", "/").replace(/^\.\//, "").replace(/\/$/, "");
-  return segments.filter((segment) =>
-    segment.locations.some((location) => location.file === target || location.file.startsWith(`${target}/`)),
-  );
 }

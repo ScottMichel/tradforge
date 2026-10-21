@@ -63,15 +63,27 @@ export type {
   ContextLine,
   PreviousTranslation,
   Provider,
+  Review,
+  ReviewItem,
+  ReviewRequest,
   TranslationItem,
   TranslationRequest,
+  Verdict,
 } from "./core/provider.js";
-export { BatchError, ProviderUnavailableError, RateLimitError, TimeoutError } from "./core/provider.js";
+export {
+  BatchError,
+  ProviderUnavailableError,
+  RateLimitError,
+  TimeoutError,
+  VERDICTS,
+} from "./core/provider.js";
 export type { Reader, ReaderInput } from "./core/reader.js";
 export { ReadError } from "./core/reader.js";
 export { reuseTranslation } from "./core/reuse.js";
 export { sampleSegments } from "./core/sample.js";
 export { groupOccurrences } from "./core/segments.js";
+export type { Suspicion, SuspicionCode, SuspicionOptions } from "./core/suspicion.js";
+export { suspicions } from "./core/suspicion.js";
 export type {
   FailedTranslation,
   Occurrence,
@@ -94,6 +106,8 @@ export type {
   ValidationOptions,
 } from "./core/validation/validate.js";
 export { DEFAULT_VALIDATION_OPTIONS, validateTranslation } from "./core/validation/validate.js";
+export type { CheckCandidate, Judge, SelectOptions, VerifyOptions, VerifySummary } from "./core/verify.js";
+export { selectForCheck, verifyTranslations } from "./core/verify.js";
 export type { Writer, WriterInput, WriterOutput } from "./core/writer.js";
 export type { BuildOptions, BuiltFile } from "./formats/build.js";
 export { buildProject } from "./formats/build.js";

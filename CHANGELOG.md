@@ -7,6 +7,10 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `tradforge verify`: suspicious machine translations (numbers changed, negation lost, length out of proportion,
+  text left as it was), or all of them with `--all`, are translated back and judged by a language model (`same`,
+  `nuance`, `different`, with a note). Verdicts are kept in the memory until the translation changes, and exported
+  in the review CSV. `--judge` picks the judge; DeepL translates back but cannot judge.
 - `tradforge compare --engines <type[:model],...> [--sample <n>]`: the same sample translated by several engines,
   with the real validation and a throwaway memory; a table (translated, failed, time, cost of the rest of the
   project), the texts on which they disagree side by side, and a CSV of every translation.

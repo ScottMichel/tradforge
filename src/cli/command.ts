@@ -16,6 +16,8 @@ export const OPTIONS = {
   to: { type: "string" },
   engines: { type: "string" },
   sample: { type: "string" },
+  all: { type: "boolean" },
+  judge: { type: "string" },
 } as const;
 
 export type OptionName = keyof typeof OPTIONS;
@@ -38,6 +40,8 @@ export const OPTION_HELP: Readonly<Record<OptionName, string>> = {
   to: "--to <lang>          Language to translate into (default: fr)",
   engines: "--engines <list>     Engines to compare, as type[:model]: ollama,gemini:gemini-flash-latest,deepl",
   sample: "--sample <n>         Number of texts to compare them on (default: 30)",
+  all: "--all                Every machine translation, not only the suspicious ones",
+  judge: "--judge <type[:model]> Language model that judges the back-translations (default: the project engine)",
 };
 
 export interface CliOptions {
@@ -55,6 +59,8 @@ export interface CliOptions {
   readonly to?: string | undefined;
   readonly engines?: string | undefined;
   readonly sample?: string | undefined;
+  readonly all?: boolean | undefined;
+  readonly judge?: string | undefined;
 }
 
 export interface CommandContext {

@@ -15,6 +15,7 @@ import { importCommand } from "./commands/import.js";
 import { initCommand } from "./commands/init.js";
 import { statusCommand } from "./commands/status.js";
 import { translateCommand } from "./commands/translate.js";
+import { verifyCommand } from "./commands/verify.js";
 import type { CliIo } from "./io.js";
 import { CliError, ConfigFileError } from "./project.js";
 
@@ -28,6 +29,7 @@ const COMMANDS: readonly Command[] = [
   diffCommand,
   translateCommand,
   compareCommand,
+  verifyCommand,
   buildCommand,
   exportCommand,
   importCommand,

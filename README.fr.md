@@ -89,6 +89,7 @@ dialogues en Lua : `cd examples/game`, puis `tradforge translate --dry-run`.
 | `diff` | Textes nouveaux, retirés et *légèrement modifiés* depuis la dernière traduction |
 | `translate [--limit <n>] [--only <chemin>] [--retry] [--dry-run]` | Traduit ce que la mémoire n'a pas encore ; `--dry-run` n'envoie rien et estime les tokens et le coût |
 | `compare --engines <type[:modèle],...> [--sample <n>] [<fichier.csv>]` | Traduit un échantillon avec plusieurs moteurs, côte à côte, pour en choisir un ; la mémoire n'est pas modifiée |
+| `verify [--all] [--only <chemin>] [--limit <n>] [--judge <type[:modèle]>]` | Retraduit les traductions suspectes et fait juger par un modèle de langage si le sens est conservé |
 | `build [--force]` | Écrit les fichiers traduits |
 | `export [<fichier.csv>]` | Écrit un CSV pour relire ou compléter les traductions |
 | `import <fichier.csv> [--keep]` | Importe des traductions relues ou manuelles |
@@ -227,6 +228,15 @@ variables, toujours les mêmes), avec la vraie validation, sans modifier la mém
 toutes les traductions dans `.tradforge/compare.csv`. Un moteur du même type que celui du projet garde ses réglages ;
 un nom de modèle Ollama garde son deux-points (`ollama:qwen3:8b`).
 
+La validation attrape les variables et les balises abîmées, pas un contresens. `tradforge verify` cherche les
+traductions qui méritent un second regard : nombres changés, négation disparue, longueur disproportionnée, texte
+laissé tel quel. Il les retraduit vers la langue source avec le moteur du projet, puis un modèle de langage compare
+l'original et la retraduction et donne un verdict : `same` (même sens), `nuance` ou `different` (contresens), avec
+une remarque. `--all` vérifie toutes les traductions du modèle ; les traductions humaines ne sont jamais vérifiées.
+Les verdicts sont gardés dans la mémoire jusqu'à ce que la traduction change, et `export` les ajoute au CSV
+(`check`, `back_translation`, `check_note`), pour que la relecture commence par les vrais problèmes. DeepL sait
+retraduire mais pas juger : ajoutez `--judge ollama` (ou n'importe quel modèle de langage).
+
 Quand une API demande de ralentir (HTTP 429), tous les lots font une pause du délai donné par le serveur (sinon
 1 s, 2 s, 4 s…), puis le même lot est renvoyé : une limite de débit ne compte jamais comme un échec. Après 6 attentes
 de suite, tradforge s'arrête et conseille de baisser `translation.concurrency`. Un quota épuisé arrête tout de suite. Un moteur qui ne répond plus du tout, 3 fois de suite, est considéré comme en
@@ -285,6 +295,9 @@ des textes écrits pour tradforge.
 - Les dossiers de langue de RimWorld sont nommés d'après le nom anglais de la langue (`French`) : renommez-les si votre
   mod utilise un autre nom.
 - Les règles de typographie n'existent pour l'instant que pour le français (France et Canada).
+- Une retraduction ajoute ses propres erreurs : un verdict est un signal pour un humain, pas une correction, et les
+  petits juges locaux sont sévères (un synonyme peut être qualifié de nuance). Les négations sont reconnues en
+  anglais, français, espagnol, allemand, italien et portugais.
 - La vérification du glossaire cherche seulement le terme attendu dans la traduction : elle ne comprend pas la
   grammaire.
 - Dans les fichiers JSON produits, les clés numériques (`"1"`, `"42"`) apparaissent en premier : une règle de
@@ -292,10 +305,9 @@ des textes écrits pour tradforge.
 
 ## Feuille de route
 
-1. **Qualité** : retraduction inverse des lignes suspectes.
-2. **Formats d'applications** : XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
-3. **Application de bureau** : ouvrir un fichier ou un dossier, traduire, relire — sans ligne de commande.
-4. **Documents bureautiques** : `.docx`, `.odt`, `.pptx`, `.xlsx`.
+1. **Formats d'applications** : XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
+2. **Application de bureau** : ouvrir un fichier ou un dossier, traduire, relire — sans ligne de commande.
+3. **Documents bureautiques** : `.docx`, `.odt`, `.pptx`, `.xlsx`.
 
 ## Contribuer
 

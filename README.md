@@ -84,6 +84,7 @@ dialogues: `cd examples/game`, then `tradforge translate --dry-run`.
 | `diff` | New, removed and *slightly changed* texts since the last translation |
 | `translate [--limit <n>] [--only <path>] [--retry] [--dry-run]` | Translate what the memory does not have yet; `--dry-run` sends nothing and estimates the tokens and the cost |
 | `compare --engines <type[:model],...> [--sample <n>] [<file.csv>]` | Translate a sample with several engines, side by side, to choose one; the memory is not changed |
+| `verify [--all] [--only <path>] [--limit <n>] [--judge <type[:model]>]` | Translate suspicious translations back and have a language model judge whether the meaning is kept |
 | `build [--force]` | Write the translated files |
 | `export [<file.csv>]` | Write a CSV to review or complete the translations |
 | `import <file.csv> [--keep]` | Import reviewed or manual translations |
@@ -221,6 +222,15 @@ failed, time, cost of the rest of the project), the texts on which the engines d
 translation in `.tradforge/compare.csv`. An engine of the project's type keeps its settings; an Ollama model name
 keeps its colon (`ollama:qwen3:8b`).
 
+Validation catches broken placeholders and markup, not a wrong meaning. `tradforge verify` looks for translations
+that deserve a second look: numbers that changed, a negation that disappeared, a length out of proportion, a text
+left as it was. It translates them back into the source language with the project engine, then a language model
+compares the original and the back-translation and gives a verdict: `same`, `nuance` or `different`, with a
+note. `--all` checks every machine translation; human translations are never checked. Verdicts are kept in the
+memory until the translation changes, and `export` adds them to the CSV (`check`, `back_translation`,
+`check_note`), so that a review starts with the real problems. DeepL can translate back but not judge: add
+`--judge ollama` (or any language model).
+
 When an API asks to slow down (HTTP 429), every batch pauses for the delay the server gives (or 1 s, 2 s, 4 s...),
 then the same batch is sent again: a rate limit is never counted as a failure. After 6 waits in a row, tradforge stops
 and advises a lower `translation.concurrency`. A used-up quota stops at once. An engine that does not answer at all,
@@ -278,15 +288,17 @@ texts written for tradforge.
 - RimWorld language folders are named after the English language name (`French`): rename them if your mod uses
   another name.
 - Typography rules exist for French only (France and Canada) so far.
+- A back-translation adds its own mistakes: a verdict is a pointer for a human, not a correction, and small local
+  judges are strict (a synonym can be called a nuance). Negations are recognised in English, French, Spanish, German,
+  Italian and Portuguese.
 - The glossary check only looks for the expected term in the translation; it does not understand grammar.
 - In JSON outputs, integer-like keys (`"1"`, `"42"`) come first: a JavaScript rule, the content is unchanged.
 
 ## Roadmap
 
-1. **Quality**: back-translation of suspicious lines.
-2. **Application formats**: XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
-3. **Desktop application**: open a file or a folder, translate, review — no command line needed.
-4. **Office documents**: `.docx`, `.odt`, `.pptx`, `.xlsx`.
+1. **Application formats**: XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
+2. **Desktop application**: open a file or a folder, translate, review — no command line needed.
+3. **Office documents**: `.docx`, `.odt`, `.pptx`, `.xlsx`.
 
 ## Contributing
 
