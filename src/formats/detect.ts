@@ -3,12 +3,14 @@ import path from "node:path";
 import { SOURCE_FORMATS, type SourceFormat } from "../core/config.js";
 import type { TextEncoding } from "../core/encodings.js";
 import { languageName } from "../core/languages.js";
+import { androidLanguage } from "./android/resources.js";
 import { findFiles } from "./files.js";
 import { paradoxLanguage } from "./paradox/languages.js";
 import { pzLanguageCode } from "./pz/languages.js";
 
 /** The file extensions of each format, in lower case. Formats with a generic extension are found by their path. */
 export const FORMAT_EXTENSIONS: Readonly<Record<SourceFormat, readonly string[]>> = {
+  android: [], // .xml is too generic: Android resources are recognised by their path (res/values/strings.xml)
   json: [".json"],
   lua: [".lua"],
   srt: [".srt"],
@@ -90,6 +92,12 @@ export async function detectSources(root: string, sourceLanguage: string, target
     if (rimworld !== undefined) {
       if ("reason" in rimworld) skipped.push({ file, reason: rimworld.reason });
       else add(rimworld);
+      continue;
+    }
+    const android = await androidSuggestion(root, file, sourceLanguage, targetLanguage);
+    if (android !== undefined) {
+      if ("reason" in android) skipped.push({ file, reason: android.reason });
+      else add(android);
       continue;
     }
     const format = formatOf(file);
@@ -334,6 +342,30 @@ async function xliffSuggestion(
 
 function baseLanguage(code: string): string {
   return code.toLowerCase().split(/[-_]/)[0] ?? "";
+}
+
+/**
+ * Android string resources: <...>/res/values/strings.xml (or values-en/), whose root is <resources> and which hold
+ * texts. One source per file: other files of the folder (colors, dimensions) must not be copied into values-fr/.
+ */
+async function androidSuggestion(
+  root: string,
+  file: string,
+  sourceLanguage: string,
+  targetLanguage: string | undefined,
+): Promise<Suggestion | { reason: string } | undefined> {
+  const parts = path.posix.dirname(file).split("/");
+  const folder = parts.at(-1) ?? "";
+  if (!file.toLowerCase().endsWith(".xml") || parts.at(-2) !== "res" || !folder.startsWith("values")) return undefined;
+  const content = (await readFile(path.join(root, file))).toString("utf8");
+  if (!/<resources[\s>]/.test(content) || !/<(?:string|string-array|plurals)[\s>]/.test(content)) return undefined;
+  const source = androidLanguage(sourceLanguage);
+  if (folder !== "values" && folder !== `values-${source}` && folder !== `values-${baseLanguage(sourceLanguage)}`) {
+    return { reason: "Android strings of another language or configuration" };
+  }
+  const target = targetLanguage === undefined ? "{lang}" : androidLanguage(targetLanguage);
+  const output = [...parts.slice(0, -1), `values-${target}`].join("/");
+  return { format: "android", include: file, output: `${output}/{name}{ext}` };
 }
 
 /** The include pattern and output template for a file with a language marker in its path, if it has one. */

@@ -109,6 +109,9 @@ export { DEFAULT_VALIDATION_OPTIONS, validateTranslation } from "./core/validati
 export type { CheckCandidate, Judge, SelectOptions, VerifyOptions, VerifySummary } from "./core/verify.js";
 export { selectForCheck, verifyTranslations } from "./core/verify.js";
 export type { Writer, WriterInput, WriterOutput } from "./core/writer.js";
+export { androidReader } from "./formats/android/reader.js";
+export { androidLanguage, pluralQuantities } from "./formats/android/resources.js";
+export { androidWriter } from "./formats/android/writer.js";
 export type { BuildOptions, BuiltFile } from "./formats/build.js";
 export { buildProject } from "./formats/build.js";
 export type { DetectedSource, Detection, SkippedFile } from "./formats/detect.js";

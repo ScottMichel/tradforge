@@ -7,6 +7,10 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `android` format: Android string resources (`res/values/strings.xml`). Strings, string array items and plural
+  quantities are read as Android reads them (backslash escapes, quotes that keep spaces, merged spaces), inline
+  `<xliff:g>` and `<b>` tags must come back, plurals get the quantities of the target language, and resources marked
+  `translatable="false"` are left out of the translation. `tradforge init` proposes `res/values-fr/` (`values-pt-rBR/`).
 - `yaml` format (`.yml`, `.yaml`): Rails, Symfony, i18next and Hugo translation files, read by a small parser without
   dependency. Every string style is supported; booleans, numbers, dates and null are left out as YAML 1.1 reads them
   (a plain `No` is a boolean). Values are replaced in place in their own style when it is safe, and the `en:` root

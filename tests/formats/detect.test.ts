@@ -241,6 +241,31 @@ describe("detectSources", () => {
     expect(skipped.map((item) => item.file)).toEqual(["config/locales/fr.yml"]);
   });
 
+  it("proposes Android string resources, one source per file, for the folder of the target language", async () => {
+    const files: Record<string, string> = {
+      "app/src/main/res/values/strings.xml": '<resources><string name="a">Hello</string></resources>',
+      "app/src/main/res/values/arrays.xml": '<resources>\n<string-array name="days"/></resources>',
+      "app/src/main/res/values/colors.xml": '<resources><color name="red">#F00</color></resources>',
+      "app/src/main/res/values-de/strings.xml": '<resources><string name="a">Hallo</string></resources>',
+      "app/src/main/AndroidManifest.xml": "<manifest/>",
+    };
+    for (const [file, content] of Object.entries(files)) {
+      await mkdir(path.dirname(path.join(root, file)), { recursive: true });
+      await writeFile(path.join(root, file), content);
+    }
+    const { sources, skipped } = await detectSources(root, "en", "pt-BR");
+    expect(sources.map((source) => [source.format, source.include[0], source.output])).toEqual([
+      ["android", "app/src/main/res/values/arrays.xml", "app/src/main/res/values-pt-rBR/{name}{ext}"],
+      ["android", "app/src/main/res/values/strings.xml", "app/src/main/res/values-pt-rBR/{name}{ext}"],
+    ]);
+    expect(skipped).toEqual([
+      {
+        file: "app/src/main/res/values-de/strings.xml",
+        reason: "Android strings of another language or configuration",
+      },
+    ]);
+  });
+
   it("explains which files it left out, and why", async () => {
     await createFiles("package.json", "tsconfig.base.json", "data/stats.json", "notes.txt", "locales/en/ui.json");
     const { skipped } = await detectSources(root, "en");

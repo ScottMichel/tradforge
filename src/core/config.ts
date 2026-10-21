@@ -8,6 +8,7 @@ import {
 
 /** Every format a reader exists for. Single source of truth for validation and types. */
 export const SOURCE_FORMATS = [
+  "android",
   "json",
   "lua",
   "paradox-yml",
@@ -604,6 +605,8 @@ export const FORMAT_PLACEHOLDERS: Readonly<Partial<Record<SourceFormat, readonly
   "rimworld-xml": ["rimworld"],
   // inline elements of XLIFF (<x/>, <g>, <ph>, <pc>) must all come back, whatever the configuration says
   xliff: ["markup"],
+  // Android strings: %1$s placeholders, <xliff:g> and <b> tags
+  android: ["printf", "markup"],
 };
 
 /** The placeholder syntaxes to check: the configured ones, plus those of the formats the project uses. */
