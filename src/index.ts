@@ -140,6 +140,8 @@ export { srtWriter } from "./formats/srt/writer.js";
 export { vttReader } from "./formats/vtt/reader.js";
 export { vttWriter } from "./formats/vtt/writer.js";
 export { WRITERS } from "./formats/writers.js";
+export { xliffReader } from "./formats/xliff/reader.js";
+export { xliffWriter } from "./formats/xliff/writer.js";
 export type { AnthropicOptions } from "./providers/anthropic/provider.js";
 export { createAnthropicProvider } from "./providers/anthropic/provider.js";
 export type { DeepLOptions } from "./providers/deepl/provider.js";

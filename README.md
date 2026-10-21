@@ -128,7 +128,7 @@ sources are required.
 | Setting | Meaning | Default |
 | --- | --- | --- |
 | `workDir` | Where the translation memory lives. **Worth committing**: it holds all the work. | `.tradforge` |
-| `sources[].format` | `json`, `lua`, `po`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` or `rimworld-xml` (see [Supported formats](#supported-formats)) | required |
+| `sources[].format` | `json`, `lua`, `po`, `xliff`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` or `rimworld-xml` (see [Supported formats](#supported-formats)) | required |
 | `sources[].include` | Glob patterns, relative to the configuration file | required |
 | `sources[].priority` | Lower is translated first (may be negative) | `0` |
 | `sources[].context` | Tells the model how the texts are used | none |
@@ -161,6 +161,7 @@ sources are required.
 | **JSON** `.json` (`json`) | every string, nested objects and arrays (`menu.quit`, `tips.0`); also Project Zomboid Build 42 translations | same structure, indentation and line endings; optional `\u` escapes |
 | **Lua** `.lua` (`lua`) | string literals of every kind (`"..."`, `'...'`, `[[...]]`, `[==[...]==]`, all escapes), skipping comments and **code-like strings** (`"idle"`, `"media/ui/icon.png"`, `"hp=%d"`) | strings replaced in place, the rest of the file kept byte for byte; optional `\ddd` escapes |
 | **gettext** `.po`, `.pot` (`po`) | every `msgid` and `msgid_plural`; `msgctxt` and `#.` notes sent as context; obsolete `#~` entries skipped | `msgstr` filled in, comments and references kept byte for byte; plural forms of the target language (`msgstr[0..n]`), `Language` and `Plural-Forms` headers, UTF-8; `fuzzy` dropped from translated entries; `forge.pot` → `fr.po` |
+| **XLIFF** 1.2 and 2.x `.xlf`, `.xliff` (`xliff`) | the source of every unit (and every segment in XLIFF 2), except `translate="no"`; inline elements (`<x/>`, `<g>`, `<ph>`, `<pc>`) kept in the text and checked; notes sent as context | targets written or added after their source, `target-language`/`trgLang` set, the rest kept byte for byte; Angular's `messages.xlf` → `messages.fr.xlf` |
 | **SubRip** `.srt` (`srt`), **WebVTT** `.vtt` (`vtt`) | one text per cue, cues less than 2 s apart kept together as a scene; tags, `{\an8}` codes, NOTE/STYLE blocks | texts replaced in place, numbers and timings untouched; `movie.en.srt` → `movie.fr.srt` |
 
 ### Engine and game dialects
@@ -176,7 +177,7 @@ file is a Lua-like table, a RimWorld `.xml` file follows a fixed schema. tradfor
 | **RimWorld language data** (`rimworld-xml`) | `.xml`, `<LanguageData>` root | `Languages/English/Keyed/` and `DefInjected/`, `<li>` lists, literal `\n` | `Languages/French/...`, XML escaped correctly; grammar symbols `[PAWN_nameDef]` and rule heads protected |
 
 `tradforge init` recognises all of them in a folder (by extension, or by path for the dialects whose extension is
-generic) and proposes the right output paths. More formats are on the way: YAML, Android, iOS, XLIFF, Markdown… See the
+generic) and proposes the right output paths. More formats are on the way: YAML, Android, iOS, Markdown… See the
 [roadmap](#roadmap).
 
 ## Engines
@@ -292,6 +293,8 @@ texts written for tradforge.
 - gettext: entries that differ only by their `msgctxt` get the same translation. Languages with more than two plural
   forms (Russian, Polish, Arabic) get the plural text in every form but the one for 1: check them, and write the
   number in the singular source too (`%(count)d bar`) when it can be more than 1 (Russian uses it for 21).
+- XLIFF: existing targets are not imported into the memory, and ICU messages (`{count, plural, ...}`) are sent as
+  plain text: check their keywords came back untouched.
 - Typography rules exist for French only (France and Canada) so far.
 - A back-translation adds its own mistakes: a verdict is a pointer for a human, not a correction, and small local
   judges are strict (a synonym can be called a nuance). Negations are recognised in English, French, Spanish, German,
@@ -301,7 +304,7 @@ texts written for tradforge.
 
 ## Roadmap
 
-1. **Application formats**: XLIFF, YAML, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
+1. **Application formats**: YAML, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
 2. **Desktop application**: open a file or a folder, translate, review — no command line needed.
 3. **Office documents**: `.docx`, `.odt`, `.pptx`, `.xlsx`.
 

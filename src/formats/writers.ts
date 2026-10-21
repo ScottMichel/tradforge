@@ -9,6 +9,7 @@ import { renpyWriter } from "./renpy/writer.js";
 import { rimworldWriter } from "./rimworld/writer.js";
 import { srtWriter } from "./srt/writer.js";
 import { vttWriter } from "./vtt/writer.js";
+import { xliffWriter } from "./xliff/writer.js";
 
 /** One writer per format. `satisfies` makes a missing format a compile error. */
 export const WRITERS = {
@@ -21,4 +22,5 @@ export const WRITERS = {
   "rimworld-xml": rimworldWriter,
   srt: srtWriter,
   vtt: vttWriter,
+  xliff: xliffWriter,
 } as const satisfies Record<SourceFormat, Writer>;

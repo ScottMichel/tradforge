@@ -16,6 +16,7 @@ export const SOURCE_FORMATS = [
   "rimworld-xml",
   "srt",
   "vtt",
+  "xliff",
   "zomboid-txt",
 ] as const;
 export type SourceFormat = (typeof SOURCE_FORMATS)[number];
@@ -600,6 +601,8 @@ export const FORMAT_PLACEHOLDERS: Readonly<Partial<Record<SourceFormat, readonly
   "paradox-yml": ["paradox"],
   renpy: ["renpy", "printf"],
   "rimworld-xml": ["rimworld"],
+  // inline elements of XLIFF (<x/>, <g>, <ph>, <pc>) must all come back, whatever the configuration says
+  xliff: ["markup"],
 };
 
 /** The placeholder syntaxes to check: the configured ones, plus those of the formats the project uses. */

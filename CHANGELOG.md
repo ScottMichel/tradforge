@@ -7,6 +7,10 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `xliff` format: XLIFF 1.2 and 2.x (`.xlf`, `.xliff`), as Angular and translation tools write them. Inline elements
+  stay in the text and must all come back (`markup` is always checked for this format), notes go to the translator
+  as context, units of several segments are translated together, and targets are written in place or added after
+  their source. `tradforge init` proposes the files of the source language that hold no translation yet.
 - `po` format: gettext catalogs and templates (`.po`, `.pot`). `msgctxt` and the notes of the developers go to the
   translator as context, singular and plural are translated together, and the output gets the plural forms and the
   `Plural-Forms` header of the target language, a UTF-8 charset, and no `fuzzy` flag on translated entries.

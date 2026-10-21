@@ -15,6 +15,7 @@ export const FORMAT_EXTENSIONS: Readonly<Record<SourceFormat, readonly string[]>
   vtt: [".vtt"],
   renpy: [".rpy"],
   po: [".po", ".pot"],
+  xliff: [".xlf", ".xliff"],
   "paradox-yml": [], // .yml is too generic: Paradox files are recognised by their name (ui_l_english.yml)
   "zomboid-txt": [], // .txt is too generic: Project Zomboid tables are recognised by their path (Translate/EN/UI_EN.txt)
   "rimworld-xml": [], // .xml is too generic: RimWorld files are recognised by their path (Languages/English/Keyed/)
@@ -110,6 +111,12 @@ export async function detectSources(root: string, sourceLanguage: string, target
       const catalog = poSuggestion(file, markers, sourceLanguage);
       if ("reason" in catalog) skipped.push({ file, reason: catalog.reason });
       else add(catalog);
+      continue;
+    }
+    if (format === "xliff") {
+      const exchange = await xliffSuggestion(root, file, markers, sourceLanguage);
+      if ("reason" in exchange) skipped.push({ file, reason: exchange.reason });
+      else add(exchange);
       continue;
     }
     if (format !== "json") continue;
@@ -288,9 +295,42 @@ function poSuggestion(
   return { reason: `no marker of ${languageName(sourceLanguage)} in its path (like locale/en/LC_MESSAGES/ or en.po)` };
 }
 
+/**
+ * An XLIFF file in the source language that holds no translation yet. The translation goes next to it, as Angular
+ * names it (messages.xlf → messages.fr.xlf), unless the path has a marker of the language to replace. A file that
+ * already names a target language is the translation of another language.
+ */
+async function xliffSuggestion(
+  root: string,
+  file: string,
+  markers: readonly string[],
+  sourceLanguage: string,
+): Promise<Suggestion | { reason: string }> {
+  const head = (await readFile(path.join(root, file))).subarray(0, 4096).toString("utf8");
+  if (!/<(?:[\w-]+:)?xliff[\s>]/.test(head)) return { reason: "not an XLIFF document" };
+  const language = (pattern: RegExp) => pattern.exec(head)?.[1];
+  const source = language(/\s(?:source-language|srcLang)\s*=\s*["']([^"']+)/);
+  if (source !== undefined && baseLanguage(source) !== baseLanguage(sourceLanguage)) {
+    return { reason: `its source language is ${languageName(source)}` };
+  }
+  const target = language(/\s(?:target-language|trgLang)\s*=\s*["']([^"']+)/);
+  if (target !== undefined) return { reason: `already a translation into ${languageName(target)}` };
+  const marked = markedSuggestion("xliff", file, markers, undefined);
+  if (marked !== undefined) return marked;
+  const extension = path.posix.extname(file);
+  const name = path.posix.basename(file, extension);
+  const folder = path.posix.dirname(file);
+  const prefix = folder === "." ? "" : `${folder}/`;
+  return { format: "xliff", include: file, output: `${prefix}${name}.{lang}${extension}` };
+}
+
+function baseLanguage(code: string): string {
+  return code.toLowerCase().split(/[-_]/)[0] ?? "";
+}
+
 /** The include pattern and output template for a file with a language marker in its path, if it has one. */
 function markedSuggestion(
-  format: "json" | "po",
+  format: "json" | "po" | "xliff",
   file: string,
   markers: readonly string[],
   targetLanguage: string | undefined,

@@ -133,7 +133,7 @@ langues et les sources sont obligatoires.
 | Réglage | Signification | Par défaut |
 | --- | --- | --- |
 | `workDir` | Dossier de la mémoire de traduction. **À versionner** : il contient tout le travail. | `.tradforge` |
-| `sources[].format` | `json`, `lua`, `po`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` ou `rimworld-xml` (voir [Formats pris en charge](#formats-pris-en-charge)) | obligatoire |
+| `sources[].format` | `json`, `lua`, `po`, `xliff`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` ou `rimworld-xml` (voir [Formats pris en charge](#formats-pris-en-charge)) | obligatoire |
 | `sources[].include` | Motifs de fichiers, relatifs au fichier de configuration | obligatoire |
 | `sources[].priority` | Plus petit = traduit en premier (peut être négatif) | `0` |
 | `sources[].context` | Indique au modèle comment les textes sont utilisés | aucun |
@@ -166,6 +166,7 @@ langues et les sources sont obligatoires.
 | **JSON** `.json` (`json`) | toutes les chaînes, objets et tableaux imbriqués (`menu.quit`, `tips.0`) ; aussi les traductions de Project Zomboid Build 42 | même structure, même indentation, mêmes fins de ligne ; échappements `\u` en option |
 | **Lua** `.lua` (`lua`) | chaînes littérales de tout type (`"..."`, `'...'`, `[[...]]`, `[==[...]==]`, tous les échappements), en ignorant les commentaires et les **chaînes qui ressemblent à du code** (`"idle"`, `"media/ui/icon.png"`, `"hp=%d"`) | chaînes remplacées sur place, le reste du fichier conservé à l'octet près ; échappements `\ddd` en option |
 | **gettext** `.po`, `.pot` (`po`) | chaque `msgid` et `msgid_plural` ; `msgctxt` et notes `#.` envoyés comme contexte ; entrées obsolètes `#~` ignorées | `msgstr` remplis, commentaires et références conservés à l'octet près ; formes plurielles de la langue cible (`msgstr[0..n]`), en-têtes `Language` et `Plural-Forms`, UTF-8 ; `fuzzy` retiré des entrées traduites ; `forge.pot` → `fr.po` |
+| **XLIFF** 1.2 et 2.x `.xlf`, `.xliff` (`xliff`) | la source de chaque unité (et de chaque segment en XLIFF 2), sauf `translate="no"` ; éléments internes (`<x/>`, `<g>`, `<ph>`, `<pc>`) gardés dans le texte et vérifiés ; notes envoyées comme contexte | cibles écrites ou ajoutées après leur source, `target-language`/`trgLang` renseigné, le reste conservé à l'octet près ; `messages.xlf` d'Angular → `messages.fr.xlf` |
 | **SubRip** `.srt` (`srt`), **WebVTT** `.vtt` (`vtt`) | un texte par réplique, les répliques à moins de 2 s d'écart regroupées en scène ; balises, codes `{\an8}`, blocs NOTE/STYLE | textes remplacés sur place, numéros et minutages intacts ; `film.en.srt` → `film.fr.srt` |
 
 ### Dialectes de moteurs et de jeux
@@ -181,7 +182,7 @@ Project Zomboid est une table proche du Lua, un `.xml` RimWorld suit un schéma 
 | **Données de langue RimWorld** (`rimworld-xml`) | `.xml`, racine `<LanguageData>` | `Languages/English/Keyed/` et `DefInjected/`, listes `<li>`, `\n` littéraux | `Languages/French/…`, XML échappé correctement ; symboles de grammaire `[PAWN_nameDef]` et têtes de règles protégés |
 
 `tradforge init` les reconnaît tous dans un dossier (par extension, ou par chemin pour les dialectes dont l'extension
-est générique) et propose les bons chemins de sortie. D'autres formats arrivent : YAML, Android, iOS, XLIFF, Markdown… Voir la
+est générique) et propose les bons chemins de sortie. D'autres formats arrivent : YAML, Android, iOS, Markdown… Voir la
 [feuille de route](#feuille-de-route).
 
 ## Moteurs
@@ -300,6 +301,8 @@ des textes écrits pour tradforge.
   de deux formes plurielles (russe, polonais, arabe) reçoivent le texte pluriel dans toutes les formes sauf celle de 1 :
   vérifiez-les, et mettez le nombre dans le singulier source aussi (`%(count)d bar`) quand il peut dépasser 1 (le russe
   s'en sert pour 21).
+- XLIFF : les cibles existantes ne sont pas importées dans la mémoire, et les messages ICU (`{count, plural, ...}`)
+  sont envoyés comme du texte : vérifiez que leurs mots-clés sont revenus intacts.
 - Les règles de typographie n'existent pour l'instant que pour le français (France et Canada).
 - Une retraduction ajoute ses propres erreurs : un verdict est un signal pour un humain, pas une correction, et les
   petits juges locaux sont sévères (un synonyme peut être qualifié de nuance). Les négations sont reconnues en
@@ -311,7 +314,7 @@ des textes écrits pour tradforge.
 
 ## Feuille de route
 
-1. **Formats d'applications** : XLIFF, YAML, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
+1. **Formats d'applications** : YAML, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
 2. **Application de bureau** : ouvrir un fichier ou un dossier, traduire, relire — sans ligne de commande.
 3. **Documents bureautiques** : `.docx`, `.odt`, `.pptx`, `.xlsx`.
 

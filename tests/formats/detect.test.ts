@@ -10,6 +10,8 @@ describe("formatOf", () => {
     expect(formatOf("media/lua/Camp.LUA")).toBe("lua");
     expect(formatOf("po/forge.pot")).toBe("po");
     expect(formatOf("po/fr.PO")).toBe("po");
+    expect(formatOf("src/locale/messages.xlf")).toBe("xliff");
+    expect(formatOf("app.xliff")).toBe("xliff");
     expect(formatOf("notes.txt")).toBeUndefined();
   });
 });
@@ -188,6 +190,30 @@ describe("detectSources", () => {
         file: "web/locale/de/LC_MESSAGES/django.po",
         reason: "no marker of English in its path (like locale/en/LC_MESSAGES/ or en.po)",
       },
+    ]);
+  });
+
+  it("proposes XLIFF files of the source language that hold no translation yet", async () => {
+    const files: Record<string, string> = {
+      "src/locale/messages.xlf": '<?xml version="1.0"?>\n<xliff version="1.2"><file source-language="en-US">',
+      "src/locale/messages.fr.xlf": '<xliff version="1.2"><file source-language="en" target-language="fr">',
+      "i18n/en/app.xliff": '<xliff version="2.0" srcLang="en">',
+      "i18n/de/app.xliff": '<xliff version="2.0" srcLang="de">',
+      "data/layout.xlf": "<layout/>",
+    };
+    for (const [file, content] of Object.entries(files)) {
+      await mkdir(path.dirname(path.join(root, file)), { recursive: true });
+      await writeFile(path.join(root, file), content);
+    }
+    const { sources, skipped } = await detectSources(root, "en");
+    expect(sources).toEqual([
+      { format: "xliff", include: ["i18n/en/*.xliff"], output: "i18n/{lang}/{name}{ext}", files: 1 },
+      { format: "xliff", include: ["src/locale/messages.xlf"], output: "src/locale/messages.{lang}.xlf", files: 1 },
+    ]);
+    expect(skipped).toEqual([
+      { file: "data/layout.xlf", reason: "not an XLIFF document" },
+      { file: "i18n/de/app.xliff", reason: "its source language is German" },
+      { file: "src/locale/messages.fr.xlf", reason: "already a translation into French" },
     ]);
   });
 

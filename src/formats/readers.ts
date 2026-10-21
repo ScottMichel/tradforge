@@ -9,6 +9,7 @@ import { renpyReader } from "./renpy/reader.js";
 import { rimworldReader } from "./rimworld/reader.js";
 import { srtReader } from "./srt/reader.js";
 import { vttReader } from "./vtt/reader.js";
+import { xliffReader } from "./xliff/reader.js";
 
 /** One reader per format. `satisfies` makes a missing format a compile error. */
 export const READERS = {
@@ -21,4 +22,5 @@ export const READERS = {
   "rimworld-xml": rimworldReader,
   srt: srtReader,
   vtt: vttReader,
+  xliff: xliffReader,
 } as const satisfies Record<SourceFormat, Reader>;
