@@ -1,15 +1,7 @@
 import { isObject } from "../../core/json.js";
-import {
-  BatchError,
-  type Provider,
-  ProviderUnavailableError,
-  RateLimitError,
-  type TranslationRequest,
-} from "../../core/provider.js";
+import { BatchError, type Provider, ProviderUnavailableError, RateLimitError } from "../../core/provider.js";
 import { hideSecret, requestJson, retryAfterMs } from "../http.js";
-import { buildSystemPrompt, buildUserMessage } from "../llm/prompt.js";
-import { parseTranslations, RESPONSE_SCHEMA } from "../llm/response.js";
-import { estimateTokens } from "../llm/usage.js";
+import { type Completion, createLlmProvider } from "../llm/provider.js";
 
 export interface AnthropicOptions {
   /** https://api.anthropic.com/v1, or a proxy that speaks the same API. */
@@ -36,12 +28,7 @@ const TEMPERATURE = 0.3;
  * Claude answers by calling this tool: its input must follow the schema, so the answer is always well-formed JSON.
  * Forcing a tool is the long-standing way of getting structured output from the Messages API.
  */
-const TOOL_NAME = "submit_translations";
-const TOOL = {
-  name: TOOL_NAME,
-  description: "Submit the translation of every text, by id.",
-  input_schema: RESPONSE_SCHEMA,
-};
+const toolName = (completion: Completion) => `submit_${completion.schemaName}`;
 
 /** max_tokens is required: twice the expected answer, at least 1024, at most what every current model accepts. */
 const MIN_MAX_TOKENS = 1024;
@@ -53,51 +40,45 @@ export function createAnthropicProvider(options: AnthropicOptions): Provider {
   const fetch = options.fetch ?? globalThis.fetch;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  return {
-    model: options.model,
-    async translateBatch(request, signal) {
-      if (options.apiKey === undefined || options.apiKey === "") {
-        throw new ProviderUnavailableError(
-          `no API key for Claude: set the ${options.apiKeyEnv} environment variable (https://console.anthropic.com)`,
-        );
-      }
-      const response = await requestJson({
-        url: `${baseUrl}/messages`,
-        headers: { "content-type": "application/json", "x-api-key": options.apiKey, "anthropic-version": API_VERSION },
-        body: messagesRequest(options.model, request),
-        timeoutMs,
-        ...(signal !== undefined ? { signal } : {}),
-        fetch,
-        label: baseUrl,
-        unreachableHint: "check your connection and provider.baseUrl",
-      });
-      if (response.status >= 400) {
-        const detail = hideSecret(errorDetail(response.body), options.apiKey);
-        throw httpError(response.status, detail, response.headers, options, baseUrl);
-      }
-      return parseTranslations(
-        toolInput(response.body),
-        request.items.map((item) => item.id),
+  return createLlmProvider(options.model, async (completion, signal) => {
+    if (options.apiKey === undefined || options.apiKey === "") {
+      throw new ProviderUnavailableError(
+        `no API key for Claude: set the ${options.apiKeyEnv} environment variable (https://console.anthropic.com)`,
       );
-    },
-  };
+    }
+    const response = await requestJson({
+      url: `${baseUrl}/messages`,
+      headers: { "content-type": "application/json", "x-api-key": options.apiKey, "anthropic-version": API_VERSION },
+      body: messagesRequest(options.model, completion),
+      timeoutMs,
+      ...(signal !== undefined ? { signal } : {}),
+      fetch,
+      label: baseUrl,
+      unreachableHint: "check your connection and provider.baseUrl",
+    });
+    if (response.status >= 400) {
+      const detail = hideSecret(errorDetail(response.body), options.apiKey);
+      throw httpError(response.status, detail, response.headers, options, baseUrl);
+    }
+    return toolInput(response.body, toolName(completion));
+  });
 }
 
-function messagesRequest(model: string, request: TranslationRequest) {
-  const expected = estimateTokens(request).outputTokens;
+function messagesRequest(model: string, completion: Completion) {
+  const name = toolName(completion);
   return {
     model,
-    max_tokens: Math.min(MAX_MAX_TOKENS, Math.max(MIN_MAX_TOKENS, expected * 2)),
+    max_tokens: Math.min(MAX_MAX_TOKENS, Math.max(MIN_MAX_TOKENS, completion.expectedOutputTokens * 2)),
     temperature: TEMPERATURE,
-    system: buildSystemPrompt(request),
-    messages: [{ role: "user", content: buildUserMessage(request) }],
-    tools: [TOOL],
-    tool_choice: { type: "tool", name: TOOL_NAME },
+    system: completion.system,
+    messages: [{ role: "user", content: completion.user }],
+    tools: [{ name, description: `Submit the ${completion.schemaName}, by id.`, input_schema: completion.schema }],
+    tool_choice: { type: "tool", name },
   };
 }
 
 /** The input of the tool call, as JSON text for parseTranslations: {"content": [{"type": "tool_use", "input": {...}}]}. */
-function toolInput(body: string): string {
+function toolInput(body: string, name: string): string {
   let data: unknown;
   try {
     data = JSON.parse(body);
@@ -110,7 +91,7 @@ function toolInput(body: string): string {
 
   const content: unknown = data.content;
   const blocks: unknown[] = Array.isArray(content) ? content : [];
-  const call = blocks.find((block) => isObject(block) && block.type === "tool_use" && block.name === TOOL_NAME);
+  const call = blocks.find((block) => isObject(block) && block.type === "tool_use" && block.name === name);
   if (!isObject(call) || call.input === undefined) throw new BatchError("Claude answered without the translation tool");
   return JSON.stringify(call.input);
 }

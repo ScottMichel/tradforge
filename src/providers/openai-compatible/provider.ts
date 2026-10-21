@@ -1,15 +1,8 @@
 import type { ResponseFormat } from "../../core/config.js";
 import { isObject } from "../../core/json.js";
-import {
-  BatchError,
-  type Provider,
-  ProviderUnavailableError,
-  RateLimitError,
-  type TranslationRequest,
-} from "../../core/provider.js";
+import { BatchError, type Provider, ProviderUnavailableError, RateLimitError } from "../../core/provider.js";
 import { hideSecret, requestJson, retryAfterMs } from "../http.js";
-import { buildSystemPrompt, buildUserMessage } from "../llm/prompt.js";
-import { parseTranslations, RESPONSE_SCHEMA } from "../llm/response.js";
+import { type Completion, createLlmProvider } from "../llm/provider.js";
 
 export interface OpenAiCompatibleOptions {
   /** e.g. https://api.openai.com/v1, http://localhost:1234/v1 */
@@ -39,49 +32,43 @@ export function createOpenAiCompatibleProvider(options: OpenAiCompatibleOptions)
   const headers: Record<string, string> = { "content-type": "application/json" };
   if (options.apiKey !== undefined && options.apiKey !== "") headers.authorization = `Bearer ${options.apiKey}`;
 
-  return {
-    model: options.model,
-    async translateBatch(request, signal) {
-      const response = await requestJson({
-        url: `${baseUrl}/chat/completions`,
-        headers,
-        body: completionRequest(options, request),
-        timeoutMs,
-        ...(signal !== undefined ? { signal } : {}),
-        fetch,
-        label: baseUrl,
-        unreachableHint: "check provider.baseUrl and that the server is running",
-      });
-      const { status, body } = response;
-      if (status === 429) throw rateLimitError(response.headers, body, hideSecret(errorDetail(body), options.apiKey));
-      if (status >= 400) throw httpError(status, hideSecret(errorDetail(body), options.apiKey), options, baseUrl);
-      return parseTranslations(
-        completionContent(body),
-        request.items.map((item) => item.id),
-      );
-    },
-  };
+  return createLlmProvider(options.model, async (completion, signal) => {
+    const response = await requestJson({
+      url: `${baseUrl}/chat/completions`,
+      headers,
+      body: completionRequest(options, completion),
+      timeoutMs,
+      ...(signal !== undefined ? { signal } : {}),
+      fetch,
+      label: baseUrl,
+      unreachableHint: "check provider.baseUrl and that the server is running",
+    });
+    const { status, body } = response;
+    if (status === 429) throw rateLimitError(response.headers, body, hideSecret(errorDetail(body), options.apiKey));
+    if (status >= 400) throw httpError(status, hideSecret(errorDetail(body), options.apiKey), options, baseUrl);
+    return completionContent(body);
+  });
 }
 
-function completionRequest(options: OpenAiCompatibleOptions, request: TranslationRequest) {
+function completionRequest(options: OpenAiCompatibleOptions, completion: Completion) {
   return {
     model: options.model,
     temperature: TEMPERATURE,
     messages: [
-      { role: "system", content: buildSystemPrompt(request) },
-      { role: "user", content: buildUserMessage(request) },
+      { role: "system", content: completion.system },
+      { role: "user", content: completion.user },
     ],
-    ...responseFormat(options.responseFormat),
+    ...responseFormat(options.responseFormat, completion),
   };
 }
 
-function responseFormat(format: ResponseFormat) {
+function responseFormat(format: ResponseFormat, completion: Completion) {
   switch (format) {
     case "json-schema":
       return {
         response_format: {
           type: "json_schema",
-          json_schema: { name: "translations", strict: true, schema: RESPONSE_SCHEMA },
+          json_schema: { name: completion.schemaName, strict: true, schema: completion.schema },
         },
       };
     case "json-object":

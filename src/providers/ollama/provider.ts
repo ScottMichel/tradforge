@@ -1,13 +1,7 @@
 import { isObject } from "../../core/json.js";
-import {
-  BatchError,
-  type Provider,
-  ProviderUnavailableError,
-  TimeoutError,
-  type TranslationRequest,
-} from "../../core/provider.js";
-import { buildSystemPrompt, buildUserMessage } from "../llm/prompt.js";
-import { parseTranslations, RESPONSE_SCHEMA } from "../llm/response.js";
+import { BatchError, type Provider, ProviderUnavailableError } from "../../core/provider.js";
+import { requestJson } from "../http.js";
+import { type Completion, createLlmProvider } from "../llm/provider.js";
 
 export interface OllamaOptions {
   /** e.g. http://localhost:11434 */
@@ -30,50 +24,31 @@ export function createOllamaProvider(options: OllamaOptions): Provider {
   const fetch = options.fetch ?? globalThis.fetch;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  return {
-    model: options.model,
-    async translateBatch(request, signal) {
-      const timeout = AbortSignal.timeout(timeoutMs);
-      try {
-        const response = await fetch(`${host}/api/chat`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(chatRequest(options.model, request)),
-          signal: signal === undefined ? timeout : AbortSignal.any([signal, timeout]),
-        });
-        const body = await response.text();
-        if (!response.ok) throw httpError(response.status, body, options.model);
-        return parseTranslations(
-          chatContent(body),
-          request.items.map((item) => item.id),
-        );
-      } catch (error) {
-        if (signal?.aborted === true) throw signal.reason; // the user interrupted: let it through as it is
-        if (timeout.aborted) {
-          throw new TimeoutError(`Ollama did not answer within ${timeoutMs / 1000} s`, { cause: error });
-        }
-        if (error instanceof TypeError) {
-          // fetch rejects with a TypeError when the server cannot be reached at all.
-          throw new ProviderUnavailableError(
-            `cannot reach Ollama at ${host}: is it running? Start it with "ollama serve" (${error.message})`,
-            { cause: error },
-          );
-        }
-        throw error;
-      }
-    },
-  };
+  return createLlmProvider(options.model, async (completion, signal) => {
+    const response = await requestJson({
+      url: `${host}/api/chat`,
+      headers: { "content-type": "application/json" },
+      body: chatRequest(options.model, completion),
+      timeoutMs,
+      ...(signal !== undefined ? { signal } : {}),
+      fetch,
+      label: `Ollama at ${host}`,
+      unreachableHint: 'is it running? Start it with "ollama serve"',
+    });
+    if (response.status >= 400) throw httpError(response.status, response.body, options.model);
+    return chatContent(response.body);
+  });
 }
 
-function chatRequest(model: string, request: TranslationRequest) {
+function chatRequest(model: string, completion: Completion) {
   return {
     model,
     stream: false,
-    format: RESPONSE_SCHEMA,
+    format: completion.schema,
     options: MODEL_OPTIONS,
     messages: [
-      { role: "system", content: buildSystemPrompt(request) },
-      { role: "user", content: buildUserMessage(request) },
+      { role: "system", content: completion.system },
+      { role: "user", content: completion.user },
     ],
   };
 }

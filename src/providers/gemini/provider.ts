@@ -1,14 +1,7 @@
 import { isObject } from "../../core/json.js";
-import {
-  BatchError,
-  type Provider,
-  ProviderUnavailableError,
-  RateLimitError,
-  type TranslationRequest,
-} from "../../core/provider.js";
+import { BatchError, type Provider, ProviderUnavailableError, RateLimitError } from "../../core/provider.js";
 import { hideSecret, requestJson } from "../http.js";
-import { buildSystemPrompt, buildUserMessage } from "../llm/prompt.js";
-import { parseTranslations, RESPONSE_SCHEMA } from "../llm/response.js";
+import { type Completion, createLlmProvider } from "../llm/provider.js";
 
 export interface GeminiOptions {
   /** https://generativelanguage.googleapis.com/v1beta */
@@ -48,8 +41,6 @@ export function geminiSchema(schema: unknown): unknown {
   return converted;
 }
 
-const RESPONSE_SCHEMA_GEMINI = geminiSchema(RESPONSE_SCHEMA);
-
 /** Provider for Gemini, through the Google generateContent API. */
 export function createGeminiProvider(options: GeminiOptions): Provider {
   const baseUrl = options.baseUrl.replace(/\/+$/, "");
@@ -57,42 +48,36 @@ export function createGeminiProvider(options: GeminiOptions): Provider {
   const fetch = options.fetch ?? globalThis.fetch;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  return {
-    model,
-    async translateBatch(request, signal) {
-      if (options.apiKey === undefined || options.apiKey === "") {
-        throw new ProviderUnavailableError(
-          `no API key for Gemini: set the ${options.apiKeyEnv} environment variable (https://aistudio.google.com/apikey)`,
-        );
-      }
-      const response = await requestJson({
-        // The key goes in a header, never in the address (?key=...), where proxies and logs would keep it.
-        url: `${baseUrl}/models/${encodeURIComponent(model)}:generateContent`,
-        headers: { "content-type": "application/json", "x-goog-api-key": options.apiKey },
-        body: generateRequest(request),
-        timeoutMs,
-        ...(signal !== undefined ? { signal } : {}),
-        fetch,
-        label: baseUrl,
-        unreachableHint: "check your connection and provider.baseUrl",
-      });
-      if (response.status >= 400) throw httpError(response.status, response.body, options, model);
-      return parseTranslations(
-        answerText(response.body),
-        request.items.map((item) => item.id),
+  return createLlmProvider(model, async (completion, signal) => {
+    if (options.apiKey === undefined || options.apiKey === "") {
+      throw new ProviderUnavailableError(
+        `no API key for Gemini: set the ${options.apiKeyEnv} environment variable (https://aistudio.google.com/apikey)`,
       );
-    },
-  };
+    }
+    const response = await requestJson({
+      // The key goes in a header, never in the address (?key=...), where proxies and logs would keep it.
+      url: `${baseUrl}/models/${encodeURIComponent(model)}:generateContent`,
+      headers: { "content-type": "application/json", "x-goog-api-key": options.apiKey },
+      body: generateRequest(completion),
+      timeoutMs,
+      ...(signal !== undefined ? { signal } : {}),
+      fetch,
+      label: baseUrl,
+      unreachableHint: "check your connection and provider.baseUrl",
+    });
+    if (response.status >= 400) throw httpError(response.status, response.body, options, model);
+    return answerText(response.body);
+  });
 }
 
-function generateRequest(request: TranslationRequest) {
+function generateRequest(completion: Completion) {
   return {
-    systemInstruction: { parts: [{ text: buildSystemPrompt(request) }] },
-    contents: [{ role: "user", parts: [{ text: buildUserMessage(request) }] }],
+    systemInstruction: { parts: [{ text: completion.system }] },
+    contents: [{ role: "user", parts: [{ text: completion.user }] }],
     generationConfig: {
       temperature: TEMPERATURE,
       responseMimeType: "application/json",
-      responseSchema: RESPONSE_SCHEMA_GEMINI,
+      responseSchema: geminiSchema(completion.schema),
     },
   };
 }
