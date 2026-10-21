@@ -287,8 +287,8 @@ texts written for tradforge.
 
 ## Limitations
 
-- Engines: Ollama, OpenAI-compatible APIs, Claude, Gemini and DeepL. Real runs were made with Ollama and Gemini;
-  the others are tested against recorded answers of their APIs.
+- Engines: Ollama, OpenAI-compatible APIs, Claude, Gemini and DeepL. Real runs were made with Ollama (also through its
+  OpenAI-compatible endpoint), Gemini and DeepL; Claude is tested against recorded answers of its API.
 - Ren'Py games get translated copies of their scripts, not a `game/tl/` translation the player can switch to.
 - RimWorld language folders are named after the English language name (`French`): rename them if your mod uses
   another name.

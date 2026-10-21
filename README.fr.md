@@ -293,8 +293,8 @@ des textes écrits pour tradforge.
 
 ## Limites
 
-- Moteurs : Ollama, API compatibles OpenAI, Claude, Gemini et DeepL. Des passages réels ont été faits avec Ollama et
-  Gemini ; les autres sont testés sur des réponses enregistrées de leurs API.
+- Moteurs : Ollama, API compatibles OpenAI, Claude, Gemini et DeepL. Des passages réels ont été faits avec Ollama (aussi par
+  son adresse compatible OpenAI), Gemini et DeepL ; Claude est testé sur des réponses enregistrées de son API.
 - Les jeux Ren'Py reçoivent des copies traduites de leurs scripts, pas une traduction `game/tl/` que le joueur pourrait
   choisir.
 - Les dossiers de langue de RimWorld sont nommés d'après le nom anglais de la langue (`French`) : renommez-les si votre
