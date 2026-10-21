@@ -7,6 +7,12 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `properties` format: Java resource bundles. Every separator, continuation and escape of the format; the doubled
+  apostrophes of MessageFormat texts are given to the translator as one and doubled again on writing. `tradforge
+  init` proposes bundles (`messages.properties`, `messages_en.properties`), not settings files.
+- `resx` format: .NET resources. Strings only (no files, objects or designer data), comments as context.
+  `Strings.resx` → `Strings.fr.resx`.
+- `arb` format: Flutter's Application Resource Bundles. Descriptions as context, `@@locale` renamed, metadata kept.
 - The `braces` placeholders include the arguments of Java's MessageFormat (`{0,number,integer}`).
 - `ios-strings` format: the `.strings` files of Apple platforms (`en.lproj/`, `Base.lproj/`), the comment above each
   entry sent as context, every escape of the format decoded and written back. `tradforge init` proposes `fr.lproj/`.

@@ -14,6 +14,7 @@ describe("formatOf", () => {
     expect(formatOf("app.xliff")).toBe("xliff");
     expect(formatOf("config/locales/en.yml")).toBe("yaml");
     expect(formatOf("App/en.lproj/Localizable.strings")).toBe("ios-strings");
+    expect(formatOf("src/main/resources/messages.properties")).toBe("properties");
     expect(formatOf("messages.en.YAML")).toBe("yaml");
     expect(formatOf("notes.txt")).toBeUndefined();
   });
@@ -282,6 +283,54 @@ describe("detectSources", () => {
     expect(skipped).toEqual([
       { file: "App/de.lproj/Localizable.strings", reason: "strings of another language" },
       { file: "Tools/notes.strings", reason: "not in a <language>.lproj folder" },
+    ]);
+  });
+
+  it("proposes Java resource bundles, but not the settings files", async () => {
+    await createFiles(
+      "src/main/resources/messages.properties",
+      "src/main/resources/messages_de.properties",
+      "src/main/resources/labels_en.properties",
+      "src/main/resources/application.properties",
+      "gradle.properties",
+    );
+    const { sources, skipped } = await detectSources(root, "en", "pt-BR");
+    expect(sources.map((source) => [source.format, source.include[0], source.output])).toEqual([
+      ["properties", "src/main/resources/labels_en.properties", "src/main/resources/labels_pt_BR.properties"],
+      ["properties", "src/main/resources/messages.properties", "src/main/resources/messages_pt_BR.properties"],
+    ]);
+    const settings = "settings rather than texts (no translation next to it, and not the name of a bundle)";
+    expect(skipped).toEqual([
+      { file: "gradle.properties", reason: settings },
+      { file: "src/main/resources/application.properties", reason: settings },
+      { file: "src/main/resources/messages_de.properties", reason: "bundle of another language" },
+    ]);
+  });
+
+  it("proposes .resx files with strings and .arb files of the source language", async () => {
+    const data = (name: string) => `<root><data name="${name}"><value>Hello</value></data></root>`;
+    const files: Record<string, string> = {
+      "Forge/Strings.resx": data("A"),
+      "Forge/Labels.en-US.resx": data("B"),
+      "Forge/Strings.de.resx": data("C"),
+      "Forge/Form1.resx": '<root><data name="$this.Text"><value>Form1</value></data></root>',
+      "lib/l10n/app_en.arb": '{"@@locale": "en", "a": "Hello"}',
+      "lib/l10n/app_de.arb": '{"@@locale": "de", "a": "Hallo"}',
+    };
+    for (const [file, content] of Object.entries(files)) {
+      await mkdir(path.dirname(path.join(root, file)), { recursive: true });
+      await writeFile(path.join(root, file), content);
+    }
+    const { sources, skipped } = await detectSources(root, "en", "pt-BR");
+    expect(sources.map((source) => [source.format, source.include[0], source.output])).toEqual([
+      ["resx", "Forge/Labels.en-US.resx", "Forge/Labels.pt-BR.resx"],
+      ["resx", "Forge/Strings.resx", "Forge/Strings.pt-BR.resx"],
+      ["arb", "lib/l10n/app_en.arb", "lib/l10n/app_pt_BR.arb"],
+    ]);
+    expect(skipped).toEqual([
+      { file: "Forge/Form1.resx", reason: "no strings (images, files or form data only)" },
+      { file: "Forge/Strings.de.resx", reason: "resources of another culture" },
+      { file: "lib/l10n/app_de.arb", reason: "no language marker in its name (like app_en.arb)" },
     ]);
   });
 

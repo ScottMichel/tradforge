@@ -9,12 +9,15 @@ import {
 /** Every format a reader exists for. Single source of truth for validation and types. */
 export const SOURCE_FORMATS = [
   "android",
+  "arb",
   "ios-strings",
   "json",
   "lua",
   "paradox-yml",
   "po",
+  "properties",
   "renpy",
+  "resx",
   "rimworld-xml",
   "srt",
   "vtt",

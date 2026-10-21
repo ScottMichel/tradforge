@@ -6,18 +6,23 @@ import { languageName } from "../core/languages.js";
 import { androidLanguage } from "./android/resources.js";
 import { findFiles } from "./files.js";
 import { paradoxLanguage } from "./paradox/languages.js";
+import { gettextLanguage } from "./po/plurals.js";
 import { pzLanguageCode } from "./pz/languages.js";
+import { parseResx } from "./resx/resources.js";
 
 /** The file extensions of each format, in lower case. Formats with a generic extension are found by their path. */
 export const FORMAT_EXTENSIONS: Readonly<Record<SourceFormat, readonly string[]>> = {
   android: [], // .xml is too generic: Android resources are recognised by their path (res/values/strings.xml)
+  arb: [".arb"],
   "ios-strings": [".strings"],
   json: [".json"],
   lua: [".lua"],
   srt: [".srt"],
   vtt: [".vtt"],
   renpy: [".rpy"],
+  resx: [".resx"],
   po: [".po", ".pot"],
+  properties: [".properties"],
   xliff: [".xlf", ".xliff"],
   yaml: [".yml", ".yaml"], // Paradox .yml files are recognised by their path first
   "paradox-yml": [], // .yml is too generic: Paradox files are recognised by their name (ui_l_english.yml)
@@ -82,7 +87,8 @@ export async function detectSources(root: string, sourceLanguage: string, target
     found.set(suggestion.include, { ...suggestion, files: (existing?.files ?? 0) + 1 });
   };
 
-  for (const file of await findFiles(root, ["**/*"], { exclude: [".tradforge"] })) {
+  const files = await findFiles(root, ["**/*"], { exclude: [".tradforge"] });
+  for (const file of files) {
     const byPath =
       pzSuggestion(file, sourceLanguage, targetLanguage) ?? paradoxSuggestion(file, sourceLanguage, targetLanguage);
     if (byPath !== undefined) {
@@ -133,6 +139,30 @@ export async function detectSources(root: string, sourceLanguage: string, target
       const strings = iosSuggestion(file, markers, targetLanguage);
       if ("reason" in strings) skipped.push({ file, reason: strings.reason });
       else add(strings);
+      continue;
+    }
+    if (format === "properties") {
+      const bundle = propertiesSuggestion(file, files, sourceLanguage, targetLanguage);
+      if ("reason" in bundle) skipped.push({ file, reason: bundle.reason });
+      else add(bundle);
+      continue;
+    }
+    if (format === "resx") {
+      const resources = await resxSuggestion(root, file, sourceLanguage, targetLanguage);
+      if ("reason" in resources) skipped.push({ file, reason: resources.reason });
+      else add(resources);
+      continue;
+    }
+    if (format === "arb") {
+      const marked = markedSuggestion("arb", file, markers, undefined);
+      if (marked === undefined) skipped.push({ file, reason: "no language marker in its name (like app_en.arb)" });
+      // Flutter writes the region after an underscore: app_pt_BR.arb
+      else
+        add(
+          targetLanguage === undefined
+            ? marked
+            : { ...marked, output: marked.output.replace("{lang}", gettextLanguage(targetLanguage)) },
+        );
       continue;
     }
     if (format === "yaml") {
@@ -376,6 +406,71 @@ async function androidSuggestion(
 }
 
 /**
+ * .NET resources: Strings.resx (neutral, in the source language) or Strings.en.resx, whose translations are
+ * Strings.fr.resx. Files of other cultures, and those without strings (images, forms), are left out.
+ */
+async function resxSuggestion(
+  root: string,
+  file: string,
+  sourceLanguage: string,
+  targetLanguage: string | undefined,
+): Promise<Suggestion | { reason: string }> {
+  const folder = path.posix.dirname(file);
+  const prefix = folder === "." ? "" : `${folder}/`;
+  const name = path.posix.basename(file, path.posix.extname(file));
+  const culture = /^(.+)\.([A-Za-z]{2,3}(?:-[A-Za-z0-9]+)*)$/.exec(name);
+  const code = culture?.[2];
+  const isCulture = code !== undefined && languageName(code) !== code;
+  if (isCulture && baseLanguage(code) !== baseLanguage(sourceLanguage))
+    return { reason: "resources of another culture" };
+  let strings: number;
+  try {
+    strings = parseResx(file, (await readFile(path.join(root, file))).toString("utf8")).length;
+  } catch {
+    return { reason: "not a readable .resx file" };
+  }
+  if (strings === 0) return { reason: "no strings (images, files or form data only)" };
+  const base = isCulture ? (culture?.[1] ?? name) : name;
+  return { format: "resx", include: file, output: `${prefix}${base}.${targetLanguage ?? "{lang}"}.resx` };
+}
+
+/** A bundle name ending with a locale: messages_fr, messages_pt_BR. */
+const BUNDLE_LOCALE = /^(.+?)_([a-z]{2,3}(?:_[A-Z]{2})?)$/;
+/** Names that only resource bundles take, even without a translation next to them. */
+const BUNDLE_NAME = /(?:^|[_.-])(?:messages|strings|labels|i18n|l10n|texts?|translations?|resources|bundle)$/i;
+
+/**
+ * Java resource bundles: messages.properties (the default, in the source language) or messages_en.properties, whose
+ * translations are messages_fr.properties. A .properties file without a locale is only taken when translations sit
+ * next to it or its name is that of a bundle: application.properties and gradle.properties are settings.
+ */
+function propertiesSuggestion(
+  file: string,
+  files: readonly string[],
+  sourceLanguage: string,
+  targetLanguage: string | undefined,
+): Suggestion | { reason: string } {
+  const folder = path.posix.dirname(file);
+  const prefix = folder === "." ? "" : `${folder}/`;
+  const name = path.posix.basename(file, path.posix.extname(file));
+  const target = targetLanguage === undefined ? "{lang}" : gettextLanguage(targetLanguage);
+  const locale = BUNDLE_LOCALE.exec(name);
+  const code = locale?.[2];
+  if (locale !== null && code !== undefined && languageName(code.replace("_", "-")) !== code.replace("_", "-")) {
+    if (baseLanguage(code) !== baseLanguage(sourceLanguage)) return { reason: "bundle of another language" };
+    return { format: "properties", include: file, output: `${prefix}${locale[1]}_${target}.properties` };
+  }
+  const translations = files.some((other) => {
+    const otherName = path.posix.basename(other, path.posix.extname(other));
+    return path.posix.dirname(other) === folder && otherName.startsWith(`${name}_`) && other.endsWith(".properties");
+  });
+  if (!translations && !BUNDLE_NAME.test(name)) {
+    return { reason: "settings rather than texts (no translation next to it, and not the name of a bundle)" };
+  }
+  return { format: "properties", include: file, output: `${prefix}${name}_${target}.properties` };
+}
+
+/**
  * Apple .strings files sit in a folder per language: en.lproj/Localizable.strings (or Base.lproj, or the old
  * English.lproj). The translations go to fr.lproj/.
  */
@@ -397,7 +492,7 @@ function iosSuggestion(
 
 /** The include pattern and output template for a file with a language marker in its path, if it has one. */
 function markedSuggestion(
-  format: "json" | "po" | "xliff" | "yaml",
+  format: "arb" | "json" | "po" | "xliff" | "yaml",
   file: string,
   markers: readonly string[],
   targetLanguage: string | undefined,

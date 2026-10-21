@@ -133,7 +133,7 @@ langues et les sources sont obligatoires.
 | Réglage | Signification | Par défaut |
 | --- | --- | --- |
 | `workDir` | Dossier de la mémoire de traduction. **À versionner** : il contient tout le travail. | `.tradforge` |
-| `sources[].format` | `json`, `yaml`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` ou `rimworld-xml` (voir [Formats pris en charge](#formats-pris-en-charge)) | obligatoire |
+| `sources[].format` | `json`, `yaml`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` ou `rimworld-xml` (voir [Formats pris en charge](#formats-pris-en-charge)) | obligatoire |
 | `sources[].include` | Motifs de fichiers, relatifs au fichier de configuration | obligatoire |
 | `sources[].priority` | Plus petit = traduit en premier (peut être négatif) | `0` |
 | `sources[].context` | Indique au modèle comment les textes sont utilisés | aucun |
@@ -170,6 +170,9 @@ langues et les sources sont obligatoires.
 | **XLIFF** 1.2 et 2.x `.xlf`, `.xliff` (`xliff`) | la source de chaque unité (et de chaque segment en XLIFF 2), sauf `translate="no"` ; éléments internes (`<x/>`, `<g>`, `<ph>`, `<pc>`) gardés dans le texte et vérifiés ; notes envoyées comme contexte | cibles écrites ou ajoutées après leur source, `target-language`/`trgLang` renseigné, le reste conservé à l'octet près ; `messages.xlf` d'Angular → `messages.fr.xlf` |
 | **Ressources Android** (`android`) | `res/values/strings.xml` : `<string>`, éléments de `<string-array>` et quantités de `<plurals>`, lus comme Android les lit (échappements, guillemets, espaces) ; `translatable="false"` ignorés ; `<xliff:g>` et `<b>` gardés et vérifiés | `res/values-fr/`, `values-pt-rBR/` ; échappés pour Android (`\'`, `\@`…), pluriels avec les quantités de la langue cible (CLDR), ressources non traduisibles retirées |
 | **Chaînes Apple** `.strings` (`ios-strings`) | `en.lproj/` ou `Base.lproj/` : chaque valeur, le commentaire au-dessus envoyé comme contexte ; tous les échappements (`\"`, `\n`, `\U00E9`) | `fr.lproj/`, valeurs remplacées sur place, commentaires conservés ; `%@` et `%ld` vérifiés |
+| **Bundles Java** `.properties` (`properties`) | `messages.properties` ou `messages_en.properties` : chaque valeur, le commentaire au-dessus comme contexte ; séparateurs `=`, `:` et espace, suites `\`, `\uXXXX` ; les apostrophes doublées des textes MessageFormat (`Don''t {0}`) données simples | `messages_fr.properties`, valeurs sur place sur une ligne, apostrophes de nouveau doublées quand le texte a des arguments `{0}` ; `asciiOnly` pour Java 8 |
+| **Ressources .NET** `.resx` (`resx`) | chaque `<data>` texte (pas les fichiers, objets ni données du concepteur Windows Forms), son `<comment>` comme contexte | `Strings.fr.resx`, valeurs sur place, XML échappé |
+| **Flutter** `.arb` (`arb`) | chaque message, la description de son `@clé` comme contexte | `app_fr.arb` (`app_pt_BR.arb`), `@@locale` renommé, métadonnées conservées |
 | **SubRip** `.srt` (`srt`), **WebVTT** `.vtt` (`vtt`) | un texte par réplique, les répliques à moins de 2 s d'écart regroupées en scène ; balises, codes `{\an8}`, blocs NOTE/STYLE | textes remplacés sur place, numéros et minutages intacts ; `film.en.srt` → `film.fr.srt` |
 
 ### Dialectes de moteurs et de jeux
@@ -185,7 +188,7 @@ Project Zomboid est une table proche du Lua, un `.xml` RimWorld suit un schéma 
 | **Données de langue RimWorld** (`rimworld-xml`) | `.xml`, racine `<LanguageData>` | `Languages/English/Keyed/` et `DefInjected/`, listes `<li>`, `\n` littéraux | `Languages/French/…`, XML échappé correctement ; symboles de grammaire `[PAWN_nameDef]` et têtes de règles protégés |
 
 `tradforge init` les reconnaît tous dans un dossier (par extension, ou par chemin pour les dialectes dont l'extension
-est générique) et propose les bons chemins de sortie. D'autres formats arrivent : `.properties`, `.resx`, `.arb`, Markdown… Voir la
+est générique) et propose les bons chemins de sortie. D'autres formats arrivent : Markdown, HTML… Voir la
 [feuille de route](#feuille-de-route).
 
 ## Moteurs
@@ -308,6 +311,8 @@ des textes écrits pour tradforge.
   sont envoyés comme du texte : vérifiez que leurs mots-clés sont revenus intacts.
 - YAML : ancres, alias, balises et tables en ligne (`{a: b}`) sont refusés avec la ligne où ils se trouvent ; une
   liste en ligne doit tenir sur une ligne.
+- Les messages ICU (`{count, plural, one {...} other {...}}`, dans les fichiers `.arb` et XLIFF) sont envoyés tels
+  quels : vérifiez que leurs mots-clés sont revenus intacts.
 - Apple : les pluriels (`.stringsdict`) et les catalogues (`.xcstrings`) ne sont pas encore pris en charge.
 - Les règles de typographie n'existent pour l'instant que pour le français (France et Canada).
 - Une retraduction ajoute ses propres erreurs : un verdict est un signal pour un humain, pas une correction, et les

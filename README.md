@@ -128,7 +128,7 @@ sources are required.
 | Setting | Meaning | Default |
 | --- | --- | --- |
 | `workDir` | Where the translation memory lives. **Worth committing**: it holds all the work. | `.tradforge` |
-| `sources[].format` | `json`, `yaml`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` or `rimworld-xml` (see [Supported formats](#supported-formats)) | required |
+| `sources[].format` | `json`, `yaml`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` or `rimworld-xml` (see [Supported formats](#supported-formats)) | required |
 | `sources[].include` | Glob patterns, relative to the configuration file | required |
 | `sources[].priority` | Lower is translated first (may be negative) | `0` |
 | `sources[].context` | Tells the model how the texts are used | none |
@@ -165,6 +165,9 @@ sources are required.
 | **XLIFF** 1.2 and 2.x `.xlf`, `.xliff` (`xliff`) | the source of every unit (and every segment in XLIFF 2), except `translate="no"`; inline elements (`<x/>`, `<g>`, `<ph>`, `<pc>`) kept in the text and checked; notes sent as context | targets written or added after their source, `target-language`/`trgLang` set, the rest kept byte for byte; Angular's `messages.xlf` → `messages.fr.xlf` |
 | **Android string resources** (`android`) | `res/values/strings.xml`: `<string>`, `<string-array>` items and `<plurals>` quantities, read as Android reads them (escapes, quotes, spaces); `translatable="false"` skipped; `<xliff:g>` and `<b>` kept and checked | `res/values-fr/`, `values-pt-rBR/`; escaped for Android (`\'`, `\@`...), plurals with the quantities of the target language (CLDR), non-translatable resources left out |
 | **Apple strings** `.strings` (`ios-strings`) | `en.lproj/` or `Base.lproj/`: every value, the comment above it sent as context; all escapes (`\"`, `\n`, `\U00E9`) | `fr.lproj/`, values replaced in place, comments kept; `%@` and `%ld` checked |
+| **Java resource bundles** `.properties` (`properties`) | `messages.properties` or `messages_en.properties`: every value, the comment above it as context; `=`, `:` and space separators, `\` continuations, `\uXXXX`; the doubled apostrophes of MessageFormat texts (`Don''t {0}`) given as one | `messages_fr.properties`, values in place on one line, apostrophes doubled again when the text has `{0}` arguments; `asciiOnly` for Java 8 |
+| **.NET resources** `.resx` (`resx`) | every string `<data>` (not files, objects or Windows Forms designer data), its `<comment>` as context | `Strings.fr.resx`, values in place, XML escaped |
+| **Flutter** `.arb` (`arb`) | every message, its `@key` description as context | `app_fr.arb` (`app_pt_BR.arb`), `@@locale` renamed, metadata kept |
 | **SubRip** `.srt` (`srt`), **WebVTT** `.vtt` (`vtt`) | one text per cue, cues less than 2 s apart kept together as a scene; tags, `{\an8}` codes, NOTE/STYLE blocks | texts replaced in place, numbers and timings untouched; `movie.en.srt` → `movie.fr.srt` |
 
 ### Engine and game dialects
@@ -180,7 +183,7 @@ file is a Lua-like table, a RimWorld `.xml` file follows a fixed schema. tradfor
 | **RimWorld language data** (`rimworld-xml`) | `.xml`, `<LanguageData>` root | `Languages/English/Keyed/` and `DefInjected/`, `<li>` lists, literal `\n` | `Languages/French/...`, XML escaped correctly; grammar symbols `[PAWN_nameDef]` and rule heads protected |
 
 `tradforge init` recognises all of them in a folder (by extension, or by path for the dialects whose extension is
-generic) and proposes the right output paths. More formats are on the way: `.properties`, `.resx`, `.arb`, Markdown… See the
+generic) and proposes the right output paths. More formats are on the way: Markdown, HTML… See the
 [roadmap](#roadmap).
 
 ## Engines
@@ -300,6 +303,8 @@ texts written for tradforge.
   plain text: check their keywords came back untouched.
 - YAML: anchors, aliases, tags and flow mappings (`{a: b}`) are refused with the line they are on; a flow list must
   fit on one line.
+- ICU messages (`{count, plural, one {...} other {...}}`, in `.arb` and XLIFF files) are sent as they are: check
+  their keywords came back untouched.
 - Apple: plurals (`.stringsdict`) and string catalogs (`.xcstrings`) are not supported yet.
 - Typography rules exist for French only (France and Canada) so far.
 - A back-translation adds its own mistakes: a verdict is a pointer for a human, not a correction, and small local
