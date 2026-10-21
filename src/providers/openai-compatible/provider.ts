@@ -7,6 +7,7 @@ import {
   RateLimitError,
   type TranslationRequest,
 } from "../../core/provider.js";
+import { hideSecret, postJson, retryAfterMs } from "../http.js";
 import { buildSystemPrompt, buildUserMessage } from "../llm/prompt.js";
 import { parseTranslations, RESPONSE_SCHEMA } from "../llm/response.js";
 
@@ -38,42 +39,26 @@ export function createOpenAiCompatibleProvider(options: OpenAiCompatibleOptions)
   const headers: Record<string, string> = { "content-type": "application/json" };
   if (options.apiKey !== undefined && options.apiKey !== "") headers.authorization = `Bearer ${options.apiKey}`;
 
-  /** Servers sometimes repeat the key they refused: never let it reach the terminal or a log. */
-  const hideKey = (text: string): string =>
-    options.apiKey === undefined || options.apiKey === "" ? text : text.replaceAll(options.apiKey, "***");
-
   return {
     model: options.model,
     async translateBatch(request, signal) {
-      const timeout = AbortSignal.timeout(timeoutMs);
-      try {
-        const response = await fetch(`${baseUrl}/chat/completions`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(completionRequest(options, request)),
-          signal: signal === undefined ? timeout : AbortSignal.any([signal, timeout]),
-        });
-        const body = await response.text();
-        if (response.status === 429) throw rateLimitError(response.headers, body, hideKey(errorDetail(body)));
-        if (!response.ok) throw httpError(response.status, hideKey(errorDetail(body)), options, baseUrl);
-        return parseTranslations(
-          completionContent(body),
-          request.items.map((item) => item.id),
-        );
-      } catch (error) {
-        if (signal?.aborted === true) throw signal.reason; // the user interrupted: let it through as it is
-        if (timeout.aborted) {
-          throw new BatchError(`${baseUrl} did not answer within ${timeoutMs / 1000} s`, { cause: error });
-        }
-        if (error instanceof TypeError) {
-          // fetch rejects with a TypeError when the server cannot be reached at all.
-          throw new ProviderUnavailableError(
-            `cannot reach ${baseUrl}: check provider.baseUrl and that the server is running (${error.message})`,
-            { cause: error },
-          );
-        }
-        throw error;
-      }
+      const response = await postJson({
+        url: `${baseUrl}/chat/completions`,
+        headers,
+        body: completionRequest(options, request),
+        timeoutMs,
+        ...(signal !== undefined ? { signal } : {}),
+        fetch,
+        label: baseUrl,
+        unreachableHint: "check provider.baseUrl and that the server is running",
+      });
+      const { status, body } = response;
+      if (status === 429) throw rateLimitError(response.headers, body, hideSecret(errorDetail(body), options.apiKey));
+      if (status >= 400) throw httpError(status, hideSecret(errorDetail(body), options.apiKey), options, baseUrl);
+      return parseTranslations(
+        completionContent(body),
+        request.items.map((item) => item.id),
+      );
     },
   };
 }
@@ -139,16 +124,6 @@ function rateLimitError(headers: Headers, body: string, detail: string): Error {
     return new ProviderUnavailableError(`the quota of this API key is used up (HTTP 429): ${detail}`);
   }
   return new RateLimitError(`rate limit reached (HTTP 429): ${detail}`, retryAfterMs(headers));
-}
-
-function retryAfterMs(headers: Headers): number | undefined {
-  const ms = Number(headers.get("retry-after-ms") ?? Number.NaN);
-  if (Number.isFinite(ms) && ms >= 0) return ms;
-  const value = headers.get("retry-after");
-  if (value === null) return undefined;
-  if (/^\d+(\.\d+)?$/.test(value.trim())) return Number(value) * 1000;
-  const date = Date.parse(value);
-  return Number.isNaN(date) ? undefined : Math.max(0, date - Date.now());
 }
 
 /** 401/403: wrong key. 404: wrong model or address. Other 4xx: wrong request (stop). 5xx: retry smaller. */
