@@ -24,6 +24,59 @@ describe("TranslationMemory", () => {
     });
   });
 
+  it("keeps the check of a translation, dated, until the translation changes", () => {
+    const memory = newMemory();
+    memory.recordMachine("Don't open the door.", "Ouvre la porte.", "mistral-small");
+    expect(
+      memory.recordCheck("Don't open the door.", "Ouvre la porte.", {
+        verdict: "different" as const,
+        note: "The negation is lost.",
+        backTranslation: "Open the door.",
+        model: "judge",
+      }),
+    ).toBe(true);
+    expect(memory.get("Don't open the door.")?.check).toStrictEqual({
+      verdict: "different",
+      note: "The negation is lost.",
+      backTranslation: "Open the door.",
+      model: "judge",
+      checkedAt: "2026-01-01T00:00:01.000Z",
+    });
+
+    memory.recordMachine("Don't open the door.", "N'ouvre pas la porte.", "mistral-small");
+    expect(memory.get("Don't open the door.")).not.toHaveProperty("check");
+    memory.recordCheck("Don't open the door.", "N'ouvre pas la porte.", {
+      verdict: "different" as const,
+      note: "The negation is lost.",
+      backTranslation: "Open the door.",
+      model: "judge",
+    });
+    memory.importTranslation("Don't open the door.", "N'ouvre surtout pas la porte.");
+    expect(memory.get("Don't open the door.")).not.toHaveProperty("check");
+  });
+
+  it("refuses a check made on another translation, or on a text it does not have", () => {
+    const memory = newMemory();
+    memory.recordMachine("Hello", "Bonjour", "m");
+    expect(
+      memory.recordCheck("Hello", "Salut", {
+        verdict: "different" as const,
+        note: "The negation is lost.",
+        backTranslation: "Open the door.",
+        model: "judge",
+      }),
+    ).toBe(false);
+    expect(
+      memory.recordCheck("Unknown", "Inconnu", {
+        verdict: "different" as const,
+        note: "The negation is lost.",
+        backTranslation: "Open the door.",
+        model: "judge",
+      }),
+    ).toBe(false);
+    expect(memory.get("Hello")).not.toHaveProperty("check");
+  });
+
   it("lets a new machine translation replace an older one", () => {
     const memory = newMemory();
     memory.recordMachine("Hello", "Bonjour", "model-a");

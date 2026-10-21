@@ -1,5 +1,5 @@
 import { compareCodeUnits } from "./compare.js";
-import type { FailedTranslation, TranslationEntry } from "./types.js";
+import type { FailedTranslation, TranslationCheck, TranslationEntry } from "./types.js";
 
 export interface MemoryLanguages {
   readonly sourceLanguage: string;
@@ -64,6 +64,17 @@ export class TranslationMemory {
     this.entries.set(source, { source, target, status: "machine", model, updatedAt: this.now() });
     this.failures.delete(source);
     return "saved";
+  }
+
+  /**
+   * Keeps the back-translation check of a translation, dated. Refused (false) when the memory has no such text, or
+   * a different translation of it: a check is only worth something for the translation it was made on.
+   */
+  recordCheck(source: string, target: string, check: Omit<TranslationCheck, "checkedAt">): boolean {
+    const entry = this.entries.get(source);
+    if (entry === undefined || entry.target !== target) return false;
+    this.entries.set(source, { ...entry, check: { ...check, checkedAt: this.now() } });
+    return true;
   }
 
   /** Logs a failed attempt. The reason and model of the last attempt are kept. */

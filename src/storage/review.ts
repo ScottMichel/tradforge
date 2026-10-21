@@ -16,7 +16,8 @@ export interface ImportResult {
   readonly empty: number;
 }
 
-const HEADER = ["source", "target", "status"];
+/** The check columns come last: an import reads its columns by name and ignores them. */
+const HEADER = ["source", "target", "status", "check", "back_translation", "check_note"];
 
 /**
  * A CSV file to review or complete the translations: one row per translation
@@ -25,9 +26,18 @@ const HEADER = ["source", "target", "status"];
 export function exportReviewCsv(memory: TranslationMemory, currentSources: Iterable<string>): string {
   const current = new Set(currentSources);
   const sources = new Set([...memory.entryList().map((entry) => entry.source), ...current]);
-  const rows = [...sources]
-    .sort(compareCodeUnits)
-    .map((source) => [source, memory.get(source)?.target ?? "", reviewStatus(memory, source, current)]);
+  const rows = [...sources].sort(compareCodeUnits).map((source) => {
+    const entry = memory.get(source);
+    const check = entry?.check;
+    return [
+      source,
+      entry?.target ?? "",
+      reviewStatus(memory, source, current),
+      check?.verdict ?? "",
+      check?.backTranslation ?? "",
+      check?.note ?? "",
+    ];
+  });
   return formatCsv([HEADER, ...rows]);
 }
 

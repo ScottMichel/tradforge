@@ -11,6 +11,7 @@ function sampleMemory(): TranslationMemory {
   memory.importTranslation("Bye", "Au revoir");
   memory.recordMachine("Removed text", "Texte retiré", "mistral-small");
   memory.recordFailure("Go to town", "added by the translation: {town}");
+  memory.recordCheck("Hello", "Bonjour", { verdict: "same", note: "ok", backTranslation: "Hello", model: "judge" });
   return memory;
 }
 
@@ -18,12 +19,12 @@ describe("exportReviewCsv", () => {
   it("lists every translation and every untranslated source, sorted, with its status", () => {
     const current = ["Hello", "Bye", "Go to town", "New text"];
     expect(parseCsv(exportReviewCsv(sampleMemory(), current))).toEqual([
-      ["source", "target", "status"],
-      ["Bye", "Au revoir", "reviewed"],
-      ["Go to town", "", "failed"],
-      ["Hello", "Bonjour", "machine"],
-      ["New text", "", "pending"],
-      ["Removed text", "Texte retiré", "stale"],
+      ["source", "target", "status", "check", "back_translation", "check_note"],
+      ["Bye", "Au revoir", "reviewed", "", "", ""],
+      ["Go to town", "", "failed", "", "", ""],
+      ["Hello", "Bonjour", "machine", "same", "Hello", "ok"],
+      ["New text", "", "pending", "", "", ""],
+      ["Removed text", "Texte retiré", "stale", "", "", ""],
     ]);
   });
 });

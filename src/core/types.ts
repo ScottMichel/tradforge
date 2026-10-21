@@ -1,3 +1,5 @@
+import type { Verdict } from "./provider.js";
+
 /** Exact place where a text appears in a source file. */
 export interface SourceLocation {
   /** File path, relative to the root of the project being translated. */
@@ -47,6 +49,20 @@ export interface TranslationEntry {
   readonly model?: string;
   /** ISO 8601 date of the last change. */
   readonly updatedAt: string;
+  /** The back-translation check of this very translation; dropped when the translation changes. */
+  readonly check?: TranslationCheck;
+}
+
+/** What a back-translation said about a translation. */
+export interface TranslationCheck {
+  readonly verdict: Verdict;
+  readonly note: string;
+  /** The translation translated back into the source language. */
+  readonly backTranslation: string;
+  /** The engine that judged. */
+  readonly model: string;
+  /** ISO 8601 date of the check. */
+  readonly checkedAt: string;
 }
 
 /** A source the model could not translate correctly. */

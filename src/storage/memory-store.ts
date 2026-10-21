@@ -2,8 +2,9 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { isObject, type JsonObject } from "../core/json.js";
 import { type MemoryLanguages, TranslationMemory } from "../core/memory.js";
+import { VERDICTS } from "../core/provider.js";
 import { stripBom } from "../core/reader.js";
-import type { FailedTranslation, TranslationEntry, TranslationStatus } from "../core/types.js";
+import type { FailedTranslation, TranslationCheck, TranslationEntry, TranslationStatus } from "../core/types.js";
 import { writeFileAtomic } from "./atomic.js";
 import { readFileIfExists } from "./read.js";
 
@@ -62,6 +63,17 @@ export function serializeMemory(memory: TranslationMemory): string {
       status: entry.status,
       ...(entry.model !== undefined ? { model: entry.model } : {}),
       updatedAt: entry.updatedAt,
+      ...(entry.check !== undefined
+        ? {
+            check: {
+              verdict: entry.check.verdict,
+              note: entry.check.note,
+              backTranslation: entry.check.backTranslation,
+              model: entry.check.model,
+              checkedAt: entry.check.checkedAt,
+            },
+          }
+        : {}),
     })),
     failures: memory.failureList().map((failure) => ({
       source: failure.source,
@@ -98,7 +110,28 @@ function parseEntry(value: unknown, path: string): TranslationEntry {
   if (status === undefined) throw new MemoryFileError(`${path}.status: must be one of ${STATUSES.join(", ")}`);
   const model = entry.model === undefined ? undefined : expectText(entry.model, `${path}.model`);
   const updatedAt = expectText(entry.updatedAt, `${path}.updatedAt`);
-  return { source, target, status, ...(model !== undefined ? { model } : {}), updatedAt };
+  const check = entry.check === undefined ? undefined : parseCheck(entry.check, `${path}.check`);
+  return {
+    source,
+    target,
+    status,
+    ...(model !== undefined ? { model } : {}),
+    updatedAt,
+    ...(check !== undefined ? { check } : {}),
+  };
+}
+
+function parseCheck(value: unknown, path: string): TranslationCheck {
+  const check = expectObject(value, path);
+  const verdict = VERDICTS.find((v) => v === check.verdict);
+  if (verdict === undefined) throw new MemoryFileError(`${path}.verdict: must be one of ${VERDICTS.join(", ")}`);
+  return {
+    verdict,
+    note: expectString(check.note, `${path}.note`),
+    backTranslation: expectString(check.backTranslation, `${path}.backTranslation`),
+    model: expectText(check.model, `${path}.model`),
+    checkedAt: expectText(check.checkedAt, `${path}.checkedAt`),
+  };
 }
 
 function parseFailure(value: unknown, path: string): FailedTranslation {

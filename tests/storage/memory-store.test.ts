@@ -23,6 +23,12 @@ function sampleMemory(): TranslationMemory {
   return memory;
 }
 
+function checkedMemory(): TranslationMemory {
+  const memory = sampleMemory();
+  memory.recordCheck("b", "B", { verdict: "nuance", note: "Close.", backTranslation: "Bee", model: "judge" });
+  return memory;
+}
+
 describe("serializeMemory / parseMemoryFile", () => {
   it("writes a versioned, sorted, indented JSON file", () => {
     expect(serializeMemory(sampleMemory())).toBe(
@@ -59,8 +65,14 @@ describe("serializeMemory / parseMemoryFile", () => {
     );
   });
 
+  it("writes the check of a translation after its other fields", () => {
+    const entry = JSON.parse(serializeMemory(checkedMemory())).entries[1];
+    expect(Object.keys(entry)).toEqual(["source", "target", "status", "model", "updatedAt", "check"]);
+    expect(Object.keys(entry.check)).toEqual(["verdict", "note", "backTranslation", "model", "checkedAt"]);
+  });
+
   it("reads back what it wrote", () => {
-    const memory = sampleMemory();
+    const memory = checkedMemory();
     const data = parseMemoryFile(JSON.parse(serializeMemory(memory)));
     expect(data.languages).toStrictEqual(languages);
     expect(data.entries).toStrictEqual(memory.entryList());
@@ -78,6 +90,24 @@ describe("serializeMemory / parseMemoryFile", () => {
     [
       { version: 1, sourceLanguage: "en", targetLanguage: "fr", entries: [], failures: [{ source: "a", attempts: 0 }] },
       /failures\[0\]\.reason/,
+    ],
+    [
+      {
+        version: 1,
+        sourceLanguage: "en",
+        targetLanguage: "fr",
+        entries: [
+          {
+            source: "a",
+            target: "A",
+            status: "machine",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+            check: { verdict: "perfect", note: "", backTranslation: "a", model: "m", checkedAt: "x" },
+          },
+        ],
+        failures: [],
+      },
+      /entries\[0\]\.check\.verdict/,
     ],
   ])("rejects %j", (raw, message) => {
     expect(() => parseMemoryFile(raw)).toThrow(MemoryFileError);
