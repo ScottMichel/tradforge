@@ -14,6 +14,7 @@ import { resxWriter } from "./resx/writer.js";
 import { rimworldWriter } from "./rimworld/writer.js";
 import { srtWriter } from "./srt/writer.js";
 import { vttWriter } from "./vtt/writer.js";
+import { xcstringsWriter } from "./xcstrings/writer.js";
 import { xliffWriter } from "./xliff/writer.js";
 import { yamlWriter } from "./yaml/writer.js";
 
@@ -33,6 +34,7 @@ export const WRITERS = {
   "rimworld-xml": rimworldWriter,
   srt: srtWriter,
   vtt: vttWriter,
+  xcstrings: xcstringsWriter,
   xliff: xliffWriter,
   yaml: yamlWriter,
 } as const satisfies Record<SourceFormat, Writer>;

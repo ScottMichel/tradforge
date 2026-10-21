@@ -7,6 +7,10 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `xcstrings` format: Xcode string catalogs. A catalog holds every language, so the translation is written into the
+  catalog itself (the only format allowed to, see `MULTILINGUAL_FORMATS`): only the target language changes, a
+  translation made in Xcode is never removed, plural variations get the categories of the target language, and the
+  layout of Xcode is kept so that a diff shows only the new lines.
 - `properties` format: Java resource bundles. Every separator, continuation and escape of the format; the doubled
   apostrophes of MessageFormat texts are given to the translator as one and doubled again on writing. `tradforge
   init` proposes bundles (`messages.properties`, `messages_en.properties`), not settings files.

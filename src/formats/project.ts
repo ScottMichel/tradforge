@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { SourceConfig, TradforgeConfig } from "../core/config.js";
+import { MULTILINGUAL_FORMATS, type SourceConfig, type TradforgeConfig } from "../core/config.js";
 import { languageName } from "../core/languages.js";
 import { findFiles } from "./files.js";
 
@@ -70,7 +70,7 @@ export async function listProjectFiles(root: string, config: TradforgeConfig): P
         source: config.sourceLanguage,
         target: config.targetLanguage,
       });
-      if (output === file) {
+      if (output === file && !MULTILINGUAL_FORMATS.includes(source.format)) {
         throw new OutputError(`${file}: the output path "${source.output.path}" would overwrite its source file`);
       }
       if (output === ".." || output.startsWith("../")) {
@@ -84,7 +84,8 @@ export async function listProjectFiles(root: string, config: TradforgeConfig): P
   const fileFor = new Map<string, string>();
   const files: ProjectFile[] = [];
   for (const entry of found) {
-    if (outputs.has(entry.file)) continue; // a translation written by a previous build
+    // a translation written by a previous build (a multilingual file is its own output: it stays)
+    if (outputs.has(entry.file) && entry.output !== entry.file) continue;
     const other = fileFor.get(entry.output);
     if (other === entry.file) continue; // the same file matched by two sources: keep the first
     if (other !== undefined) {

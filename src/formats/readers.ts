@@ -14,6 +14,7 @@ import { resxReader } from "./resx/reader.js";
 import { rimworldReader } from "./rimworld/reader.js";
 import { srtReader } from "./srt/reader.js";
 import { vttReader } from "./vtt/reader.js";
+import { xcstringsReader } from "./xcstrings/reader.js";
 import { xliffReader } from "./xliff/reader.js";
 import { yamlReader } from "./yaml/reader.js";
 
@@ -33,6 +34,7 @@ export const READERS = {
   "rimworld-xml": rimworldReader,
   srt: srtReader,
   vtt: vttReader,
+  xcstrings: xcstringsReader,
   xliff: xliffReader,
   yaml: yamlReader,
 } as const satisfies Record<SourceFormat, Reader>;

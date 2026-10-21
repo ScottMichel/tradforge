@@ -128,7 +128,7 @@ sources are required.
 | Setting | Meaning | Default |
 | --- | --- | --- |
 | `workDir` | Where the translation memory lives. **Worth committing**: it holds all the work. | `.tradforge` |
-| `sources[].format` | `json`, `yaml`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` or `rimworld-xml` (see [Supported formats](#supported-formats)) | required |
+| `sources[].format` | `json`, `yaml`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `xcstrings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` or `rimworld-xml` (see [Supported formats](#supported-formats)) | required |
 | `sources[].include` | Glob patterns, relative to the configuration file | required |
 | `sources[].priority` | Lower is translated first (may be negative) | `0` |
 | `sources[].context` | Tells the model how the texts are used | none |
@@ -165,6 +165,7 @@ sources are required.
 | **XLIFF** 1.2 and 2.x `.xlf`, `.xliff` (`xliff`) | the source of every unit (and every segment in XLIFF 2), except `translate="no"`; inline elements (`<x/>`, `<g>`, `<ph>`, `<pc>`) kept in the text and checked; notes sent as context | targets written or added after their source, `target-language`/`trgLang` set, the rest kept byte for byte; Angular's `messages.xlf` → `messages.fr.xlf` |
 | **Android string resources** (`android`) | `res/values/strings.xml`: `<string>`, `<string-array>` items and `<plurals>` quantities, read as Android reads them (escapes, quotes, spaces); `translatable="false"` skipped; `<xliff:g>` and `<b>` kept and checked | `res/values-fr/`, `values-pt-rBR/`; escaped for Android (`\'`, `\@`...), plurals with the quantities of the target language (CLDR), non-translatable resources left out |
 | **Apple strings** `.strings` (`ios-strings`) | `en.lproj/` or `Base.lproj/`: every value, the comment above it sent as context; all escapes (`\"`, `\n`, `\U00E9`) | `fr.lproj/`, values replaced in place, comments kept; `%@` and `%ld` checked |
+| **Xcode string catalogs** `.xcstrings` (`xcstrings`) | the source language of every string (the key when it has no value), plural variations, the comment as context; `shouldTranslate: false` respected | **the catalog itself**: the target language added or updated, other languages untouched, translations made in Xcode never removed; plural categories of the target language; Xcode's layout, so that a diff shows only the new lines |
 | **Java resource bundles** `.properties` (`properties`) | `messages.properties` or `messages_en.properties`: every value, the comment above it as context; `=`, `:` and space separators, `\` continuations, `\uXXXX`; the doubled apostrophes of MessageFormat texts (`Don''t {0}`) given as one | `messages_fr.properties`, values in place on one line, apostrophes doubled again when the text has `{0}` arguments; `asciiOnly` for Java 8 |
 | **.NET resources** `.resx` (`resx`) | every string `<data>` (not files, objects or Windows Forms designer data), its `<comment>` as context | `Strings.fr.resx`, values in place, XML escaped |
 | **Flutter** `.arb` (`arb`) | every message, its `@key` description as context | `app_fr.arb` (`app_pt_BR.arb`), `@@locale` renamed, metadata kept |
@@ -305,7 +306,8 @@ texts written for tradforge.
   fit on one line.
 - ICU messages (`{count, plural, one {...} other {...}}`, in `.arb` and XLIFF files) are sent as they are: check
   their keywords came back untouched.
-- Apple: plurals (`.stringsdict`) and string catalogs (`.xcstrings`) are not supported yet.
+- Apple: `.stringsdict` plurals are not supported, nor the substitutions of string catalogs (several plurals in one
+  text): those strings are left out.
 - Typography rules exist for French only (France and Canada) so far.
 - A back-translation adds its own mistakes: a verdict is a pointer for a human, not a correction, and small local
   judges are strict (a synonym can be called a nuance). Negations are recognised in English, French, Spanish, German,
@@ -315,7 +317,7 @@ texts written for tradforge.
 
 ## Roadmap
 
-1. **Application formats**: Apple `.stringsdict` and `.xcstrings`, `.properties`, `.resx`, `.arb`, Markdown, HTML.
+1. **Application formats**: Apple `.stringsdict`, `.properties`, `.resx`, `.arb`, Markdown, HTML.
 2. **Desktop application**: open a file or a folder, translate, review — no command line needed.
 3. **Office documents**: `.docx`, `.odt`, `.pptx`, `.xlsx`.
 

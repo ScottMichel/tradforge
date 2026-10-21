@@ -133,7 +133,7 @@ langues et les sources sont obligatoires.
 | Réglage | Signification | Par défaut |
 | --- | --- | --- |
 | `workDir` | Dossier de la mémoire de traduction. **À versionner** : il contient tout le travail. | `.tradforge` |
-| `sources[].format` | `json`, `yaml`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` ou `rimworld-xml` (voir [Formats pris en charge](#formats-pris-en-charge)) | obligatoire |
+| `sources[].format` | `json`, `yaml`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `xcstrings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` ou `rimworld-xml` (voir [Formats pris en charge](#formats-pris-en-charge)) | obligatoire |
 | `sources[].include` | Motifs de fichiers, relatifs au fichier de configuration | obligatoire |
 | `sources[].priority` | Plus petit = traduit en premier (peut être négatif) | `0` |
 | `sources[].context` | Indique au modèle comment les textes sont utilisés | aucun |
@@ -170,6 +170,7 @@ langues et les sources sont obligatoires.
 | **XLIFF** 1.2 et 2.x `.xlf`, `.xliff` (`xliff`) | la source de chaque unité (et de chaque segment en XLIFF 2), sauf `translate="no"` ; éléments internes (`<x/>`, `<g>`, `<ph>`, `<pc>`) gardés dans le texte et vérifiés ; notes envoyées comme contexte | cibles écrites ou ajoutées après leur source, `target-language`/`trgLang` renseigné, le reste conservé à l'octet près ; `messages.xlf` d'Angular → `messages.fr.xlf` |
 | **Ressources Android** (`android`) | `res/values/strings.xml` : `<string>`, éléments de `<string-array>` et quantités de `<plurals>`, lus comme Android les lit (échappements, guillemets, espaces) ; `translatable="false"` ignorés ; `<xliff:g>` et `<b>` gardés et vérifiés | `res/values-fr/`, `values-pt-rBR/` ; échappés pour Android (`\'`, `\@`…), pluriels avec les quantités de la langue cible (CLDR), ressources non traduisibles retirées |
 | **Chaînes Apple** `.strings` (`ios-strings`) | `en.lproj/` ou `Base.lproj/` : chaque valeur, le commentaire au-dessus envoyé comme contexte ; tous les échappements (`\"`, `\n`, `\U00E9`) | `fr.lproj/`, valeurs remplacées sur place, commentaires conservés ; `%@` et `%ld` vérifiés |
+| **Catalogues Xcode** `.xcstrings` (`xcstrings`) | la langue source de chaque chaîne (la clé quand elle n'a pas de valeur), variantes plurielles, commentaire comme contexte ; `shouldTranslate: false` respecté | **le catalogue lui-même** : langue cible ajoutée ou mise à jour, autres langues intactes, traductions faites dans Xcode jamais effacées ; catégories plurielles de la langue cible ; mise en page d'Xcode, pour qu'un diff ne montre que les nouvelles lignes |
 | **Bundles Java** `.properties` (`properties`) | `messages.properties` ou `messages_en.properties` : chaque valeur, le commentaire au-dessus comme contexte ; séparateurs `=`, `:` et espace, suites `\`, `\uXXXX` ; les apostrophes doublées des textes MessageFormat (`Don''t {0}`) données simples | `messages_fr.properties`, valeurs sur place sur une ligne, apostrophes de nouveau doublées quand le texte a des arguments `{0}` ; `asciiOnly` pour Java 8 |
 | **Ressources .NET** `.resx` (`resx`) | chaque `<data>` texte (pas les fichiers, objets ni données du concepteur Windows Forms), son `<comment>` comme contexte | `Strings.fr.resx`, valeurs sur place, XML échappé |
 | **Flutter** `.arb` (`arb`) | chaque message, la description de son `@clé` comme contexte | `app_fr.arb` (`app_pt_BR.arb`), `@@locale` renommé, métadonnées conservées |
@@ -313,7 +314,8 @@ des textes écrits pour tradforge.
   liste en ligne doit tenir sur une ligne.
 - Les messages ICU (`{count, plural, one {...} other {...}}`, dans les fichiers `.arb` et XLIFF) sont envoyés tels
   quels : vérifiez que leurs mots-clés sont revenus intacts.
-- Apple : les pluriels (`.stringsdict`) et les catalogues (`.xcstrings`) ne sont pas encore pris en charge.
+- Apple : les pluriels `.stringsdict` ne sont pas pris en charge, ni les substitutions des catalogues (plusieurs
+  pluriels dans un texte) : ces chaînes sont ignorées.
 - Les règles de typographie n'existent pour l'instant que pour le français (France et Canada).
 - Une retraduction ajoute ses propres erreurs : un verdict est un signal pour un humain, pas une correction, et les
   petits juges locaux sont sévères (un synonyme peut être qualifié de nuance). Les négations sont reconnues en
@@ -325,7 +327,7 @@ des textes écrits pour tradforge.
 
 ## Feuille de route
 
-1. **Formats d'applications** : `.stringsdict` et `.xcstrings` d'Apple, `.properties`, `.resx`, `.arb`, Markdown, HTML.
+1. **Formats d'applications** : `.stringsdict` d'Apple, `.properties`, `.resx`, `.arb`, Markdown, HTML.
 2. **Application de bureau** : ouvrir un fichier ou un dossier, traduire, relire — sans ligne de commande.
 3. **Documents bureautiques** : `.docx`, `.odt`, `.pptx`, `.xlsx`.
 

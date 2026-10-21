@@ -32,6 +32,7 @@ export {
   effectivePlaceholders,
   FORMAT_PLACEHOLDERS,
   GROUP_MODES,
+  MULTILINGUAL_FORMATS,
   OUTPUT_PLACEHOLDERS,
   PROVIDER_TYPES,
   parseConfig,
@@ -154,6 +155,9 @@ export { srtWriter } from "./formats/srt/writer.js";
 export { vttReader } from "./formats/vtt/reader.js";
 export { vttWriter } from "./formats/vtt/writer.js";
 export { WRITERS } from "./formats/writers.js";
+export { catalogTexts, parseCatalog, xcodeJson } from "./formats/xcstrings/catalog.js";
+export { xcstringsReader } from "./formats/xcstrings/reader.js";
+export { xcstringsWriter } from "./formats/xcstrings/writer.js";
 export { xliffReader } from "./formats/xliff/reader.js";
 export { xliffWriter } from "./formats/xliff/writer.js";
 export { yamlReader } from "./formats/yaml/reader.js";

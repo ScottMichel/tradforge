@@ -23,6 +23,7 @@ export const FORMAT_EXTENSIONS: Readonly<Record<SourceFormat, readonly string[]>
   resx: [".resx"],
   po: [".po", ".pot"],
   properties: [".properties"],
+  xcstrings: [".xcstrings"],
   xliff: [".xlf", ".xliff"],
   yaml: [".yml", ".yaml"], // Paradox .yml files are recognised by their path first
   "paradox-yml": [], // .yml is too generic: Paradox files are recognised by their name (ui_l_english.yml)
@@ -163,6 +164,11 @@ export async function detectSources(root: string, sourceLanguage: string, target
             ? marked
             : { ...marked, output: marked.output.replace("{lang}", gettextLanguage(targetLanguage)) },
         );
+      continue;
+    }
+    if (format === "xcstrings") {
+      // A string catalog holds every language: the translation goes into the catalog itself.
+      add({ format: "xcstrings", include: file, output: "{dir}/{name}{ext}" });
       continue;
     }
     if (format === "yaml") {

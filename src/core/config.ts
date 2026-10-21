@@ -21,6 +21,7 @@ export const SOURCE_FORMATS = [
   "rimworld-xml",
   "srt",
   "vtt",
+  "xcstrings",
   "xliff",
   "yaml",
   "zomboid-txt",
@@ -602,6 +603,12 @@ function parsePlaceholderSyntaxes(value: unknown, report: Report): PlaceholderSy
   );
 }
 
+/**
+ * Formats whose files hold every language (Xcode string catalogs): the translation is written into the source file
+ * itself, which every other format refuses. Their writers only change the target language.
+ */
+export const MULTILINGUAL_FORMATS: readonly SourceFormat[] = ["xcstrings"];
+
 /** Placeholder syntaxes that a format brings with it, on top of the configured ones. */
 export const FORMAT_PLACEHOLDERS: Readonly<Partial<Record<SourceFormat, readonly PlaceholderSyntax[]>>> = {
   "paradox-yml": ["paradox"],
@@ -613,6 +620,7 @@ export const FORMAT_PLACEHOLDERS: Readonly<Partial<Record<SourceFormat, readonly
   android: ["printf", "markup"],
   // Apple strings: %@, %1$@, %ld
   "ios-strings": ["printf"],
+  xcstrings: ["printf"],
 };
 
 /** The placeholder syntaxes to check: the configured ones, plus those of the formats the project uses. */
