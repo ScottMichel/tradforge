@@ -23,8 +23,8 @@ export const DEFAULT_PLACEHOLDER_SYNTAXES: readonly PlaceholderSyntax[] = PLACEH
 );
 
 const PATTERNS: Readonly<Record<PlaceholderSyntax, RegExp>> = {
-  // {name}, {0}, {}, {player.name}, {0:N2}
-  braces: /\{[\w.:-]*\}/g,
+  // {name}, {0}, {}, {player.name}, {0:N2}, and Java's MessageFormat {0,number,integer} (no nested braces)
+  braces: /\{[\w.:-]*(?:,[^{}]*)?\}/g,
   // %s, %d, %1$s, %5.2f, %-3i, %%, Python's %(name)s, Ruby's %{name}, Apple's %@, and the length modifiers of C
   // (%ld, %lld, %zu). No space flag, so "100% sure" is plain text.
   printf: /%(?:%|\{[\w.-]+\}|(?:\d+\$|\([\w.-]+\))?[-+#0]*\d*(?:\.\d+)?(?:hh|h|ll|l|q|z|t|j|L)?[sdifuxXoeEgGcqp@])/g,

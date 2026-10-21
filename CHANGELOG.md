@@ -7,6 +7,7 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- The `braces` placeholders include the arguments of Java's MessageFormat (`{0,number,integer}`).
 - `ios-strings` format: the `.strings` files of Apple platforms (`en.lproj/`, `Base.lproj/`), the comment above each
   entry sent as context, every escape of the format decoded and written back. `tradforge init` proposes `fr.lproj/`.
 - The `printf` placeholders include Apple's `%@` and the length modifiers of C (`%ld`, `%lld`, `%zu`).

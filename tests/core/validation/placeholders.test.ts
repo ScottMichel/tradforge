@@ -12,6 +12,14 @@ describe("findTokens", () => {
     expect(findTokens("Hi {name}, {0} and {} but not { this }", "braces")).toEqual(["{name}", "{0}", "{}"]);
   });
 
+  it("finds the arguments of Java's MessageFormat, with their format", () => {
+    expect(findTokens("{0,number,integer} bars on {1, date, short} for {2,choice,0#none|1#one}", "braces")).toEqual([
+      "{0,number,integer}",
+      "{1, date, short}",
+      "{2,choice,0#none|1#one}",
+    ]);
+  });
+
   it("finds printf placeholders, positional ones and %% included", () => {
     expect(findTokens("%s %d %1$s %5.2f %-3i %%", "printf")).toEqual(["%s", "%d", "%1$s", "%5.2f", "%-3i", "%%"]);
   });
