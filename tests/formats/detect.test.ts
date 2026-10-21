@@ -8,6 +8,8 @@ describe("formatOf", () => {
   it("knows the formats by their extension, whatever the case", () => {
     expect(formatOf("locales/en/ui.json")).toBe("json");
     expect(formatOf("media/lua/Camp.LUA")).toBe("lua");
+    expect(formatOf("po/forge.pot")).toBe("po");
+    expect(formatOf("po/fr.PO")).toBe("po");
     expect(formatOf("notes.txt")).toBeUndefined();
   });
 });
@@ -152,6 +154,39 @@ describe("detectSources", () => {
         include: ["game/*.rpy", "game/chapters/*.rpy"],
         output: "translations/{lang}/{dir}/{name}{ext}",
         files: 2,
+      },
+    ]);
+  });
+
+  it("proposes gettext templates, and the catalogs of the source language", async () => {
+    await createFiles(
+      "po/forge.pot",
+      "po/fr.po",
+      "app/locale/messages.pot",
+      "web/locale/en/LC_MESSAGES/django.po",
+      "web/locale/de/LC_MESSAGES/django.po",
+    );
+    const { sources, skipped } = await detectSources(root, "en");
+    expect(sources).toEqual([
+      {
+        format: "po",
+        include: ["app/locale/messages.pot"],
+        output: "app/locale/{lang}/LC_MESSAGES/{name}.po",
+        files: 1,
+      },
+      { format: "po", include: ["po/forge.pot"], output: "po/{lang}.po", files: 1 },
+      {
+        format: "po",
+        include: ["web/locale/en/LC_MESSAGES/*.po"],
+        output: "web/locale/{lang}/LC_MESSAGES/{name}{ext}",
+        files: 1,
+      },
+    ]);
+    expect(skipped).toEqual([
+      { file: "po/fr.po", reason: "no marker of English in its path (like locale/en/LC_MESSAGES/ or en.po)" },
+      {
+        file: "web/locale/de/LC_MESSAGES/django.po",
+        reason: "no marker of English in its path (like locale/en/LC_MESSAGES/ or en.po)",
       },
     ]);
   });

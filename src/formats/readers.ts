@@ -3,6 +3,7 @@ import type { Reader } from "../core/reader.js";
 import { jsonReader } from "./json/reader.js";
 import { luaReader } from "./lua/reader.js";
 import { paradoxReader } from "./paradox/reader.js";
+import { poReader } from "./po/reader.js";
 import { pzReader } from "./pz/reader.js";
 import { renpyReader } from "./renpy/reader.js";
 import { rimworldReader } from "./rimworld/reader.js";
@@ -14,6 +15,7 @@ export const READERS = {
   json: jsonReader,
   lua: luaReader,
   "paradox-yml": paradoxReader,
+  po: poReader,
   "zomboid-txt": pzReader,
   renpy: renpyReader,
   "rimworld-xml": rimworldReader,

@@ -3,6 +3,7 @@ import type { Writer } from "../core/writer.js";
 import { jsonWriter } from "./json/writer.js";
 import { luaWriter } from "./lua/writer.js";
 import { paradoxWriter } from "./paradox/writer.js";
+import { poWriter } from "./po/writer.js";
 import { pzWriter } from "./pz/writer.js";
 import { renpyWriter } from "./renpy/writer.js";
 import { rimworldWriter } from "./rimworld/writer.js";
@@ -14,6 +15,7 @@ export const WRITERS = {
   json: jsonWriter,
   lua: luaWriter,
   "paradox-yml": paradoxWriter,
+  po: poWriter,
   "zomboid-txt": pzWriter,
   renpy: renpyWriter,
   "rimworld-xml": rimworldWriter,

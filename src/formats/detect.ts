@@ -14,6 +14,7 @@ export const FORMAT_EXTENSIONS: Readonly<Record<SourceFormat, readonly string[]>
   srt: [".srt"],
   vtt: [".vtt"],
   renpy: [".rpy"],
+  po: [".po", ".pot"],
   "paradox-yml": [], // .yml is too generic: Paradox files are recognised by their name (ui_l_english.yml)
   "zomboid-txt": [], // .txt is too generic: Project Zomboid tables are recognised by their path (Translate/EN/UI_EN.txt)
   "rimworld-xml": [], // .xml is too generic: RimWorld files are recognised by their path (Languages/English/Keyed/)
@@ -105,13 +106,19 @@ export async function detectSources(root: string, sourceLanguage: string, target
       scripts.set(format, entry);
       continue;
     }
+    if (format === "po") {
+      const catalog = poSuggestion(file, markers, sourceLanguage);
+      if ("reason" in catalog) skipped.push({ file, reason: catalog.reason });
+      else add(catalog);
+      continue;
+    }
     if (format !== "json") continue;
 
     if (TOOL_CONFIGURATION.test(path.posix.basename(file))) {
       skipped.push({ file, reason: "configuration file of a tool" });
       continue;
     }
-    const suggestion = jsonSuggestion(file, markers, targetLanguage);
+    const suggestion = markedSuggestion("json", file, markers, targetLanguage);
     if (suggestion === undefined) {
       skipped.push({ file, reason: "no language marker in its path (like locales/en/ or ui.en.json)" });
       continue;
@@ -255,8 +262,35 @@ async function rimworldSuggestion(
   return { format: "rimworld-xml", include: `${folder}/*.xml`, output: `${output}/{name}{ext}` };
 }
 
-/** The include pattern and output template for a JSON file with a language marker, if it has one. */
-function jsonSuggestion(
+/**
+ * A gettext catalog. A template (.pot) is always in the source language: the translations go next to it in a po/
+ * folder (po/fr.po, as GNU projects do), or where gettext looks for them at run time (locale/fr/LC_MESSAGES/x.po).
+ * A .po needs a marker of the source language in its path (locale/en/LC_MESSAGES/x.po, po/en.po): the others are
+ * the translations of other languages.
+ */
+function poSuggestion(
+  file: string,
+  markers: readonly string[],
+  sourceLanguage: string,
+): Suggestion | { reason: string } {
+  const folder = path.posix.dirname(file);
+  const prefix = folder === "." ? "" : `${folder}/`;
+  if (path.posix.extname(file).toLowerCase() === ".pot") {
+    const gnu = path.posix.basename(folder).toLowerCase() === "po";
+    return {
+      format: "po",
+      include: file,
+      output: gnu ? `${prefix}{lang}.po` : `${prefix}{lang}/LC_MESSAGES/{name}.po`,
+    };
+  }
+  const marked = markedSuggestion("po", file, markers, undefined);
+  if (marked !== undefined) return marked;
+  return { reason: `no marker of ${languageName(sourceLanguage)} in its path (like locale/en/LC_MESSAGES/ or en.po)` };
+}
+
+/** The include pattern and output template for a file with a language marker in its path, if it has one. */
+function markedSuggestion(
+  format: "json" | "po",
   file: string,
   markers: readonly string[],
   targetLanguage: string | undefined,
@@ -269,7 +303,7 @@ function jsonSuggestion(
     const inGame = folders[index - 1]?.toLowerCase() === "translate" && targetLanguage !== undefined;
     const replacement = inGame ? pzLanguageCode(targetLanguage) : placeholderLike(marker, markers);
     const output = folders.map((part, i) => (i === index ? replacement : part)).join("/");
-    return { format: "json", include: `${folder}/*.json`, output: `${output}/{name}{ext}` };
+    return { format, include: `${folder}/*${path.posix.extname(file)}`, output: `${output}/{name}{ext}` };
   }
 
   const extension = path.posix.extname(file);
@@ -278,7 +312,7 @@ function jsonSuggestion(
     const inName = new RegExp(`(^|[._-])${marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=[._-]|$)`, "i");
     if (inName.test(name)) {
       const prefix = folder === "." ? "" : `${folder}/`;
-      return { format: "json", include: file, output: `${prefix}${name.replace(inName, "$1{lang}")}${extension}` };
+      return { format, include: file, output: `${prefix}${name.replace(inName, "$1{lang}")}${extension}` };
     }
   }
   return undefined;

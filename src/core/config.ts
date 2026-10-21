@@ -11,6 +11,7 @@ export const SOURCE_FORMATS = [
   "json",
   "lua",
   "paradox-yml",
+  "po",
   "renpy",
   "rimworld-xml",
   "srt",

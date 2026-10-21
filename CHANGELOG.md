@@ -7,6 +7,11 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `po` format: gettext catalogs and templates (`.po`, `.pot`). `msgctxt` and the notes of the developers go to the
+  translator as context, singular and plural are translated together, and the output gets the plural forms and the
+  `Plural-Forms` header of the target language, a UTF-8 charset, and no `fuzzy` flag on translated entries.
+  `tradforge init` proposes the templates and the catalogs of the source language.
+- The `printf` placeholders include the named placeholders of Python (`%(count)d`).
 - `tradforge verify`: suspicious machine translations (numbers changed, negation lost, length out of proportion,
   text left as it was), or all of them with `--all`, are translated back and judged by a language model (`same`,
   `nuance`, `different`, with a note). Verdicts are kept in the memory until the translation changes, and exported
