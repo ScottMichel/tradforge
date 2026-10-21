@@ -75,3 +75,14 @@ export class BatchError extends Error {
     this.name = "BatchError";
   }
 }
+
+/**
+ * The engine did not answer in time. A smaller batch may be answered sooner, but an engine that stays silent
+ * batch after batch is down: the pipeline stops after a few silences in a row.
+ */
+export class TimeoutError extends BatchError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "TimeoutError";
+  }
+}

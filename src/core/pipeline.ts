@@ -9,6 +9,7 @@ import {
   type Provider,
   ProviderUnavailableError,
   RateLimitError,
+  TimeoutError,
   type TranslationRequest,
 } from "./provider.js";
 import { reuseTranslation } from "./reuse.js";
@@ -81,6 +82,9 @@ const MAX_ATTEMPTS = 3;
 /** Waits in a row for one request before giving up: the limit is too low for this concurrency. */
 const MAX_RATE_LIMIT_WAITS = 6;
 
+/** Timeouts in a row before the engine is taken as down. */
+const MAX_SILENCES = 3;
+
 /** Waits when the server does not say how long: 1 s, 2 s, 4 s... at most a minute. */
 const FIRST_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 60_000;
@@ -109,6 +113,8 @@ interface Run {
   readonly previous: ReadonlyMap<string, PreviousTranslation>;
   readonly neighbours: Neighbours;
   readonly pause: SharedPause;
+  /** Timeouts in a row, across every batch in flight; any answer sets it back to 0. */
+  readonly silences: { count: number };
 }
 
 /**
@@ -135,6 +141,7 @@ export async function translateSegments(options: PipelineOptions): Promise<Pipel
     previous,
     neighbours: new Neighbours(options.segments),
     pause: new SharedPause(options.sleep ?? sleep, signal),
+    silences: { count: 0 },
   };
   const save = oneAtATime(options.save);
   const queue = chunkByGroup(todo, config.translation.batchSize);
@@ -343,9 +350,25 @@ async function requestWithPatience(
     try {
       // Built again on each try: the neighbours translated meanwhile give a better context.
       const context = { config: run.options.config, memory: run.options.memory, ...run };
-      return await provider.translateBatch(buildRequest(group, context, shields), signal);
+      const answer = await provider.translateBatch(buildRequest(group, context, shields), signal);
+      run.silences.count = 0;
+      return answer;
     } catch (error) {
-      if (!(error instanceof RateLimitError)) throw error;
+      if (error instanceof TimeoutError) {
+        // Smaller batches help a slow engine, not a silent one: after a few silences in a row, it is down.
+        if (++run.silences.count >= MAX_SILENCES) {
+          throw new ProviderUnavailableError(
+            `${provider.model} did not answer ${MAX_SILENCES} times in a row: the service may be down or ` +
+              `overloaded, try again later (${error.message})`,
+            { cause: error },
+          );
+        }
+        throw error;
+      }
+      if (!(error instanceof RateLimitError)) {
+        if (error instanceof BatchError) run.silences.count = 0; // an answer came, even an unreadable one
+        throw error;
+      }
       if (waits >= MAX_RATE_LIMIT_WAITS) {
         throw new ProviderUnavailableError(
           `the rate limit is still reached after ${MAX_RATE_LIMIT_WAITS} waits: lower translation.concurrency ` +

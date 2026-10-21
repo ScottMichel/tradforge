@@ -1,5 +1,11 @@
 import { isObject } from "../../core/json.js";
-import { BatchError, type Provider, ProviderUnavailableError, type TranslationRequest } from "../../core/provider.js";
+import {
+  BatchError,
+  type Provider,
+  ProviderUnavailableError,
+  TimeoutError,
+  type TranslationRequest,
+} from "../../core/provider.js";
 import { buildSystemPrompt, buildUserMessage } from "../llm/prompt.js";
 import { parseTranslations, RESPONSE_SCHEMA } from "../llm/response.js";
 
@@ -44,7 +50,7 @@ export function createOllamaProvider(options: OllamaOptions): Provider {
       } catch (error) {
         if (signal?.aborted === true) throw signal.reason; // the user interrupted: let it through as it is
         if (timeout.aborted) {
-          throw new BatchError(`Ollama did not answer within ${timeoutMs / 1000} s`, { cause: error });
+          throw new TimeoutError(`Ollama did not answer within ${timeoutMs / 1000} s`, { cause: error });
         }
         if (error instanceof TypeError) {
           // fetch rejects with a TypeError when the server cannot be reached at all.

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseConfig } from "../../src/core/config.js";
 import { TranslationMemory } from "../../src/core/memory.js";
 import { type PipelineOptions, type ProgressEvent, planRequests, translateSegments } from "../../src/core/pipeline.js";
-import { type Provider, ProviderUnavailableError, RateLimitError } from "../../src/core/provider.js";
+import { type Provider, ProviderUnavailableError, RateLimitError, TimeoutError } from "../../src/core/provider.js";
 import type { Segment } from "../../src/core/types.js";
 import { createMockProvider, type MockProvider } from "../../src/providers/mock/provider.js";
 
@@ -612,5 +612,54 @@ describe("planRequests", () => {
       planRequests(texts, memory, planned, options).flatMap((request) => request.items.map((item) => item.source));
     expect(sources({})).toEqual(["Talk to the NPC", "Line 1", "Line 2", "Bye"]);
     expect(sources({ retryFailed: true, limit: 2 })).toEqual(["Hello", "Talk to the NPC"]);
+  });
+});
+
+describe("translateSegments with an engine that stops answering", () => {
+  const quiet = parseConfig({
+    sourceLanguage: "en",
+    targetLanguage: "fr",
+    sources: [{ format: "json", include: ["*.json"] }],
+    translation: { batchSize: 4 },
+  });
+  const texts = ["One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight"].map((source) => segment(source));
+
+  it("stops after a few silences in a row, rather than trying ever smaller batches", async () => {
+    let requests = 0;
+    const silent: Provider = {
+      model: "silent",
+      translateBatch: async () => {
+        requests++;
+        throw new TimeoutError("the server did not answer within 300 s");
+      },
+    };
+    const run = translateSegments({
+      segments: texts,
+      memory: new TranslationMemory({ languages: quiet }),
+      provider: silent,
+      config: quiet,
+      save: async () => {},
+    });
+    await expect(run).rejects.toThrow(ProviderUnavailableError);
+    await expect(run).rejects.toThrow(/did not answer 3 times in a row/);
+    expect(requests).toBe(3);
+  });
+
+  it("goes on when a smaller batch gets an answer: only silences in a row count", async () => {
+    const slowOnBigBatches: Provider = {
+      model: "slow",
+      translateBatch: async (request) => {
+        if (request.items.length > 1) throw new TimeoutError("too slow for this batch");
+        return new Map(request.items.map((item) => [item.id, `[fr] ${item.source}`]));
+      },
+    };
+    const summary = await translateSegments({
+      segments: texts,
+      memory: new TranslationMemory({ languages: quiet }),
+      provider: slowOnBigBatches,
+      config: quiet,
+      save: async () => {},
+    });
+    expect(summary).toMatchObject({ translated: 8, failed: 0 });
   });
 });

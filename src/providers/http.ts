@@ -1,4 +1,4 @@
-import { BatchError, ProviderUnavailableError } from "../core/provider.js";
+import { ProviderUnavailableError, TimeoutError } from "../core/provider.js";
 
 export interface RequestOptions {
   readonly url: string;
@@ -26,7 +26,7 @@ export interface HttpResponse {
 
 /**
  * Sends a request (JSON body) and reads the whole answer, whatever its status: each engine reads its own errors.
- * A timeout is a BatchError (a smaller batch answers sooner), an unreachable server a ProviderUnavailableError,
+ * A timeout is a TimeoutError (a smaller batch answers sooner), an unreachable server a ProviderUnavailableError,
  * and the user's interruption goes through as it is.
  */
 export async function requestJson(options: RequestOptions): Promise<HttpResponse> {
@@ -43,7 +43,7 @@ export async function requestJson(options: RequestOptions): Promise<HttpResponse
   } catch (error) {
     if (signal?.aborted === true) throw signal.reason;
     if (timeout.aborted) {
-      throw new BatchError(`${options.label} did not answer within ${options.timeoutMs / 1000} s`, { cause: error });
+      throw new TimeoutError(`${options.label} did not answer within ${options.timeoutMs / 1000} s`, { cause: error });
     }
     if (error instanceof TypeError) {
       // fetch rejects with a TypeError when the server cannot be reached at all. Only fetch is in this try:
