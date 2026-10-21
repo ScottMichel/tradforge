@@ -14,6 +14,7 @@ import { parseResx } from "./resx/resources.js";
 export const FORMAT_EXTENSIONS: Readonly<Record<SourceFormat, readonly string[]>> = {
   android: [], // .xml is too generic: Android resources are recognised by their path (res/values/strings.xml)
   arb: [".arb"],
+  html: [".html", ".htm"],
   "ios-strings": [".strings"],
   json: [".json"],
   lua: [".lua"],
@@ -170,6 +171,12 @@ export async function detectSources(root: string, sourceLanguage: string, target
     if (format === "xcstrings") {
       // A string catalog holds every language: the translation goes into the catalog itself.
       add({ format: "xcstrings", include: file, output: "{dir}/{name}{ext}" });
+      continue;
+    }
+    if (format === "html") {
+      const pageSource = await htmlSuggestion(root, file, markers, sourceLanguage);
+      if ("reason" in pageSource) skipped.push({ file, reason: pageSource.reason });
+      else add(pageSource);
       continue;
     }
     if (format === "markdown") {
@@ -418,6 +425,31 @@ async function androidSuggestion(
   return { format: "android", include: file, output: `${output}/{name}{ext}` };
 }
 
+/** Folders that tools fill with generated pages (test coverage, builds). */
+const BUILD_FOLDERS = /(?:^|\/)(?:coverage|dist|build|out|target|_site|public\/build)(?:\/|$)/i;
+
+/**
+ * HTML pages: those with a marker of the source language in their path (en/index.html, about.en.html), or that
+ * declare it (<html lang="en">). Pages of build and coverage folders are generated, not written: they are left out.
+ * A page that declares no language is left out too: a project holds many generated or third-party pages.
+ */
+async function htmlSuggestion(
+  root: string,
+  file: string,
+  markers: readonly string[],
+  sourceLanguage: string,
+): Promise<Suggestion | { reason: string }> {
+  if (BUILD_FOLDERS.test(path.posix.dirname(file))) return { reason: "a generated page (build or coverage folder)" };
+  const marked = markedSuggestion("html", file, markers, undefined);
+  if (marked !== undefined) return marked;
+  const head = (await readFile(path.join(root, file))).subarray(0, 4096).toString("utf8");
+  const declared = /<html[^>]*\slang\s*=\s*["']?([\w-]+)/i.exec(head)?.[1];
+  if (declared === undefined) return { reason: 'no language marker in its path, and no <html lang="...">' };
+  if (baseLanguage(declared) !== baseLanguage(sourceLanguage)) return { reason: `a page in ${languageName(declared)}` };
+  // A separate folder per language, as static sites have it: fr/index.html.
+  return { format: "html", include: file, output: "{lang}/{dir}/{name}{ext}" };
+}
+
 /** Folders that hold documentation for readers. */
 const DOCUMENT_FOLDERS = /(?:^|\/)(?:docs?|documentation|content|guides?|wiki|manual|site)(?:\/|$)/i;
 /** Documents of a project that are rarely translated. */
@@ -535,7 +567,7 @@ function iosSuggestion(
 
 /** The include pattern and output template for a file with a language marker in its path, if it has one. */
 function markedSuggestion(
-  format: "arb" | "json" | "markdown" | "po" | "xliff" | "yaml",
+  format: "arb" | "html" | "json" | "markdown" | "po" | "xliff" | "yaml",
   file: string,
   markers: readonly string[],
   targetLanguage: string | undefined,

@@ -7,6 +7,10 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `html` format: the texts of a page between block tags, inline tags kept and checked, and the attributes people
+  read (`alt`, `title`, `placeholder`, `aria-label`, description meta tags). Pages are read as browsers read them;
+  scripts, styles and `<pre>` are left out, and `<html lang>` names the target language. `tradforge init` proposes
+  pages of the source language, not generated ones (coverage, build folders).
 - `markdown` format: headings, paragraphs, list items, quotes, table cells and the title of a YAML front matter,
   code and HTML blocks left out. A wrapped paragraph is one text and is written back on one line; the texts of a
   section are translated together. `tradforge init` proposes READMEs and documentation folders

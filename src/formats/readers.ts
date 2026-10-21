@@ -2,6 +2,7 @@ import type { SourceFormat } from "../core/config.js";
 import type { Reader } from "../core/reader.js";
 import { androidReader } from "./android/reader.js";
 import { arbReader } from "./arb/reader.js";
+import { htmlReader } from "./html/reader.js";
 import { iosStringsReader } from "./ios/reader.js";
 import { jsonReader } from "./json/reader.js";
 import { luaReader } from "./lua/reader.js";
@@ -23,6 +24,7 @@ import { yamlReader } from "./yaml/reader.js";
 export const READERS = {
   android: androidReader,
   arb: arbReader,
+  html: htmlReader,
   "ios-strings": iosStringsReader,
   json: jsonReader,
   lua: luaReader,

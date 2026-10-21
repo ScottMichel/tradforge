@@ -128,7 +128,7 @@ sources are required.
 | Setting | Meaning | Default |
 | --- | --- | --- |
 | `workDir` | Where the translation memory lives. **Worth committing**: it holds all the work. | `.tradforge` |
-| `sources[].format` | `json`, `yaml`, `markdown`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `xcstrings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` or `rimworld-xml` (see [Supported formats](#supported-formats)) | required |
+| `sources[].format` | `json`, `yaml`, `markdown`, `html`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `xcstrings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` or `rimworld-xml` (see [Supported formats](#supported-formats)) | required |
 | `sources[].include` | Glob patterns, relative to the configuration file | required |
 | `sources[].priority` | Lower is translated first (may be negative) | `0` |
 | `sources[].context` | Tells the model how the texts are used | none |
@@ -170,6 +170,7 @@ sources are required.
 | **.NET resources** `.resx` (`resx`) | every string `<data>` (not files, objects or Windows Forms designer data), its `<comment>` as context | `Strings.fr.resx`, values in place, XML escaped |
 | **Flutter** `.arb` (`arb`) | every message, its `@key` description as context | `app_fr.arb` (`app_pt_BR.arb`), `@@locale` renamed, metadata kept |
 | **Markdown** `.md` (`markdown`) | headings, paragraphs (wrapped lines joined), list items, quotes, table cells, and the `title`/`description` of a YAML front matter; code blocks, HTML blocks and link definitions left out; one group per section | `README.fr.md`, `docs/{lang}/`; texts in place, a paragraph on one line; `` `code` `` and link destinations `](url)` must come back untouched |
+| **HTML** `.html` (`html`) | the text between block tags, inline tags (`<a>`, `<strong>`, `<br>`) kept and checked; `alt`, `title`, `placeholder`, `aria-label`, `<title>` and description meta tags; read as browsers do (unclosed `<p>`, `&nbsp;`); scripts, styles and `<pre>` left out | `fr/index.html` or `about.fr.html`; texts in place, `<html lang>` set, everything else byte for byte |
 | **SubRip** `.srt` (`srt`), **WebVTT** `.vtt` (`vtt`) | one text per cue, cues less than 2 s apart kept together as a scene; tags, `{\an8}` codes, NOTE/STYLE blocks | texts replaced in place, numbers and timings untouched; `movie.en.srt` → `movie.fr.srt` |
 
 ### Engine and game dialects
@@ -185,8 +186,7 @@ file is a Lua-like table, a RimWorld `.xml` file follows a fixed schema. tradfor
 | **RimWorld language data** (`rimworld-xml`) | `.xml`, `<LanguageData>` root | `Languages/English/Keyed/` and `DefInjected/`, `<li>` lists, literal `\n` | `Languages/French/...`, XML escaped correctly; grammar symbols `[PAWN_nameDef]` and rule heads protected |
 
 `tradforge init` recognises all of them in a folder (by extension, or by path for the dialects whose extension is
-generic) and proposes the right output paths. More formats are on the way: HTML… See the
-[roadmap](#roadmap).
+generic) and proposes the right output paths. See the [roadmap](#roadmap) for what comes next.
 
 ## Engines
 
@@ -305,6 +305,8 @@ texts written for tradforge.
   plain text: check their keywords came back untouched.
 - YAML: anchors, aliases, tags and flow mappings (`{a: b}`) are refused with the line they are on; a flow list must
   fit on one line.
+- HTML: the attributes of an inline element inside a text (`<a title="...">`) stay as they are; the text and the
+  attribute would overlap.
 - ICU messages (`{count, plural, one {...} other {...}}`, in `.arb` and XLIFF files) are sent as they are: check
   their keywords came back untouched.
 - Apple: `.stringsdict` plurals are not supported, nor the substitutions of string catalogs (several plurals in one
@@ -318,9 +320,8 @@ texts written for tradforge.
 
 ## Roadmap
 
-1. **Application formats**: Apple `.stringsdict`, `.properties`, `.resx`, `.arb`, Markdown, HTML.
-2. **Desktop application**: open a file or a folder, translate, review — no command line needed.
-3. **Office documents**: `.docx`, `.odt`, `.pptx`, `.xlsx`.
+1. **Desktop application**: open a file or a folder, translate, review — no command line needed.
+2. **Office documents**: `.docx`, `.odt`, `.pptx`, `.xlsx`.
 
 ## Contributing
 

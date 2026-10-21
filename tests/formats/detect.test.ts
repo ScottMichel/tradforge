@@ -356,6 +356,30 @@ describe("detectSources", () => {
     ]);
   });
 
+  it("proposes HTML pages of the source language, not generated ones nor pages of other languages", async () => {
+    const files: Record<string, string> = {
+      "index.html": '<!DOCTYPE html>\n<html lang="en-US"><body><p>Hello</p></body></html>',
+      "about.en.html": "<p>About</p>",
+      "de/index.html": '<html lang="de"><p>Hallo</p></html>',
+      "coverage/index.html": '<html lang="en"><p>Coverage</p></html>',
+      "snippet.html": "<p>No language</p>",
+    };
+    for (const [file, content] of Object.entries(files)) {
+      await mkdir(path.dirname(path.join(root, file)), { recursive: true });
+      await writeFile(path.join(root, file), content);
+    }
+    const { sources, skipped } = await detectSources(root, "en");
+    expect(sources.map((source) => [source.format, source.include[0], source.output])).toEqual([
+      ["html", "about.en.html", "about.{lang}.html"],
+      ["html", "index.html", "{lang}/{dir}/{name}{ext}"],
+    ]);
+    expect(skipped).toEqual([
+      { file: "coverage/index.html", reason: "a generated page (build or coverage folder)" },
+      { file: "de/index.html", reason: "a page in German" },
+      { file: "snippet.html", reason: 'no language marker in its path, and no <html lang="...">' },
+    ]);
+  });
+
   it("explains which files it left out, and why", async () => {
     await createFiles("package.json", "tsconfig.base.json", "data/stats.json", "notes.txt", "locales/en/ui.json");
     const { skipped } = await detectSources(root, "en");

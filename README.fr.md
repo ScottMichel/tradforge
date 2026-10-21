@@ -133,7 +133,7 @@ langues et les sources sont obligatoires.
 | Réglage | Signification | Par défaut |
 | --- | --- | --- |
 | `workDir` | Dossier de la mémoire de traduction. **À versionner** : il contient tout le travail. | `.tradforge` |
-| `sources[].format` | `json`, `yaml`, `markdown`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `xcstrings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` ou `rimworld-xml` (voir [Formats pris en charge](#formats-pris-en-charge)) | obligatoire |
+| `sources[].format` | `json`, `yaml`, `markdown`, `html`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `xcstrings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` ou `rimworld-xml` (voir [Formats pris en charge](#formats-pris-en-charge)) | obligatoire |
 | `sources[].include` | Motifs de fichiers, relatifs au fichier de configuration | obligatoire |
 | `sources[].priority` | Plus petit = traduit en premier (peut être négatif) | `0` |
 | `sources[].context` | Indique au modèle comment les textes sont utilisés | aucun |
@@ -175,6 +175,7 @@ langues et les sources sont obligatoires.
 | **Ressources .NET** `.resx` (`resx`) | chaque `<data>` texte (pas les fichiers, objets ni données du concepteur Windows Forms), son `<comment>` comme contexte | `Strings.fr.resx`, valeurs sur place, XML échappé |
 | **Flutter** `.arb` (`arb`) | chaque message, la description de son `@clé` comme contexte | `app_fr.arb` (`app_pt_BR.arb`), `@@locale` renommé, métadonnées conservées |
 | **Markdown** `.md` (`markdown`) | titres, paragraphes (lignes coupées jointes), éléments de liste, citations, cellules de tableau, et `title`/`description` d'un en-tête YAML ; blocs de code, blocs HTML et définitions de liens ignorés ; un groupe par section | `README.fr.md`, `docs/{lang}/` ; textes sur place, un paragraphe sur une ligne ; `` `code` `` et destinations de liens `](url)` doivent revenir intacts |
+| **HTML** `.html` (`html`) | le texte entre balises de bloc, balises en ligne (`<a>`, `<strong>`, `<br>`) gardées et vérifiées ; `alt`, `title`, `placeholder`, `aria-label`, `<title>` et balises meta de description ; lu comme un navigateur (`<p>` non fermés, `&nbsp;`) ; scripts, styles et `<pre>` ignorés | `fr/index.html` ou `about.fr.html` ; textes sur place, `<html lang>` renseigné, tout le reste à l'octet près |
 | **SubRip** `.srt` (`srt`), **WebVTT** `.vtt` (`vtt`) | un texte par réplique, les répliques à moins de 2 s d'écart regroupées en scène ; balises, codes `{\an8}`, blocs NOTE/STYLE | textes remplacés sur place, numéros et minutages intacts ; `film.en.srt` → `film.fr.srt` |
 
 ### Dialectes de moteurs et de jeux
@@ -190,8 +191,7 @@ Project Zomboid est une table proche du Lua, un `.xml` RimWorld suit un schéma 
 | **Données de langue RimWorld** (`rimworld-xml`) | `.xml`, racine `<LanguageData>` | `Languages/English/Keyed/` et `DefInjected/`, listes `<li>`, `\n` littéraux | `Languages/French/…`, XML échappé correctement ; symboles de grammaire `[PAWN_nameDef]` et têtes de règles protégés |
 
 `tradforge init` les reconnaît tous dans un dossier (par extension, ou par chemin pour les dialectes dont l'extension
-est générique) et propose les bons chemins de sortie. D'autres formats arrivent : HTML… Voir la
-[feuille de route](#feuille-de-route).
+est générique) et propose les bons chemins de sortie. La [feuille de route](#feuille-de-route) dit ce qui suit.
 
 ## Moteurs
 
@@ -313,6 +313,8 @@ des textes écrits pour tradforge.
   sont envoyés comme du texte : vérifiez que leurs mots-clés sont revenus intacts.
 - YAML : ancres, alias, balises et tables en ligne (`{a: b}`) sont refusés avec la ligne où ils se trouvent ; une
   liste en ligne doit tenir sur une ligne.
+- HTML : les attributs d'une balise en ligne au milieu d'un texte (`<a title="...">`) restent tels quels ; le texte et
+  l'attribut se chevaucheraient.
 - Les messages ICU (`{count, plural, one {...} other {...}}`, dans les fichiers `.arb` et XLIFF) sont envoyés tels
   quels : vérifiez que leurs mots-clés sont revenus intacts.
 - Apple : les pluriels `.stringsdict` ne sont pas pris en charge, ni les substitutions des catalogues (plusieurs
@@ -328,9 +330,8 @@ des textes écrits pour tradforge.
 
 ## Feuille de route
 
-1. **Formats d'applications** : `.stringsdict` d'Apple, `.properties`, `.resx`, `.arb`, Markdown, HTML.
-2. **Application de bureau** : ouvrir un fichier ou un dossier, traduire, relire — sans ligne de commande.
-3. **Documents bureautiques** : `.docx`, `.odt`, `.pptx`, `.xlsx`.
+1. **Application de bureau** : ouvrir un fichier ou un dossier, traduire, relire — sans ligne de commande.
+2. **Documents bureautiques** : `.docx`, `.odt`, `.pptx`, `.xlsx`.
 
 ## Contribuer
 
