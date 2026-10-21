@@ -6,7 +6,7 @@ import {
   RateLimitError,
   type TranslationRequest,
 } from "../../core/provider.js";
-import { hideSecret, postJson, retryAfterMs } from "../http.js";
+import { hideSecret, requestJson, retryAfterMs } from "../http.js";
 import { buildSystemPrompt, buildUserMessage } from "../llm/prompt.js";
 import { parseTranslations, RESPONSE_SCHEMA } from "../llm/response.js";
 import { estimateTokens } from "../llm/usage.js";
@@ -61,7 +61,7 @@ export function createAnthropicProvider(options: AnthropicOptions): Provider {
           `no API key for Claude: set the ${options.apiKeyEnv} environment variable (https://console.anthropic.com)`,
         );
       }
-      const response = await postJson({
+      const response = await requestJson({
         url: `${baseUrl}/messages`,
         headers: { "content-type": "application/json", "x-api-key": options.apiKey, "anthropic-version": API_VERSION },
         body: messagesRequest(options.model, request),

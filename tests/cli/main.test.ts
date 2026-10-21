@@ -208,6 +208,17 @@ describe("the command line", () => {
     expect((await cli("translate --dry-run")).out).toMatch(
       /Estimated cost: about [\d.,]+ \(2,000 per million tokens sent, 8,000 received\)/,
     );
+
+    await createFile(
+      "tradforge.config.json",
+      config.replace(
+        /"provider": \{[^}]*\}/,
+        '"provider": { "type": "deepl", "pricing": { "perMillionCharacters": 25 } }',
+      ),
+    );
+    const deepl = (await cli("translate --dry-run")).out;
+    expect(deepl).toContain("Estimated use: about 32 characters (1 request");
+    expect(deepl).toMatch(/Estimated cost: about [\d.,]+ \(25 per million characters\)/);
   });
 
   it("says when it waits because of a rate limit", async () => {

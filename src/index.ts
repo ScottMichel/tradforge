@@ -1,6 +1,10 @@
 export type {
   AnthropicProviderConfig,
+  CharacterPricing,
   ConfigProblem,
+  DeepLFormality,
+  DeepLModel,
+  DeepLProviderConfig,
   GeminiProviderConfig,
   GroupRule,
   OllamaProviderConfig,
@@ -20,6 +24,8 @@ export type {
 } from "./core/config.js";
 export {
   ConfigError,
+  DEEPL_FORMALITIES,
+  DEEPL_MODELS,
   DEFAULT_OUTPUT,
   effectivePlaceholders,
   FORMAT_PLACEHOLDERS,
@@ -114,6 +120,8 @@ export { vttWriter } from "./formats/vtt/writer.js";
 export { WRITERS } from "./formats/writers.js";
 export type { AnthropicOptions } from "./providers/anthropic/provider.js";
 export { createAnthropicProvider } from "./providers/anthropic/provider.js";
+export type { DeepLOptions } from "./providers/deepl/provider.js";
+export { createDeepLProvider } from "./providers/deepl/provider.js";
 export type { ProviderDependencies } from "./providers/factory.js";
 export { createProvider } from "./providers/factory.js";
 export type { GeminiOptions } from "./providers/gemini/provider.js";

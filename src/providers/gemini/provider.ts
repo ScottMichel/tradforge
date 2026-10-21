@@ -6,7 +6,7 @@ import {
   RateLimitError,
   type TranslationRequest,
 } from "../../core/provider.js";
-import { hideSecret, postJson } from "../http.js";
+import { hideSecret, requestJson } from "../http.js";
 import { buildSystemPrompt, buildUserMessage } from "../llm/prompt.js";
 import { parseTranslations, RESPONSE_SCHEMA } from "../llm/response.js";
 
@@ -65,7 +65,7 @@ export function createGeminiProvider(options: GeminiOptions): Provider {
           `no API key for Gemini: set the ${options.apiKeyEnv} environment variable (https://aistudio.google.com/apikey)`,
         );
       }
-      const response = await postJson({
+      const response = await requestJson({
         // The key goes in a header, never in the address (?key=...), where proxies and logs would keep it.
         url: `${baseUrl}/models/${encodeURIComponent(model)}:generateContent`,
         headers: { "content-type": "application/json", "x-goog-api-key": options.apiKey },

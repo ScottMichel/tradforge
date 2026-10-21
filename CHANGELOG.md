@@ -7,6 +7,9 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `deepl` engine: placeholders protected as `<x id="n"/>` tags (`tag_handling: xml`), XML characters escaped,
+  instructions and neighbouring lines sent as DeepL context, the glossary turned into a DeepL glossary reused across
+  runs, `formality`, free and paid addresses guessed from the key, 50 texts per request, cost per character.
 - `gemini` engine, through the Google generateContent API: the answer schema is converted to the OpenAPI subset
   Gemini accepts; the delay of a rate limit is read from Google's RetryInfo, and a used-up daily quota stops the run.
 - `anthropic` engine for Claude, through the Messages API: answers are forced through a tool whose input follows
@@ -60,6 +63,8 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Fixed
 
+- Placeholders that touch (`{hour}:{minute}`, `%d/%d`) are protected as one tag: a real DeepL run had put a space
+  inside the time. Protected tags are numbered in the order of the text.
 - The JSON writer used an invisible character in a regular expression; it now uses a readable escape.
 
 ## [0.1.0] - not published yet

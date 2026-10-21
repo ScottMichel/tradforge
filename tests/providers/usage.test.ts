@@ -46,6 +46,7 @@ describe("estimateUsage", () => {
   it("adds up the requests of a run", () => {
     const [first, second] = plan.map(estimateTokens);
     expect(estimateUsage(openAi, plan)).toStrictEqual({
+      kind: "tokens",
       requests: 2,
       inputTokens: (first?.inputTokens ?? 0) + (second?.inputTokens ?? 0),
       outputTokens: (first?.outputTokens ?? 0) + (second?.outputTokens ?? 0),
@@ -54,6 +55,7 @@ describe("estimateUsage", () => {
 
   it("gives a cost when the configuration has the prices per million tokens", () => {
     const usage = estimateUsage({ ...openAi, pricing: { inputPerMillion: 2, outputPerMillion: 8 } }, plan);
+    if (usage.kind !== "tokens") throw new Error("a language model is measured in tokens");
     expect(usage.cost).toBeCloseTo((usage.inputTokens * 2 + usage.outputTokens * 8) / 1_000_000, 10);
   });
 
@@ -72,5 +74,21 @@ describe("estimateUsage", () => {
     const usage = estimateUsage({ type: "ollama", model: "mistral-small", host: "http://localhost:11434" }, plan);
     expect(usage.requests).toBe(2);
     expect(usage.cost).toBeUndefined();
+  });
+
+  it("counts the characters of the texts for DeepL, which bills them, and not the context", () => {
+    const deepl = {
+      type: "deepl" as const,
+      model: "deepl" as const,
+      apiKeyEnv: "DEEPL_API_KEY",
+      formality: "default" as const,
+    };
+    const withContext = [
+      request(["Hello", "Bye"], { instructions: "A long instruction that DeepL receives as free context." }),
+      request(["Thanks"]),
+    ];
+    expect(estimateUsage(deepl, withContext)).toStrictEqual({ kind: "characters", requests: 2, characters: 14 });
+    const priced = estimateUsage({ ...deepl, pricing: { perMillionCharacters: 25 } }, withContext);
+    expect(priced.cost).toBeCloseTo((14 * 25) / 1_000_000, 12);
   });
 });

@@ -142,7 +142,7 @@ describe("parseConfig", () => {
       problemPaths({
         targetLanguage: 3,
         sources: [{ format: "xml", include: [] }],
-        provider: { type: "deepl" },
+        provider: { type: "babelfish" },
         translation: { batchSize: 0 },
       }),
     ).toEqual([
@@ -343,6 +343,48 @@ describe("parseConfig", () => {
       apiKeyEnv: "GEMINI_API_KEY",
     });
     expect(problemPaths({ ...minimal, provider: { type: "gemini" } })).toEqual(["provider.model"]);
+  });
+
+  it("reads a DeepL provider: no model to choose, formality, address guessed from the key", () => {
+    expect(parseConfig({ ...minimal, provider: { type: "deepl" } }).provider).toStrictEqual({
+      type: "deepl",
+      model: "deepl",
+      apiKeyEnv: "DEEPL_API_KEY",
+      formality: "default",
+    });
+    const custom = parseConfig({
+      ...minimal,
+      provider: {
+        type: "deepl",
+        model: "quality_optimized",
+        formality: "prefer_less",
+        baseUrl: "https://api.deepl.com",
+        pricing: { perMillionCharacters: 20 },
+      },
+    });
+    expect(custom.provider).toStrictEqual({
+      type: "deepl",
+      model: "quality_optimized",
+      apiKeyEnv: "DEEPL_API_KEY",
+      formality: "prefer_less",
+      baseUrl: "https://api.deepl.com",
+      pricing: { perMillionCharacters: 20 },
+    });
+  });
+
+  it("rejects a wrong DeepL model, formality or price, and a key in the file", () => {
+    expect(
+      problemPaths({
+        ...minimal,
+        provider: {
+          type: "deepl",
+          model: "gpt-5",
+          formality: "casual",
+          pricing: { inputPerMillion: 1 },
+          apiKey: "abc:fx",
+        },
+      }),
+    ).toEqual(["provider.model", "provider.formality", "provider.apiKey", "provider.pricing.perMillionCharacters"]);
   });
 
   it("applies the same rules to every remote engine: model required, no key in the file", () => {

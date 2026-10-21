@@ -184,6 +184,7 @@ generic) and proposes the right output paths. More formats are on the way: YAML,
 | `openai-compatible` | `model` (required), `baseUrl` (`https://api.openai.com/v1`), `apiKeyEnv` (`OPENAI_API_KEY`), `responseFormat` (`json-schema`) | OpenAI, Mistral, OpenRouter, Groq, and local servers such as LM Studio or vLLM |
 | `anthropic` | `model` (required, e.g. `claude-haiku-5-5`), `baseUrl` (`https://api.anthropic.com/v1`), `apiKeyEnv` (`ANTHROPIC_API_KEY`) | Claude |
 | `gemini` | `model` (required, e.g. `gemini-flash-latest`, which follows the current Flash model), `baseUrl` (`https://generativelanguage.googleapis.com/v1beta`), `apiKeyEnv` (`GEMINI_API_KEY`) | Gemini, with a free tier for trying it out |
+| `deepl` | `model` (`deepl`, or a DeepL model type such as `quality_optimized`), `formality` (`default`; `prefer_less` for an informal "you"), `apiKeyEnv` (`DEEPL_API_KEY`), `baseUrl` (guessed from the key: free keys end with `:fx`) | DeepL, a translation engine rather than a language model |
 
 ```jsonc
 "provider": { "type": "openai-compatible", "model": "mistral-small-latest", "baseUrl": "https://api.mistral.ai/v1", "apiKeyEnv": "MISTRAL_API_KEY" }
@@ -201,6 +202,11 @@ glossary and context lines are paid for with every batch). Add `"pricing": { "in
 "outputPerMillion": 1.6 }` to the provider, copied from the price list of your API, to get the cost: tradforge has no
 built-in prices, since they change too often. On the example project, the estimate was 11 % above the real count for
 what is sent, and exact for what is received; retries are not included.
+
+DeepL is not a language model: it gets the texts, never a prompt. tradforge replaces placeholders and tags with
+`<x id="0"/>` before sending them and puts them back after; instructions, contexts and neighbouring lines go in
+DeepL's `context` parameter (not billed); the glossary becomes a DeepL glossary, named after its content and reused
+from one run to the next. DeepL bills characters, so `pricing` is `{ "perMillionCharacters": 25 }`.
 
 When an API asks to slow down (HTTP 429), every batch pauses for the delay the server gives (or 1 s, 2 s, 4 s...),
 then the same batch is sent again: a rate limit is never counted as a failure. After 6 waits in a row, tradforge stops
@@ -252,7 +258,8 @@ texts written for tradforge.
 
 ## Limitations
 
-- Four kinds of engines for now: Ollama, OpenAI-compatible APIs, Claude and Gemini.
+- Engines: Ollama, OpenAI-compatible APIs, Claude, Gemini and DeepL. Real runs were made with Ollama and Gemini;
+  the others are tested against recorded answers of their APIs.
 - Ren'Py games get translated copies of their scripts, not a `game/tl/` translation the player can switch to.
 - RimWorld language folders are named after the English language name (`French`): rename them if your mod uses
   another name.
@@ -262,11 +269,10 @@ texts written for tradforge.
 
 ## Roadmap
 
-1. **Engines**: DeepL.
-2. **Quality**: `tradforge compare` (models side by side), back-translation of suspicious lines.
-3. **Application formats**: XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
-4. **Desktop application**: open a file or a folder, translate, review — no command line needed.
-5. **Office documents**: `.docx`, `.odt`, `.pptx`, `.xlsx`.
+1. **Quality**: `tradforge compare` (models side by side), back-translation of suspicious lines.
+2. **Application formats**: XLIFF, YAML, `.po`, Android, iOS, `.properties`, `.resx`, `.arb`, Markdown, HTML.
+3. **Desktop application**: open a file or a folder, translate, review — no command line needed.
+4. **Office documents**: `.docx`, `.odt`, `.pptx`, `.xlsx`.
 
 ## Contributing
 

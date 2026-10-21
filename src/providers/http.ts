@@ -1,10 +1,12 @@
 import { BatchError, ProviderUnavailableError } from "../core/provider.js";
 
-export interface PostOptions {
+export interface RequestOptions {
   readonly url: string;
   readonly headers: Readonly<Record<string, string>>;
-  /** Sent as JSON. */
-  readonly body: unknown;
+  /** Default: POST. */
+  readonly method?: "GET" | "POST";
+  /** Sent as JSON; none for a GET. */
+  readonly body?: unknown;
   /** Maximum time for the whole exchange. */
   readonly timeoutMs: number;
   /** The user's interruption (Ctrl+C). */
@@ -23,18 +25,18 @@ export interface HttpResponse {
 }
 
 /**
- * Sends a JSON request and reads the whole answer, whatever its status: each engine reads its own errors.
+ * Sends a request (JSON body) and reads the whole answer, whatever its status: each engine reads its own errors.
  * A timeout is a BatchError (a smaller batch answers sooner), an unreachable server a ProviderUnavailableError,
  * and the user's interruption goes through as it is.
  */
-export async function postJson(options: PostOptions): Promise<HttpResponse> {
+export async function requestJson(options: RequestOptions): Promise<HttpResponse> {
   const timeout = AbortSignal.timeout(options.timeoutMs);
   const { signal } = options;
   try {
     const response = await options.fetch(options.url, {
-      method: "POST",
+      method: options.method ?? "POST",
       headers: options.headers,
-      body: JSON.stringify(options.body),
+      ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
       signal: signal === undefined ? timeout : AbortSignal.any([signal, timeout]),
     });
     return { status: response.status, headers: response.headers, body: await response.text() };

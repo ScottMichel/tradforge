@@ -83,6 +83,22 @@ describe("createProvider", () => {
     expect(key).toBe("AIza-1");
   });
 
+  it("creates DeepL with the key of its environment variable, and the free address for a free key", async () => {
+    const seen: { url?: string; key?: string | null } = {};
+    const fetch: typeof globalThis.fetch = async (input, init) => {
+      seen.url = String(input);
+      seen.key = new Headers(init?.headers).get("authorization");
+      return Response.json({ translations: [{ text: "Salut" }] });
+    };
+    const deepl = createProvider(
+      { type: "deepl", model: "deepl", apiKeyEnv: "DEEPL_API_KEY", formality: "default" },
+      { env: { DEEPL_API_KEY: "abc:fx" }, fetch },
+    );
+    expect(deepl.protectPlaceholders).toBe(true);
+    expect(await deepl.translateBatch(request)).toEqual(new Map([[0, "Salut"]]));
+    expect(seen).toEqual({ url: "https://api-free.deepl.com/v2/translate", key: "DeepL-Auth-Key abc:fx" });
+  });
+
   it("works without a key, for local servers", async () => {
     const { fetch, seen } = recordingFetch();
     await createProvider(openAi, { env: {}, fetch }).translateBatch(request);

@@ -7,7 +7,7 @@ import {
   RateLimitError,
   type TranslationRequest,
 } from "../../core/provider.js";
-import { hideSecret, postJson, retryAfterMs } from "../http.js";
+import { hideSecret, requestJson, retryAfterMs } from "../http.js";
 import { buildSystemPrompt, buildUserMessage } from "../llm/prompt.js";
 import { parseTranslations, RESPONSE_SCHEMA } from "../llm/response.js";
 
@@ -42,7 +42,7 @@ export function createOpenAiCompatibleProvider(options: OpenAiCompatibleOptions)
   return {
     model: options.model,
     async translateBatch(request, signal) {
-      const response = await postJson({
+      const response = await requestJson({
         url: `${baseUrl}/chat/completions`,
         headers,
         body: completionRequest(options, request),

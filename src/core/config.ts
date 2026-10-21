@@ -19,7 +19,7 @@ export const SOURCE_FORMATS = [
 ] as const;
 export type SourceFormat = (typeof SOURCE_FORMATS)[number];
 
-export const PROVIDER_TYPES = ["ollama", "openai-compatible", "anthropic", "gemini"] as const;
+export const PROVIDER_TYPES = ["ollama", "openai-compatible", "anthropic", "gemini", "deepl"] as const;
 export type ProviderType = (typeof PROVIDER_TYPES)[number];
 
 /**
@@ -112,6 +112,30 @@ export interface GeminiProviderConfig extends RemoteProviderSettings {
   readonly type: "gemini";
 }
 
+/** "deepl" lets DeepL choose; the others are DeepL's own model types. */
+export const DEEPL_MODELS = ["deepl", "quality_optimized", "prefer_quality_optimized", "latency_optimized"] as const;
+export type DeepLModel = (typeof DEEPL_MODELS)[number];
+
+/** Form of address. The "prefer_" values fall back to the default for languages that have no such distinction. */
+export const DEEPL_FORMALITIES = ["default", "more", "less", "prefer_more", "prefer_less"] as const;
+export type DeepLFormality = (typeof DEEPL_FORMALITIES)[number];
+
+/** DeepL bills the characters of the source texts. */
+export interface CharacterPricing {
+  readonly perMillionCharacters: number;
+}
+
+/** DeepL: a translation engine, not a language model. It gets the texts, never a prompt. */
+export interface DeepLProviderConfig {
+  readonly type: "deepl";
+  readonly model: DeepLModel;
+  readonly apiKeyEnv: string;
+  /** Default: https://api-free.deepl.com for a free key (ending in ":fx"), https://api.deepl.com otherwise. */
+  readonly baseUrl?: string;
+  readonly formality: DeepLFormality;
+  readonly pricing?: CharacterPricing;
+}
+
 /** In any currency, per million tokens, as API price lists show them. */
 export interface Pricing {
   readonly inputPerMillion: number;
@@ -123,7 +147,8 @@ export type ProviderConfig =
   | OllamaProviderConfig
   | OpenAiCompatibleProviderConfig
   | AnthropicProviderConfig
-  | GeminiProviderConfig;
+  | GeminiProviderConfig
+  | DeepLProviderConfig;
 
 export interface TranslationConfig {
   /** Number of segments sent to the model in one request. */
@@ -382,6 +407,8 @@ function parseProvider(value: unknown, report: Report): ProviderConfig {
         type,
         ...parseRemote(value, { baseUrl: "https://api.anthropic.com/v1", apiKeyEnv: "ANTHROPIC_API_KEY" }, report),
       };
+    case "deepl":
+      return parseDeepL(value, report);
     case "gemini":
       return {
         type,
@@ -407,22 +434,49 @@ function parseRemote(
   if (baseUrl !== "" && !/^https?:\/\/[^/]/.test(baseUrl)) {
     report("provider.baseUrl", "must start with http:// or https://");
   }
-  const apiKeyEnv = parseString(value.apiKeyEnv, "provider.apiKeyEnv", report, defaults.apiKeyEnv);
+  const model = parseString(value.model, "provider.model", report);
+  const apiKeyEnv = parseApiKeyEnv(value, defaults.apiKeyEnv, report);
+  const pricing = value.pricing === undefined ? undefined : parsePricing(value.pricing, report);
+  return { model, baseUrl, apiKeyEnv, ...(pricing !== undefined ? { pricing } : {}) };
+}
+
+/** The name of the variable that holds the key; a key written in the configuration itself is refused. */
+function parseApiKeyEnv(value: Record<string, unknown>, fallback: string, report: Report): string {
+  const apiKeyEnv = parseString(value.apiKeyEnv, "provider.apiKeyEnv", report, fallback);
   if (apiKeyEnv !== "" && !ENV_NAME.test(apiKeyEnv)) {
-    report("provider.apiKeyEnv", `must be the name of an environment variable, such as ${defaults.apiKeyEnv}`);
+    report("provider.apiKeyEnv", `must be the name of an environment variable, such as ${fallback}`);
   }
   if (value.apiKey !== undefined) {
     // The configuration file is often committed: a key written there ends up public. Never echo it back.
     report(
       "provider.apiKey",
-      `never write an API key in the configuration: put it in the ${apiKeyEnv || defaults.apiKeyEnv} environment variable`,
+      `never write an API key in the configuration: put it in the ${apiKeyEnv || fallback} environment variable`,
     );
   }
-  const pricing = value.pricing === undefined ? undefined : parsePricing(value.pricing, report);
+  return apiKeyEnv;
+}
+
+function parseDeepL(value: Record<string, unknown>, report: Report): DeepLProviderConfig {
+  const model = parseChoice(DEEPL_MODELS, value.model, "provider.model", report, "deepl");
+  const baseUrl = value.baseUrl === undefined ? undefined : parseString(value.baseUrl, "provider.baseUrl", report);
+  if (baseUrl !== undefined && baseUrl !== "" && !/^https?:\/\/[^/]/.test(baseUrl)) {
+    report("provider.baseUrl", "must start with http:// or https://");
+  }
+  const formality = parseChoice(DEEPL_FORMALITIES, value.formality, "provider.formality", report, "default");
+  const apiKeyEnv = parseApiKeyEnv(value, "DEEPL_API_KEY", report);
+  let pricing: CharacterPricing | undefined;
+  if (value.pricing !== undefined) {
+    const amount = isObject(value.pricing) ? value.pricing.perMillionCharacters : undefined;
+    if (typeof amount === "number" && Number.isFinite(amount) && amount >= 0)
+      pricing = { perMillionCharacters: amount };
+    else report("provider.pricing.perMillionCharacters", "must be a number, 0 or more: DeepL bills characters");
+  }
   return {
-    model: parseString(value.model, "provider.model", report),
-    baseUrl,
+    type: "deepl",
+    model,
     apiKeyEnv,
+    formality,
+    ...(baseUrl !== undefined ? { baseUrl } : {}),
     ...(pricing !== undefined ? { pricing } : {}),
   };
 }

@@ -93,17 +93,27 @@ const FAILURE_HINT =
 const roughAmount = new Intl.NumberFormat("en-US", { maximumSignificantDigits: 2 });
 
 function usageLines(provider: ProviderConfig, usage: UsageEstimate): string[] {
+  const requests = `${plural(usage.requests, "request")}, retries not included`;
   const lines = [
-    `Estimated use: about ${formatCount(usage.inputTokens)} tokens sent and ${formatCount(usage.outputTokens)} ` +
-      `received (${plural(usage.requests, "request")}, retries not included).`,
+    usage.kind === "tokens"
+      ? `Estimated use: about ${formatCount(usage.inputTokens)} tokens sent and ` +
+        `${formatCount(usage.outputTokens)} received (${requests}).`
+      : `Estimated use: about ${formatCount(usage.characters)} characters (${requests}).`,
   ];
-  if (provider.type === "ollama") lines.push("Local model: no cost.");
-  else if (usage.cost !== undefined && provider.pricing !== undefined) {
-    lines.push(
-      `Estimated cost: about ${roughAmount.format(usage.cost)} (${formatCount(provider.pricing.inputPerMillion)} ` +
-        `per million tokens sent, ${formatCount(provider.pricing.outputPerMillion)} received).`,
-    );
-  } else lines.push("Add provider.pricing to estimate the cost.");
+  if (provider.type === "ollama") {
+    lines.push("Local model: no cost.");
+    return lines;
+  }
+  if (usage.cost === undefined || provider.pricing === undefined) {
+    lines.push("Add provider.pricing to estimate the cost.");
+    return lines;
+  }
+  const prices =
+    "perMillionCharacters" in provider.pricing
+      ? `${formatCount(provider.pricing.perMillionCharacters)} per million characters`
+      : `${formatCount(provider.pricing.inputPerMillion)} per million tokens sent, ` +
+        `${formatCount(provider.pricing.outputPerMillion)} received`;
+  lines.push(`Estimated cost: about ${roughAmount.format(usage.cost)} (${prices}).`);
   return lines;
 }
 
