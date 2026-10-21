@@ -16,6 +16,15 @@ describe("findTokens", () => {
     expect(findTokens("%s %d %1$s %5.2f %-3i %%", "printf")).toEqual(["%s", "%d", "%1$s", "%5.2f", "%-3i", "%%"]);
   });
 
+  it("finds the named placeholders of Python, common in gettext catalogs", () => {
+    expect(findTokens("%(count)d files in %(folder_name)s, %(ratio).1f%%", "printf")).toEqual([
+      "%(count)d",
+      "%(folder_name)s",
+      "%(ratio).1f",
+      "%%",
+    ]);
+  });
+
   it("does not take a plain percent sign for a placeholder", () => {
     expect(findTokens("100% sure, 50 % off", "printf")).toEqual([]);
   });
