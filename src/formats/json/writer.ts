@@ -23,14 +23,23 @@ export const jsonWriter: Writer = {
     };
 
     const result = mapStrings(data, replace);
-    let json = JSON.stringify(result === OMIT ? data : result, null, detectIndent(content));
-    if (options.asciiOnly) json = escapeNonAscii(json);
-    // Raw line breaks only exist between JSON tokens (inside strings they are escaped), so this is safe.
-    if (content.includes("\r\n")) json = json.replaceAll("\n", "\r\n");
-    if (/\r?\n$/.test(content)) json += content.endsWith("\r\n") ? "\r\n" : "\n";
-    return { content: json, translated, untranslated };
+    return {
+      content: serializeJson(result === OMIT ? data : result, content, options.asciiOnly),
+      translated,
+      untranslated,
+    };
   },
 };
+
+/** JSON written like its source: same indentation, same line ends, final line break kept; asciiOnly gives \u. */
+export function serializeJson(value: unknown, source: string, asciiOnly: boolean): string {
+  let json = JSON.stringify(value, null, detectIndent(source));
+  if (asciiOnly) json = escapeNonAscii(json);
+  // Raw line breaks only exist between JSON tokens (inside strings they are escaped), so this is safe.
+  if (source.includes("\r\n")) json = json.replaceAll("\n", "\r\n");
+  if (/\r?\n$/.test(source)) json += source.endsWith("\r\n") ? "\r\n" : "\n";
+  return json;
+}
 
 /** Rebuilds a JSON value with every string passed through replace. Array items are never left out. */
 function mapStrings(value: unknown, replace: (text: string) => string | typeof OMIT): unknown {
