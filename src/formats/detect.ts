@@ -16,6 +16,7 @@ export const FORMAT_EXTENSIONS: Readonly<Record<SourceFormat, readonly string[]>
   renpy: [".rpy"],
   po: [".po", ".pot"],
   xliff: [".xlf", ".xliff"],
+  yaml: [".yml", ".yaml"], // Paradox .yml files are recognised by their path first
   "paradox-yml": [], // .yml is too generic: Paradox files are recognised by their name (ui_l_english.yml)
   "zomboid-txt": [], // .txt is too generic: Project Zomboid tables are recognised by their path (Translate/EN/UI_EN.txt)
   "rimworld-xml": [], // .xml is too generic: RimWorld files are recognised by their path (Languages/English/Keyed/)
@@ -117,6 +118,13 @@ export async function detectSources(root: string, sourceLanguage: string, target
       const exchange = await xliffSuggestion(root, file, markers, sourceLanguage);
       if ("reason" in exchange) skipped.push({ file, reason: exchange.reason });
       else add(exchange);
+      continue;
+    }
+    if (format === "yaml") {
+      const suggestion = markedSuggestion("yaml", file, markers, undefined);
+      if (suggestion === undefined)
+        skipped.push({ file, reason: "no language marker in its path (like locales/en.yml)" });
+      else add(suggestion);
       continue;
     }
     if (format !== "json") continue;
@@ -330,7 +338,7 @@ function baseLanguage(code: string): string {
 
 /** The include pattern and output template for a file with a language marker in its path, if it has one. */
 function markedSuggestion(
-  format: "json" | "po" | "xliff",
+  format: "json" | "po" | "xliff" | "yaml",
   file: string,
   markers: readonly string[],
   targetLanguage: string | undefined,

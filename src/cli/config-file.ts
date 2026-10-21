@@ -134,7 +134,7 @@ export function renderConfig(draft: ConfigDraft): string {
   // Folder where tradforge keeps its translation memory. Worth committing: it holds all the work.
   "workDir": ".tradforge",
 
-  // Files to translate. Formats: "json", "lua", "po" (gettext), "xliff", "srt", "vtt", "renpy" (Ren'Py scripts),
+  // Files to translate. Formats: "json", "yaml", "lua", "po" (gettext), "xliff", "srt", "vtt", "renpy" (Ren'Py scripts),
   // "zomboid-txt" (Project Zomboid Build 41 tables), "paradox-yml" (Paradox localisation), "rimworld-xml"
   // (RimWorld language files). Check the output paths before running "tradforge build".
   // Lower "priority" = translated first (default 0). "context" helps the model choose the right meaning.

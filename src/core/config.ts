@@ -17,6 +17,7 @@ export const SOURCE_FORMATS = [
   "srt",
   "vtt",
   "xliff",
+  "yaml",
   "zomboid-txt",
 ] as const;
 export type SourceFormat = (typeof SOURCE_FORMATS)[number];

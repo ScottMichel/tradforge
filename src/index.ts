@@ -142,6 +142,8 @@ export { vttWriter } from "./formats/vtt/writer.js";
 export { WRITERS } from "./formats/writers.js";
 export { xliffReader } from "./formats/xliff/reader.js";
 export { xliffWriter } from "./formats/xliff/writer.js";
+export { yamlReader } from "./formats/yaml/reader.js";
+export { yamlWriter } from "./formats/yaml/writer.js";
 export type { AnthropicOptions } from "./providers/anthropic/provider.js";
 export { createAnthropicProvider } from "./providers/anthropic/provider.js";
 export type { DeepLOptions } from "./providers/deepl/provider.js";

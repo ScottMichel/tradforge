@@ -12,6 +12,8 @@ describe("formatOf", () => {
     expect(formatOf("po/fr.PO")).toBe("po");
     expect(formatOf("src/locale/messages.xlf")).toBe("xliff");
     expect(formatOf("app.xliff")).toBe("xliff");
+    expect(formatOf("config/locales/en.yml")).toBe("yaml");
+    expect(formatOf("messages.en.YAML")).toBe("yaml");
     expect(formatOf("notes.txt")).toBeUndefined();
   });
 });
@@ -215,6 +217,28 @@ describe("detectSources", () => {
       { file: "i18n/de/app.xliff", reason: "its source language is German" },
       { file: "src/locale/messages.fr.xlf", reason: "already a translation into French" },
     ]);
+  });
+
+  it("proposes YAML files with a language marker, and leaves the others out", async () => {
+    await createFiles(
+      "config/locales/en.yml",
+      "translations/messages.en.yaml",
+      "config/locales/fr.yml",
+      ".github/workflows/ci.yml",
+      "mod/localisation/english/forge_l_english.yml",
+    );
+    const { sources, skipped } = await detectSources(root, "en");
+    expect(sources.map((source) => [source.format, source.include[0], source.output])).toEqual([
+      ["yaml", "config/locales/en.yml", "config/locales/{lang}.yml"],
+      [
+        "paradox-yml",
+        "mod/localisation/english/*_l_english.yml",
+        "mod/localisation/{language}/{stem}_l_{language}{ext}",
+      ],
+      ["yaml", "translations/messages.en.yaml", "translations/messages.{lang}.yaml"],
+    ]);
+    // Hidden folders such as .github are not even looked at.
+    expect(skipped.map((item) => item.file)).toEqual(["config/locales/fr.yml"]);
   });
 
   it("explains which files it left out, and why", async () => {

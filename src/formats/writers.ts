@@ -10,6 +10,7 @@ import { rimworldWriter } from "./rimworld/writer.js";
 import { srtWriter } from "./srt/writer.js";
 import { vttWriter } from "./vtt/writer.js";
 import { xliffWriter } from "./xliff/writer.js";
+import { yamlWriter } from "./yaml/writer.js";
 
 /** One writer per format. `satisfies` makes a missing format a compile error. */
 export const WRITERS = {
@@ -23,4 +24,5 @@ export const WRITERS = {
   srt: srtWriter,
   vtt: vttWriter,
   xliff: xliffWriter,
+  yaml: yamlWriter,
 } as const satisfies Record<SourceFormat, Writer>;

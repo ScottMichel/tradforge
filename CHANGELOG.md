@@ -7,6 +7,10 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `yaml` format (`.yml`, `.yaml`): Rails, Symfony, i18next and Hugo translation files, read by a small parser without
+  dependency. Every string style is supported; booleans, numbers, dates and null are left out as YAML 1.1 reads them
+  (a plain `No` is a boolean). Values are replaced in place in their own style when it is safe, and the `en:` root
+  of Rails files is renamed. Anchors, aliases, tags and flow mappings are refused with their line.
 - The `printf` placeholders include the named placeholders of Ruby (`%{count}`).
 - `xliff` format: XLIFF 1.2 and 2.x (`.xlf`, `.xliff`), as Angular and translation tools write them. Inline elements
   stay in the text and must all come back (`markup` is always checked for this format), notes go to the translator

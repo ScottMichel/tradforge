@@ -10,6 +10,7 @@ import { rimworldReader } from "./rimworld/reader.js";
 import { srtReader } from "./srt/reader.js";
 import { vttReader } from "./vtt/reader.js";
 import { xliffReader } from "./xliff/reader.js";
+import { yamlReader } from "./yaml/reader.js";
 
 /** One reader per format. `satisfies` makes a missing format a compile error. */
 export const READERS = {
@@ -23,4 +24,5 @@ export const READERS = {
   srt: srtReader,
   vtt: vttReader,
   xliff: xliffReader,
+  yaml: yamlReader,
 } as const satisfies Record<SourceFormat, Reader>;
