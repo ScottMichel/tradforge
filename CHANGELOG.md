@@ -108,6 +108,7 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Fixed
 
+- French typography no longer puts a space inside a character reference (`&unknown;`, `&#233;`) left in a text.
 - DeepL: a free account holds a single glossary, so changing the project glossary failed with HTTP 456. The older
   glossaries that tradforge made for the same language pair are now deleted to make room; other glossaries are
   never touched.

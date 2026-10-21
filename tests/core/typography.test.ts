@@ -28,6 +28,8 @@ describe("fixTypography (French)", () => {
     "Hein\n?",
     "Déjà\u{202f}?",
     "Points de suspension...",
+    "Poisson &unknown; frites",
+    "Un &#233;t&#xE9; &nbsp;chaud",
   ])("leaves %j as it is", (text) => {
     expect(fr(text)).toBe(text);
   });

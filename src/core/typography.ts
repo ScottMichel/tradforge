@@ -4,7 +4,10 @@ import { DEFAULT_PLACEHOLDER_SYNTAXES, type PlaceholderSyntax, placeholderPatter
 const NBSP = "\u{a0}";
 const SPACES = "[ \\u{a0}\\u{202f}]*";
 
-/** Placeholders, tags and URLs: their punctuation must never be touched. Built once per set of syntaxes. */
+/**
+ * Placeholders, tags, URLs and character references (&nbsp; &#233;): their punctuation must never be touched.
+ * Built once per set of syntaxes.
+ */
 const protectedPatterns = new Map<string, RegExp>();
 
 function protectedPattern(syntaxes: readonly PlaceholderSyntax[]): RegExp {
@@ -12,7 +15,7 @@ function protectedPattern(syntaxes: readonly PlaceholderSyntax[]): RegExp {
   let pattern = protectedPatterns.get(key);
   if (pattern === undefined) {
     const placeholders = syntaxes.length > 0 ? `|${placeholderPattern(syntaxes).source}` : "";
-    pattern = new RegExp(`https?://\\S+${placeholders}`, "g");
+    pattern = new RegExp(`https?://\\S+|&(?:[A-Za-z][A-Za-z0-9]*|#\\d+|#[xX][0-9a-fA-F]+);${placeholders}`, "g");
     protectedPatterns.set(key, pattern);
   }
   return pattern;
