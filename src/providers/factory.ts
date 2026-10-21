@@ -1,5 +1,6 @@
 import type { ProviderConfig } from "../core/config.js";
 import type { Provider } from "../core/provider.js";
+import { createAnthropicProvider } from "./anthropic/provider.js";
 import { createOllamaProvider } from "./ollama/provider.js";
 import { createOpenAiCompatibleProvider } from "./openai-compatible/provider.js";
 
@@ -24,6 +25,16 @@ export function createProvider(config: ProviderConfig, dependencies: ProviderDep
         model: config.model,
         apiKeyEnv: config.apiKeyEnv,
         responseFormat: config.responseFormat,
+        ...(apiKey !== undefined ? { apiKey } : {}),
+        ...fetch,
+      });
+    }
+    case "anthropic": {
+      const apiKey = (dependencies.env ?? process.env)[config.apiKeyEnv];
+      return createAnthropicProvider({
+        baseUrl: config.baseUrl,
+        model: config.model,
+        apiKeyEnv: config.apiKeyEnv,
         ...(apiKey !== undefined ? { apiKey } : {}),
         ...fetch,
       });

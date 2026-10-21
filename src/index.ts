@@ -1,4 +1,5 @@
 export type {
+  AnthropicProviderConfig,
   ConfigProblem,
   GroupRule,
   OllamaProviderConfig,
@@ -7,6 +8,7 @@ export type {
   Pricing,
   ProviderConfig,
   ProviderType,
+  RemoteProviderSettings,
   ResponseFormat,
   SourceConfig,
   SourceFormat,
@@ -109,6 +111,8 @@ export { srtWriter } from "./formats/srt/writer.js";
 export { vttReader } from "./formats/vtt/reader.js";
 export { vttWriter } from "./formats/vtt/writer.js";
 export { WRITERS } from "./formats/writers.js";
+export type { AnthropicOptions } from "./providers/anthropic/provider.js";
+export { createAnthropicProvider } from "./providers/anthropic/provider.js";
 export type { ProviderDependencies } from "./providers/factory.js";
 export { createProvider } from "./providers/factory.js";
 export type { MockOptions, MockProvider } from "./providers/mock/provider.js";

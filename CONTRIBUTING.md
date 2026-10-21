@@ -63,7 +63,8 @@ You do not need Ollama to work on tradforge: the tests use a mock provider and a
 2. Implement the `Provider` port of `src/core/provider.ts` in `src/providers/<engine>/provider.ts`. Throw
    `ProviderUnavailableError` when the engine cannot be used at all, `BatchError` when a batch can be retried smaller,
    `RateLimitError` (with the delay the server asks for, if any) when the engine asks to slow down.
-3. Inject `fetch` so that the tests never need the network.
+3. Inject `fetch` so that the tests never need the network. `src/providers/http.ts` sends the request with a timeout
+   and the user's interruption, reads `Retry-After` and hides the API key from error messages.
 4. Add the case to `src/providers/factory.ts` — the exhaustiveness check will remind you.
 
 ## Documentation

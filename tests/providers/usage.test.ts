@@ -57,6 +57,17 @@ describe("estimateUsage", () => {
     expect(usage.cost).toBeCloseTo((usage.inputTokens * 2 + usage.outputTokens * 8) / 1_000_000, 10);
   });
 
+  it("prices Claude the same way", () => {
+    const claude = {
+      type: "anthropic" as const,
+      model: "claude-haiku-5-5",
+      baseUrl: "https://api.anthropic.com/v1",
+      apiKeyEnv: "ANTHROPIC_API_KEY",
+      pricing: { inputPerMillion: 1, outputPerMillion: 5 },
+    };
+    expect(estimateUsage(claude, plan).cost).toBeGreaterThan(0);
+  });
+
   it("gives no cost for a local Ollama model", () => {
     const usage = estimateUsage({ type: "ollama", model: "mistral-small", host: "http://localhost:11434" }, plan);
     expect(usage.requests).toBe(2);

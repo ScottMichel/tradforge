@@ -7,6 +7,8 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `anthropic` engine for Claude, through the Messages API: answers are forced through a tool whose input follows
+  the answer schema; an overloaded API (HTTP 529) is waited for like a rate limit.
 - `translate --dry-run` estimates the tokens sent and received, measured on the real prompt, and the cost with
   `provider.pricing` (`inputPerMillion`, `outputPerMillion`).
 - Rate limits: on HTTP 429, every batch pauses for the delay the server asks (`Retry-After`), or 1 s, 2 s, 4 s...,

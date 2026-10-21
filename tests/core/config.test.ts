@@ -319,6 +319,33 @@ describe("parseConfig", () => {
     ).toEqual(["provider.baseUrl", "provider.apiKeyEnv", "provider.responseFormat"]);
   });
 
+  it("reads a Claude provider, with the Anthropic address and key variable by default", () => {
+    const config = parseConfig({ ...minimal, provider: { type: "anthropic", model: "claude-haiku-5-5" } });
+    expect(config.provider).toStrictEqual({
+      type: "anthropic",
+      model: "claude-haiku-5-5",
+      baseUrl: "https://api.anthropic.com/v1",
+      apiKeyEnv: "ANTHROPIC_API_KEY",
+    });
+    const priced = parseConfig({
+      ...minimal,
+      provider: { type: "anthropic", model: "m", pricing: { inputPerMillion: 1, outputPerMillion: 5 } },
+    });
+    expect(priced.provider).toMatchObject({ pricing: { inputPerMillion: 1, outputPerMillion: 5 } });
+  });
+
+  it("applies the same rules to every remote engine: model required, no key in the file", () => {
+    expect(problemPaths({ ...minimal, provider: { type: "anthropic" } })).toEqual(["provider.model"]);
+    const error = configErrorOf({ ...minimal, provider: { type: "anthropic", model: "m", apiKey: "sk-ant-secret" } });
+    expect(error.problems).toEqual([
+      { path: "provider.apiKey", message: expect.stringContaining("ANTHROPIC_API_KEY") },
+    ]);
+    expect(error.message).not.toContain("sk-ant-secret");
+    expect(
+      problemPaths({ ...minimal, provider: { type: "anthropic", model: "m", baseUrl: "api.anthropic.com" } }),
+    ).toEqual(["provider.baseUrl"]);
+  });
+
   it("keeps the prices per million tokens, used to estimate the cost of a run", () => {
     const provider = { type: "openai-compatible", model: "m" };
     const config = parseConfig({

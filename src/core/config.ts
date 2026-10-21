@@ -19,7 +19,7 @@ export const SOURCE_FORMATS = [
 ] as const;
 export type SourceFormat = (typeof SOURCE_FORMATS)[number];
 
-export const PROVIDER_TYPES = ["ollama", "openai-compatible"] as const;
+export const PROVIDER_TYPES = ["ollama", "openai-compatible", "anthropic"] as const;
 export type ProviderType = (typeof PROVIDER_TYPES)[number];
 
 /**
@@ -85,17 +85,26 @@ export interface OllamaProviderConfig {
   readonly host: string;
 }
 
-/** Any server that speaks the OpenAI chat completions protocol: OpenAI, Mistral, OpenRouter, Groq, LM Studio, vLLM... */
-export interface OpenAiCompatibleProviderConfig {
-  readonly type: "openai-compatible";
+/** What every engine reached over the network has. */
+export interface RemoteProviderSettings {
   readonly model: string;
   /** e.g. https://api.openai.com/v1, http://localhost:1234/v1 */
   readonly baseUrl: string;
   /** Name of the environment variable that holds the API key. The key itself never goes in the configuration. */
   readonly apiKeyEnv: string;
-  readonly responseFormat: ResponseFormat;
   /** Prices of the engine, for the cost estimate of a dry run. Not built in: prices change too often. */
   readonly pricing?: Pricing;
+}
+
+/** Any server that speaks the OpenAI chat completions protocol: OpenAI, Mistral, OpenRouter, Groq, LM Studio, vLLM... */
+export interface OpenAiCompatibleProviderConfig extends RemoteProviderSettings {
+  readonly type: "openai-compatible";
+  readonly responseFormat: ResponseFormat;
+}
+
+/** Claude, through the Anthropic Messages API. */
+export interface AnthropicProviderConfig extends RemoteProviderSettings {
+  readonly type: "anthropic";
 }
 
 /** In any currency, per million tokens, as API price lists show them. */
@@ -105,7 +114,7 @@ export interface Pricing {
 }
 
 /** Discriminated by type: each engine has its own settings. */
-export type ProviderConfig = OllamaProviderConfig | OpenAiCompatibleProviderConfig;
+export type ProviderConfig = OllamaProviderConfig | OpenAiCompatibleProviderConfig | AnthropicProviderConfig;
 
 export interface TranslationConfig {
   /** Number of segments sent to the model in one request. */
@@ -348,44 +357,54 @@ function parseProvider(value: unknown, report: Report): ProviderConfig {
         host: parseString(value.host, "provider.host", report, DEFAULT_PROVIDER.host),
       };
     case "openai-compatible":
-      return parseOpenAiCompatible(value, report);
+      return {
+        type,
+        ...parseRemote(value, { baseUrl: "https://api.openai.com/v1", apiKeyEnv: "OPENAI_API_KEY" }, report),
+        responseFormat: parseChoice(
+          RESPONSE_FORMATS,
+          value.responseFormat,
+          "provider.responseFormat",
+          report,
+          "json-schema",
+        ),
+      };
+    case "anthropic":
+      return {
+        type,
+        ...parseRemote(value, { baseUrl: "https://api.anthropic.com/v1", apiKeyEnv: "ANTHROPIC_API_KEY" }, report),
+      };
   }
 }
 
-const DEFAULT_BASE_URL = "https://api.openai.com/v1";
-const DEFAULT_API_KEY_ENV = "OPENAI_API_KEY";
 /** The usual shape of an environment variable name, which also works on Windows. */
 const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
-function parseOpenAiCompatible(value: Record<string, unknown>, report: Report): OpenAiCompatibleProviderConfig {
-  const baseUrl = parseString(value.baseUrl, "provider.baseUrl", report, DEFAULT_BASE_URL);
+/** The settings every remote engine shares, checked the same way for all of them. */
+function parseRemote(
+  value: Record<string, unknown>,
+  defaults: { readonly baseUrl: string; readonly apiKeyEnv: string },
+  report: Report,
+): RemoteProviderSettings {
+  const baseUrl = parseString(value.baseUrl, "provider.baseUrl", report, defaults.baseUrl);
   if (baseUrl !== "" && !/^https?:\/\/[^/]/.test(baseUrl)) {
     report("provider.baseUrl", "must start with http:// or https://");
   }
-  const apiKeyEnv = parseString(value.apiKeyEnv, "provider.apiKeyEnv", report, DEFAULT_API_KEY_ENV);
+  const apiKeyEnv = parseString(value.apiKeyEnv, "provider.apiKeyEnv", report, defaults.apiKeyEnv);
   if (apiKeyEnv !== "" && !ENV_NAME.test(apiKeyEnv)) {
-    report("provider.apiKeyEnv", "must be the name of an environment variable, such as OPENAI_API_KEY");
+    report("provider.apiKeyEnv", `must be the name of an environment variable, such as ${defaults.apiKeyEnv}`);
   }
   if (value.apiKey !== undefined) {
     // The configuration file is often committed: a key written there ends up public. Never echo it back.
     report(
       "provider.apiKey",
-      `never write an API key in the configuration: put it in the ${apiKeyEnv || DEFAULT_API_KEY_ENV} environment variable`,
+      `never write an API key in the configuration: put it in the ${apiKeyEnv || defaults.apiKeyEnv} environment variable`,
     );
   }
   const pricing = value.pricing === undefined ? undefined : parsePricing(value.pricing, report);
   return {
-    type: "openai-compatible",
     model: parseString(value.model, "provider.model", report),
     baseUrl,
     apiKeyEnv,
-    responseFormat: parseChoice(
-      RESPONSE_FORMATS,
-      value.responseFormat,
-      "provider.responseFormat",
-      report,
-      "json-schema",
-    ),
     ...(pricing !== undefined ? { pricing } : {}),
   };
 }

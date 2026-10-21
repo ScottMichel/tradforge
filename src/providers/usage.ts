@@ -23,7 +23,7 @@ export function estimateUsage(config: ProviderConfig, requests: readonly Transla
     inputTokens += tokens.inputTokens;
     outputTokens += tokens.outputTokens;
   }
-  const pricing = config.type === "openai-compatible" ? config.pricing : undefined;
+  const pricing = config.type === "ollama" ? undefined : config.pricing;
   return {
     requests: requests.length,
     inputTokens,

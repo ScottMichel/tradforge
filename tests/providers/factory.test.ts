@@ -38,6 +38,31 @@ describe("createProvider", () => {
     expect(seen.authorization).toBe("Bearer gsk-123");
   });
 
+  it("creates Claude with the key of its environment variable", async () => {
+    let key: string | null = null;
+    const fetch: typeof globalThis.fetch = async (_input, init) => {
+      key = new Headers(init?.headers).get("x-api-key");
+      const input = { translations: [{ id: 0, translation: "Salut" }] };
+      return new Response(
+        JSON.stringify({
+          stop_reason: "tool_use",
+          content: [{ type: "tool_use", name: "submit_translations", input }],
+        }),
+      );
+    };
+    const claude = createProvider(
+      {
+        type: "anthropic",
+        model: "claude-haiku-5-5",
+        baseUrl: "https://api.anthropic.com/v1",
+        apiKeyEnv: "ANTHROPIC_API_KEY",
+      },
+      { env: { ANTHROPIC_API_KEY: "sk-ant-1" }, fetch },
+    );
+    expect(await claude.translateBatch(request)).toEqual(new Map([[0, "Salut"]]));
+    expect(key).toBe("sk-ant-1");
+  });
+
   it("works without a key, for local servers", async () => {
     const { fetch, seen } = recordingFetch();
     await createProvider(openAi, { env: {}, fetch }).translateBatch(request);
