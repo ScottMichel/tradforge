@@ -17,6 +17,7 @@ export const FORMAT_EXTENSIONS: Readonly<Record<SourceFormat, readonly string[]>
   "ios-strings": [".strings"],
   json: [".json"],
   lua: [".lua"],
+  markdown: [".md", ".markdown"],
   srt: [".srt"],
   vtt: [".vtt"],
   renpy: [".rpy"],
@@ -169,6 +170,12 @@ export async function detectSources(root: string, sourceLanguage: string, target
     if (format === "xcstrings") {
       // A string catalog holds every language: the translation goes into the catalog itself.
       add({ format: "xcstrings", include: file, output: "{dir}/{name}{ext}" });
+      continue;
+    }
+    if (format === "markdown") {
+      const doc = markdownSuggestion(file, markers);
+      if ("reason" in doc) skipped.push({ file, reason: doc.reason });
+      else add(doc);
       continue;
     }
     if (format === "yaml") {
@@ -411,6 +418,36 @@ async function androidSuggestion(
   return { format: "android", include: file, output: `${output}/{name}{ext}` };
 }
 
+/** Folders that hold documentation for readers. */
+const DOCUMENT_FOLDERS = /(?:^|\/)(?:docs?|documentation|content|guides?|wiki|manual|site)(?:\/|$)/i;
+/** Documents of a project that are rarely translated. */
+const PROJECT_FILES =
+  /^(?:changelog|changes|history|license|licence|copying|notice|authors|contributors|code_of_conduct|security)$/i;
+
+/**
+ * Markdown documents: those with a marker of the source language (docs/en/, guide.en.md), READMEs, and the
+ * documents of a documentation folder (docs/, content/). A translation goes next to its source: README.fr.md.
+ * Documents in another language, and changelogs or licences, are left out.
+ */
+function markdownSuggestion(file: string, markers: readonly string[]): Suggestion | { reason: string } {
+  const marked = markedSuggestion("markdown", file, markers, undefined);
+  if (marked !== undefined) return marked;
+  const extension = path.posix.extname(file);
+  const name = path.posix.basename(file, extension);
+  const folder = path.posix.dirname(file);
+  const suffix = /[._-]([A-Za-z]{2,3}(?:[-_][A-Za-z]{2,4})?)$/.exec(name)?.[1];
+  if (suffix !== undefined && languageName(suffix.replace("_", "-")) !== suffix.replace("_", "-")) {
+    return { reason: "a document in another language" };
+  }
+  if (PROJECT_FILES.test(name))
+    return { reason: "a project file rarely translated (add it to sources to translate it)" };
+  if (!/^readme$/i.test(name) && !DOCUMENT_FOLDERS.test(folder)) {
+    return { reason: "neither a README nor in a documentation folder (docs/, content/)" };
+  }
+  const prefix = folder === "." ? "" : `${folder}/`;
+  return { format: "markdown", include: file, output: `${prefix}${name}.{lang}${extension}` };
+}
+
 /**
  * .NET resources: Strings.resx (neutral, in the source language) or Strings.en.resx, whose translations are
  * Strings.fr.resx. Files of other cultures, and those without strings (images, forms), are left out.
@@ -498,7 +535,7 @@ function iosSuggestion(
 
 /** The include pattern and output template for a file with a language marker in its path, if it has one. */
 function markedSuggestion(
-  format: "arb" | "json" | "po" | "xliff" | "yaml",
+  format: "arb" | "json" | "markdown" | "po" | "xliff" | "yaml",
   file: string,
   markers: readonly string[],
   targetLanguage: string | undefined,

@@ -5,6 +5,7 @@ import { arbReader } from "./arb/reader.js";
 import { iosStringsReader } from "./ios/reader.js";
 import { jsonReader } from "./json/reader.js";
 import { luaReader } from "./lua/reader.js";
+import { markdownReader } from "./markdown/reader.js";
 import { paradoxReader } from "./paradox/reader.js";
 import { poReader } from "./po/reader.js";
 import { propertiesReader } from "./properties/reader.js";
@@ -25,6 +26,7 @@ export const READERS = {
   "ios-strings": iosStringsReader,
   json: jsonReader,
   lua: luaReader,
+  markdown: markdownReader,
   "paradox-yml": paradoxReader,
   po: poReader,
   properties: propertiesReader,

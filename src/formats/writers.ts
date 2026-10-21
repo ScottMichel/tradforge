@@ -5,6 +5,7 @@ import { arbWriter } from "./arb/writer.js";
 import { iosStringsWriter } from "./ios/writer.js";
 import { jsonWriter } from "./json/writer.js";
 import { luaWriter } from "./lua/writer.js";
+import { markdownWriter } from "./markdown/writer.js";
 import { paradoxWriter } from "./paradox/writer.js";
 import { poWriter } from "./po/writer.js";
 import { propertiesWriter } from "./properties/writer.js";
@@ -25,6 +26,7 @@ export const WRITERS = {
   "ios-strings": iosStringsWriter,
   json: jsonWriter,
   lua: luaWriter,
+  markdown: markdownWriter,
   "paradox-yml": paradoxWriter,
   po: poWriter,
   properties: propertiesWriter,

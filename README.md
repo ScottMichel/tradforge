@@ -128,7 +128,7 @@ sources are required.
 | Setting | Meaning | Default |
 | --- | --- | --- |
 | `workDir` | Where the translation memory lives. **Worth committing**: it holds all the work. | `.tradforge` |
-| `sources[].format` | `json`, `yaml`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `xcstrings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` or `rimworld-xml` (see [Supported formats](#supported-formats)) | required |
+| `sources[].format` | `json`, `yaml`, `markdown`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `xcstrings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` or `rimworld-xml` (see [Supported formats](#supported-formats)) | required |
 | `sources[].include` | Glob patterns, relative to the configuration file | required |
 | `sources[].priority` | Lower is translated first (may be negative) | `0` |
 | `sources[].context` | Tells the model how the texts are used | none |
@@ -146,7 +146,7 @@ sources are required.
 | `translation.contextLines` | Lines sent before and after each batch, with their translation when known, for context only (`0`: none) | `3` |
 | `translation.typography` | Fix the typography of the target language (French: non-breaking spaces before `; : ! ?` and inside `« »`) | `true` |
 | `translation.reuse` | Reuse the translation of a slightly changed text: copied when only the punctuation changed, shown to the model otherwise | `true` |
-| `validation.placeholders` | Placeholder syntaxes to protect: `braces` `{name}`, `printf` `%s`, `positional` `%1`, `bbcode` `[img=x]`, `ass` `{\an8}`, `timestamp` `<00:00:01.500>`, `markup` `<b>`. The `paradox`, `renpy` and `rimworld` syntaxes come automatically with their format | all but the format ones |
+| `validation.placeholders` | Placeholder syntaxes to protect: `braces` `{name}`, `printf` `%s`, `positional` `%1`, `bbcode` `[img=x]`, `ass` `{\an8}`, `timestamp` `<00:00:01.500>`, `markup` `<b>`. The `paradox`, `renpy`, `rimworld` and `markdown` syntaxes come automatically with their format | all but the format ones |
 | `validation.glossary` | Reject a translation that does not use the glossary translation of a term found in the source | `true` |
 
 > **VS Code:** to stop the editor from flagging the comments, add
@@ -169,6 +169,7 @@ sources are required.
 | **Java resource bundles** `.properties` (`properties`) | `messages.properties` or `messages_en.properties`: every value, the comment above it as context; `=`, `:` and space separators, `\` continuations, `\uXXXX`; the doubled apostrophes of MessageFormat texts (`Don''t {0}`) given as one | `messages_fr.properties`, values in place on one line, apostrophes doubled again when the text has `{0}` arguments; `asciiOnly` for Java 8 |
 | **.NET resources** `.resx` (`resx`) | every string `<data>` (not files, objects or Windows Forms designer data), its `<comment>` as context | `Strings.fr.resx`, values in place, XML escaped |
 | **Flutter** `.arb` (`arb`) | every message, its `@key` description as context | `app_fr.arb` (`app_pt_BR.arb`), `@@locale` renamed, metadata kept |
+| **Markdown** `.md` (`markdown`) | headings, paragraphs (wrapped lines joined), list items, quotes, table cells, and the `title`/`description` of a YAML front matter; code blocks, HTML blocks and link definitions left out; one group per section | `README.fr.md`, `docs/{lang}/`; texts in place, a paragraph on one line; `` `code` `` and link destinations `](url)` must come back untouched |
 | **SubRip** `.srt` (`srt`), **WebVTT** `.vtt` (`vtt`) | one text per cue, cues less than 2 s apart kept together as a scene; tags, `{\an8}` codes, NOTE/STYLE blocks | texts replaced in place, numbers and timings untouched; `movie.en.srt` → `movie.fr.srt` |
 
 ### Engine and game dialects
@@ -184,7 +185,7 @@ file is a Lua-like table, a RimWorld `.xml` file follows a fixed schema. tradfor
 | **RimWorld language data** (`rimworld-xml`) | `.xml`, `<LanguageData>` root | `Languages/English/Keyed/` and `DefInjected/`, `<li>` lists, literal `\n` | `Languages/French/...`, XML escaped correctly; grammar symbols `[PAWN_nameDef]` and rule heads protected |
 
 `tradforge init` recognises all of them in a folder (by extension, or by path for the dialects whose extension is
-generic) and proposes the right output paths. More formats are on the way: Markdown, HTML… See the
+generic) and proposes the right output paths. More formats are on the way: HTML… See the
 [roadmap](#roadmap).
 
 ## Engines

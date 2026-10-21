@@ -133,7 +133,7 @@ langues et les sources sont obligatoires.
 | Réglage | Signification | Par défaut |
 | --- | --- | --- |
 | `workDir` | Dossier de la mémoire de traduction. **À versionner** : il contient tout le travail. | `.tradforge` |
-| `sources[].format` | `json`, `yaml`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `xcstrings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` ou `rimworld-xml` (voir [Formats pris en charge](#formats-pris-en-charge)) | obligatoire |
+| `sources[].format` | `json`, `yaml`, `markdown`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `xcstrings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` ou `rimworld-xml` (voir [Formats pris en charge](#formats-pris-en-charge)) | obligatoire |
 | `sources[].include` | Motifs de fichiers, relatifs au fichier de configuration | obligatoire |
 | `sources[].priority` | Plus petit = traduit en premier (peut être négatif) | `0` |
 | `sources[].context` | Indique au modèle comment les textes sont utilisés | aucun |
@@ -151,7 +151,7 @@ langues et les sources sont obligatoires.
 | `translation.contextLines` | Lignes envoyées avant et après chaque lot, avec leur traduction si elle est connue, comme contexte seulement (`0` : aucune) | `3` |
 | `translation.typography` | Corrige la typographie de la langue cible (français : espaces insécables avant `; : ! ?` et dans `« »`) | `true` |
 | `translation.reuse` | Réutilise la traduction d'un texte légèrement modifié : copiée si seule la ponctuation a changé, montrée au modèle sinon | `true` |
-| `validation.placeholders` | Syntaxes de variables à protéger : `braces` `{name}`, `printf` `%s`, `positional` `%1`, `bbcode` `[img=x]`, `ass` `{\an8}`, `timestamp` `<00:00:01.500>`, `markup` `<b>`. Les syntaxes `paradox`, `renpy` et `rimworld` arrivent automatiquement avec leur format | toutes sauf celles des formats |
+| `validation.placeholders` | Syntaxes de variables à protéger : `braces` `{name}`, `printf` `%s`, `positional` `%1`, `bbcode` `[img=x]`, `ass` `{\an8}`, `timestamp` `<00:00:01.500>`, `markup` `<b>`. Les syntaxes `paradox`, `renpy`, `rimworld` et `markdown` arrivent automatiquement avec leur format | toutes sauf celles des formats |
 | `validation.glossary` | Refuse une traduction qui n'utilise pas la traduction du glossaire pour un terme présent dans la source | `true` |
 
 > **VS Code :** pour que l'éditeur ne signale plus les commentaires comme des erreurs, ajoutez
@@ -174,6 +174,7 @@ langues et les sources sont obligatoires.
 | **Bundles Java** `.properties` (`properties`) | `messages.properties` ou `messages_en.properties` : chaque valeur, le commentaire au-dessus comme contexte ; séparateurs `=`, `:` et espace, suites `\`, `\uXXXX` ; les apostrophes doublées des textes MessageFormat (`Don''t {0}`) données simples | `messages_fr.properties`, valeurs sur place sur une ligne, apostrophes de nouveau doublées quand le texte a des arguments `{0}` ; `asciiOnly` pour Java 8 |
 | **Ressources .NET** `.resx` (`resx`) | chaque `<data>` texte (pas les fichiers, objets ni données du concepteur Windows Forms), son `<comment>` comme contexte | `Strings.fr.resx`, valeurs sur place, XML échappé |
 | **Flutter** `.arb` (`arb`) | chaque message, la description de son `@clé` comme contexte | `app_fr.arb` (`app_pt_BR.arb`), `@@locale` renommé, métadonnées conservées |
+| **Markdown** `.md` (`markdown`) | titres, paragraphes (lignes coupées jointes), éléments de liste, citations, cellules de tableau, et `title`/`description` d'un en-tête YAML ; blocs de code, blocs HTML et définitions de liens ignorés ; un groupe par section | `README.fr.md`, `docs/{lang}/` ; textes sur place, un paragraphe sur une ligne ; `` `code` `` et destinations de liens `](url)` doivent revenir intacts |
 | **SubRip** `.srt` (`srt`), **WebVTT** `.vtt` (`vtt`) | un texte par réplique, les répliques à moins de 2 s d'écart regroupées en scène ; balises, codes `{\an8}`, blocs NOTE/STYLE | textes remplacés sur place, numéros et minutages intacts ; `film.en.srt` → `film.fr.srt` |
 
 ### Dialectes de moteurs et de jeux
@@ -189,7 +190,7 @@ Project Zomboid est une table proche du Lua, un `.xml` RimWorld suit un schéma 
 | **Données de langue RimWorld** (`rimworld-xml`) | `.xml`, racine `<LanguageData>` | `Languages/English/Keyed/` et `DefInjected/`, listes `<li>`, `\n` littéraux | `Languages/French/…`, XML échappé correctement ; symboles de grammaire `[PAWN_nameDef]` et têtes de règles protégés |
 
 `tradforge init` les reconnaît tous dans un dossier (par extension, ou par chemin pour les dialectes dont l'extension
-est générique) et propose les bons chemins de sortie. D'autres formats arrivent : Markdown, HTML… Voir la
+est générique) et propose les bons chemins de sortie. D'autres formats arrivent : HTML… Voir la
 [feuille de route](#feuille-de-route).
 
 ## Moteurs

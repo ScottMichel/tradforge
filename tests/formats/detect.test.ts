@@ -334,6 +334,28 @@ describe("detectSources", () => {
     ]);
   });
 
+  it("proposes READMEs and documentation in Markdown, not changelogs nor translations", async () => {
+    await createFiles(
+      "README.md",
+      "README.fr.md",
+      "CHANGELOG.md",
+      "docs/guide.md",
+      "site/en/intro.md",
+      "notes/todo.md",
+    );
+    const { sources, skipped } = await detectSources(root, "en");
+    expect(sources.map((source) => [source.format, source.include[0], source.output])).toEqual([
+      ["markdown", "README.md", "README.{lang}.md"],
+      ["markdown", "docs/guide.md", "docs/guide.{lang}.md"],
+      ["markdown", "site/en/*.md", "site/{lang}/{name}{ext}"],
+    ]);
+    expect(skipped).toEqual([
+      { file: "CHANGELOG.md", reason: "a project file rarely translated (add it to sources to translate it)" },
+      { file: "README.fr.md", reason: "a document in another language" },
+      { file: "notes/todo.md", reason: "neither a README nor in a documentation folder (docs/, content/)" },
+    ]);
+  });
+
   it("explains which files it left out, and why", async () => {
     await createFiles("package.json", "tsconfig.base.json", "data/stats.json", "notes.txt", "locales/en/ui.json");
     const { skipped } = await detectSources(root, "en");

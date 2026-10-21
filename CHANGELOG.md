@@ -7,6 +7,11 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `markdown` format: headings, paragraphs, list items, quotes, table cells and the title of a YAML front matter,
+  code and HTML blocks left out. A wrapped paragraph is one text and is written back on one line; the texts of a
+  section are translated together. `tradforge init` proposes READMEs and documentation folders
+  (`README.md` → `README.fr.md`), not changelogs or licences.
+- `markdown` placeholders: inline code and link destinations must come back untouched (with the `markdown` format).
 - `xcstrings` format: Xcode string catalogs. A catalog holds every language, so the translation is written into the
   catalog itself (the only format allowed to, see `MULTILINGUAL_FORMATS`): only the target language changes, a
   translation made in Xcode is never removed, plural variations get the categories of the target language, and the

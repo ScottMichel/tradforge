@@ -10,16 +10,18 @@ export const PLACEHOLDER_SYNTAXES = [
   "paradox",
   "renpy",
   "rimworld",
+  "markdown",
 ] as const;
 export type PlaceholderSyntax = (typeof PLACEHOLDER_SYNTAXES)[number];
 
 /**
  * The syntaxes checked when the configuration does not choose. Format-specific ones are left out: "paradox", "renpy"
- * and "rimworld" treat a [word] as code, which is right in those games and wrong elsewhere. They come with their
- * format instead (see FORMAT_PLACEHOLDERS in config.ts).
+ * and "rimworld" treat a [word] as code, which is right in those games and wrong elsewhere, and "markdown" reads
+ * backticks as code. They come with their format instead (see FORMAT_PLACEHOLDERS in config.ts).
  */
+const FORMAT_SPECIFIC: readonly PlaceholderSyntax[] = ["paradox", "renpy", "rimworld", "markdown"];
 export const DEFAULT_PLACEHOLDER_SYNTAXES: readonly PlaceholderSyntax[] = PLACEHOLDER_SYNTAXES.filter(
-  (syntax) => syntax !== "paradox" && syntax !== "renpy" && syntax !== "rimworld",
+  (syntax) => !FORMAT_SPECIFIC.includes(syntax),
 );
 
 const PATTERNS: Readonly<Record<PlaceholderSyntax, RegExp>> = {
@@ -45,6 +47,10 @@ const PATTERNS: Readonly<Record<PlaceholderSyntax, RegExp>> = {
   renpy: /\{\{|\[\[|\{[^{}]*\}|\[(?:[^[\]]|\[[^[\]]*\])*\]/g,
   // RimWorld: grammar symbols [PAWN_nameDef], and the rule head at the start of a rule: r_name-> or r_x(p=2)->
   rimworld: /^\w+(?:\([^()\n]*\))*->|\[[A-Za-z_]\w*\]/g,
+  // Markdown: inline code (`x`, ``a ` b``), link and image destinations ](url "title"), reference links ][id].
+  // The text of a link is translated; where it leads is not. No capturing group: the syntaxes are combined into one
+  // pattern (placeholderPattern), where a back reference would point at another syntax's group.
+  markdown: /``(?:[^`\n]|`(?!`))+``|`[^`\n]+`|\]\((?:[^()\s]|\([^()\s]*\))*(?:\s+"[^"\n]*")?\)|\]\[[^\]\n]+\]/g,
 };
 
 /** Every token of one syntax, in order of appearance. */

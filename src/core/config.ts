@@ -13,6 +13,7 @@ export const SOURCE_FORMATS = [
   "ios-strings",
   "json",
   "lua",
+  "markdown",
   "paradox-yml",
   "po",
   "properties",
@@ -621,6 +622,8 @@ export const FORMAT_PLACEHOLDERS: Readonly<Partial<Record<SourceFormat, readonly
   // Apple strings: %@, %1$@, %ld
   "ios-strings": ["printf"],
   xcstrings: ["printf"],
+  // Markdown: inline code and link destinations, and the HTML tags a document may hold
+  markdown: ["markdown", "markup"],
 };
 
 /** The placeholder syntaxes to check: the configured ones, plus those of the formats the project uses. */
