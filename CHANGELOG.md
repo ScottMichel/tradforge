@@ -7,6 +7,7 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- The `printf` placeholders include Apple's `%@` and the length modifiers of C (`%ld`, `%lld`, `%zu`).
 - `android` format: Android string resources (`res/values/strings.xml`). Strings, string array items and plural
   quantities are read as Android reads them (backslash escapes, quotes that keep spaces, merged spaces), inline
   `<xliff:g>` and `<b>` tags must come back, plurals get the quantities of the target language, and resources marked

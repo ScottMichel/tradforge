@@ -25,8 +25,9 @@ export const DEFAULT_PLACEHOLDER_SYNTAXES: readonly PlaceholderSyntax[] = PLACEH
 const PATTERNS: Readonly<Record<PlaceholderSyntax, RegExp>> = {
   // {name}, {0}, {}, {player.name}, {0:N2}
   braces: /\{[\w.:-]*\}/g,
-  // %s, %d, %1$s, %5.2f, %-3i, %%, Python's %(name)s and Ruby's %{name} (no space flag, so "100% sure" is plain text)
-  printf: /%(?:%|\{[\w.-]+\}|(?:\d+\$|\([\w.-]+\))?[-+#0]*\d*(?:\.\d+)?[sdifuxXoeEgGcq])/g,
+  // %s, %d, %1$s, %5.2f, %-3i, %%, Python's %(name)s, Ruby's %{name}, Apple's %@, and the length modifiers of C
+  // (%ld, %lld, %zu). No space flag, so "100% sure" is plain text.
+  printf: /%(?:%|\{[\w.-]+\}|(?:\d+\$|\([\w.-]+\))?[-+#0]*\d*(?:\.\d+)?(?:hh|h|ll|l|q|z|t|j|L)?[sdifuxXoeEgGcqp@])/g,
   // %1, %2 (numbered, as in Project Zomboid); "%1$s" belongs to printf
   positional: /%\d+(?![\d$])/g,
   // [img=music], [color=255,0,0], [/color]; a word in brackets ("[Note]") is plain text

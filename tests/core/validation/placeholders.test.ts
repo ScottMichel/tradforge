@@ -29,6 +29,20 @@ describe("findTokens", () => {
     expect(findTokens("%{count} bars for %{user.name}", "printf")).toEqual(["%{count}", "%{user.name}"]);
   });
 
+  it("finds the placeholders of Apple platforms and C, with their length modifiers", () => {
+    expect(findTokens("%@ has %ld bars, %1$@ %2$lld %lu %zd %hhd %llx %p", "printf")).toEqual([
+      "%@",
+      "%ld",
+      "%1$@",
+      "%2$lld",
+      "%lu",
+      "%zd",
+      "%hhd",
+      "%llx",
+      "%p",
+    ]);
+  });
+
   it("does not take a plain percent sign for a placeholder", () => {
     expect(findTokens("100% sure, 50 % off", "printf")).toEqual([]);
   });
