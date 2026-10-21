@@ -1,5 +1,6 @@
 import { stripBom } from "../../core/reader.js";
 import type { Writer } from "../../core/writer.js";
+import { escapeXmlText, splitByTags } from "../xml/inline.js";
 import type { XmlElement } from "../xml/parser.js";
 import { parseXliff, type XliffText } from "./units.js";
 
@@ -135,27 +136,7 @@ function escapeAttribute(value: string): string {
  * every non-ASCII character as a character reference (é → &#233;).
  */
 export function encodeInline(translation: string, tags: readonly string[], asciiOnly: boolean): string {
-  const known = [...new Set(tags)].sort((a, b) => b.length - a.length);
-  let encoded = "";
-  let position = 0;
-  while (position < translation.length) {
-    const tag = known.find((candidate) => translation.startsWith(candidate, position));
-    if (tag !== undefined) {
-      encoded += tag;
-      position += tag.length;
-      continue;
-    }
-    const char = String.fromCodePoint(translation.codePointAt(position) ?? 0);
-    encoded += encodeCharacter(char, asciiOnly);
-    position += char.length;
-  }
-  return encoded;
-}
-
-function encodeCharacter(char: string, asciiOnly: boolean): string {
-  if (char === "&") return "&amp;";
-  if (char === "<") return "&lt;";
-  if (char === ">") return "&gt;";
-  const code = char.codePointAt(0) ?? 0;
-  return asciiOnly && code > 0x7f ? `&#${code};` : char;
+  return splitByTags(translation, tags)
+    .map((part) => (part.kind === "tag" ? part.value : escapeXmlText(part.value, asciiOnly)))
+    .join("");
 }

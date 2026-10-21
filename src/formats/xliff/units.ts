@@ -1,4 +1,5 @@
 import { ReadError, stripBom } from "../../core/reader.js";
+import { flattenInline } from "../xml/inline.js";
 import { parseXml, type XmlElement, XmlSyntaxError } from "../xml/parser.js";
 
 /**
@@ -120,8 +121,7 @@ function inline(
   unit: XmlElement,
   group: string | undefined,
 ): Omit<XliffText, "target" | "segment"> | undefined {
-  const tags: string[] = [];
-  const raw = flatten(src, source, tags);
+  const { text: raw, tags } = flattenInline(src, source);
   const value = raw.trim();
   if (value === "") return undefined;
   const leading = raw.slice(0, raw.length - raw.trimStart().length);
@@ -138,27 +138,6 @@ function inline(
     source,
     unit,
   };
-}
-
-/** Text decoded, inline elements as their tags written in the source, the text inside them included. */
-function flatten(src: string, element: XmlElement, tags: string[]): string {
-  let value = "";
-  for (const child of element.children) {
-    if (child.kind === "text" || child.kind === "cdata") value += child.value;
-    else if (child.kind === "element") {
-      if (child.selfClosing) {
-        const tag = src.slice(child.start, child.end);
-        tags.push(tag);
-        value += tag;
-      } else {
-        const open = src.slice(child.start, child.contentStart);
-        const close = src.slice(child.contentEnd, child.end);
-        tags.push(open, close);
-        value += open + flatten(src, child, tags) + close;
-      }
-    }
-  }
-  return value;
 }
 
 /** Plain text of an element (a note), tags left out. */
