@@ -16,6 +16,23 @@ export interface Reader {
   readonly read: (input: ReaderInput) => Occurrence[];
 }
 
+/** What a binary reader receives: the bytes of the file (an office document is a ZIP archive). */
+export interface BinaryReaderInput extends Omit<ReaderInput, "content"> {
+  readonly bytes: Uint8Array;
+}
+
+/** Port: extracts the texts of a binary file. The pipeline reads its bytes instead of decoding them as text. */
+export interface BinaryReader {
+  readonly format: SourceFormat;
+  readonly binary: true;
+  readonly read: (input: BinaryReaderInput) => Occurrence[];
+}
+
+/** Whether a reader or a writer works on bytes rather than text. */
+export function isBinary<T extends object>(port: T): port is Extract<T, { readonly binary: true }> {
+  return "binary" in port && port.binary === true;
+}
+
 /** A file could not be read. The message always names the file. */
 export class ReadError extends Error {
   readonly file: string;

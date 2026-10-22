@@ -1,5 +1,5 @@
 import type { SourceFormat } from "../core/config.js";
-import type { Reader } from "../core/reader.js";
+import type { BinaryReader, Reader } from "../core/reader.js";
 import { androidReader } from "./android/reader.js";
 import { arbReader } from "./arb/reader.js";
 import { htmlReader } from "./html/reader.js";
@@ -41,4 +41,9 @@ export const READERS = {
   xcstrings: xcstringsReader,
   xliff: xliffReader,
   yaml: yamlReader,
-} as const satisfies Record<SourceFormat, Reader>;
+} as const satisfies Record<SourceFormat, Reader | BinaryReader>;
+
+/** The reader of a format, text or binary: callers tell them apart with isBinary. */
+export function readerFor(format: SourceFormat): Reader | BinaryReader {
+  return READERS[format];
+}

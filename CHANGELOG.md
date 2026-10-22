@@ -7,6 +7,8 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- Formats can work on bytes (`BinaryReader`, `BinaryWriter`): the output encoding does not apply to them. Office
+  documents use a small ZIP reader and writer of tradforge's own, without dependency.
 - `html` format: the texts of a page between block tags, inline tags kept and checked, and the attributes people
   read (`alt`, `title`, `placeholder`, `aria-label`, description meta tags). Pages are read as browsers read them;
   scripts, styles and `<pre>` are left out, and `<html lang>` names the target language. `tradforge init` proposes

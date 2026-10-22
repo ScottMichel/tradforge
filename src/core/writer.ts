@@ -20,6 +20,22 @@ export interface WriterOutput {
   readonly untranslated: number;
 }
 
+/** What a binary writer receives: the bytes of the source file instead of its text. */
+export interface BinaryWriterInput extends Omit<WriterInput, "content"> {
+  readonly bytes: Uint8Array;
+}
+
+export interface BinaryWriterOutput extends Omit<WriterOutput, "content"> {
+  readonly bytes: Uint8Array;
+}
+
+/** Port: writes the translated version of a binary file, as bytes. The output encoding does not apply. */
+export interface BinaryWriter {
+  readonly format: SourceFormat;
+  readonly binary: true;
+  readonly write: (input: BinaryWriterInput) => BinaryWriterOutput;
+}
+
 /** Port: writes the translated version of a source file. Pure, like the readers: no disk access. */
 export interface Writer {
   readonly format: SourceFormat;

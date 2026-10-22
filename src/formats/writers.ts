@@ -1,5 +1,5 @@
 import type { SourceFormat } from "../core/config.js";
-import type { Writer } from "../core/writer.js";
+import type { BinaryWriter, Writer } from "../core/writer.js";
 import { androidWriter } from "./android/writer.js";
 import { arbWriter } from "./arb/writer.js";
 import { htmlWriter } from "./html/writer.js";
@@ -41,4 +41,9 @@ export const WRITERS = {
   xcstrings: xcstringsWriter,
   xliff: xliffWriter,
   yaml: yamlWriter,
-} as const satisfies Record<SourceFormat, Writer>;
+} as const satisfies Record<SourceFormat, Writer | BinaryWriter>;
+
+/** The writer of a format, text or binary: callers tell them apart with isBinary. */
+export function writerFor(format: SourceFormat): Writer | BinaryWriter {
+  return WRITERS[format];
+}

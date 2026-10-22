@@ -3,12 +3,13 @@ import path from "node:path";
 import { compareCodeUnits } from "../core/compare.js";
 import type { TradforgeConfig } from "../core/config.js";
 import type { TranslationMemory } from "../core/memory.js";
+import { isBinary } from "../core/reader.js";
 import type { WriterOutput } from "../core/writer.js";
 import { writeFileAtomic } from "../storage/atomic.js";
 import { decodeText, EncodingError, encodeText } from "../storage/encoding.js";
 import { readBytesIfExists } from "../storage/read.js";
 import { listProjectFiles, OutputError } from "./project.js";
-import { WRITERS } from "./writers.js";
+import { writerFor } from "./writers.js";
 
 export interface BuildOptions {
   /** Replace outputs even when the new version is much smaller. */
@@ -32,7 +33,7 @@ const MIN_SIZE_RATIO = 0.5;
 interface PlannedFile {
   readonly file: string;
   readonly output: string;
-  readonly result: WriterOutput;
+  readonly result: Pick<WriterOutput, "translated" | "untranslated">;
   /** The translated file, encoded as configured. */
   readonly bytes: Uint8Array;
   readonly existing: Uint8Array | undefined;
@@ -53,12 +54,22 @@ export async function buildProject(
   const plans: PlannedFile[] = [];
   const unencodable: string[] = [];
   for (const { source, file, output } of await listProjectFiles(root, config)) {
-    const content = decodeText(await readFile(path.join(root, file)), source.encoding);
+    const sourceBytes = await readFile(path.join(root, file));
     const languages = { source: config.sourceLanguage, target: config.targetLanguage };
-    const result = WRITERS[source.format].write({ file, content, translate, options: source.output, languages });
+    const input = { file, translate, options: source.output, languages };
+    const writer = writerFor(source.format);
+    let result: { readonly translated: number; readonly untranslated: number };
     let bytes: Uint8Array;
     try {
-      bytes = encodeText(result.content, source.output.encoding);
+      if (isBinary(writer)) {
+        const written = writer.write({ ...input, bytes: sourceBytes });
+        result = written;
+        bytes = written.bytes; // a binary file has no text encoding
+      } else {
+        const written = writer.write({ ...input, content: decodeText(sourceBytes, source.encoding) });
+        result = written;
+        bytes = encodeText(written.content, source.output.encoding);
+      }
     } catch (error) {
       if (!(error instanceof EncodingError)) throw error;
       unencodable.push(`  - ${output}: ${error.message}`);
