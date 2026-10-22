@@ -128,7 +128,7 @@ sources are required.
 | Setting | Meaning | Default |
 | --- | --- | --- |
 | `workDir` | Where the translation memory lives. **Worth committing**: it holds all the work. | `.tradforge` |
-| `sources[].format` | `json`, `yaml`, `markdown`, `html`, `docx`, `pptx`, `xlsx`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `xcstrings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` or `rimworld-xml` (see [Supported formats](#supported-formats)) | required |
+| `sources[].format` | `json`, `yaml`, `markdown`, `html`, `docx`, `pptx`, `xlsx`, `odt`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `xcstrings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` or `rimworld-xml` (see [Supported formats](#supported-formats)) | required |
 | `sources[].include` | Glob patterns, relative to the configuration file | required |
 | `sources[].priority` | Lower is translated first (may be negative) | `0` |
 | `sources[].context` | Tells the model how the texts are used | none |
@@ -174,6 +174,7 @@ sources are required.
 | **Word** `.docx` (`docx`) | every paragraph of the body, tables, headers, footers and notes, as one text: other formats as tags (`<g1>bold</g1>`), tabs, pictures and fields as `<x1/>`; the paragraph style as context | `manual.fr.docx`: the runs of each paragraph rebuilt in the order of the translation, the language set for spelling, every other part of the archive copied byte for byte |
 | **PowerPoint** `.pptx` (`pptx`) | every paragraph of the slides (text boxes, shapes, tables), then the speaker notes, as in Word; one group per slide; layouts and masters left out | `talk.fr.pptx`, as for Word |
 | **Excel** `.xlsx` (`xlsx`) | the shared strings (one translation for every cell that shows it), rich text with its formats as tags, the inline strings of the sheets and the text boxes of the drawings; numbers, formulas and strings without letters left out | `tools.fr.xlsx`: strings in place, their order and count kept; sheet names untouched, since formulas refer to them |
+| **OpenDocument text** `.odt` (`odt`) | every paragraph and heading of the body, then the headers and footers; spans and links as tags, tabs, fields and notes as `<x1/>`; spaces read as ODF reads them | `manual.fr.odt`: texts in place, spaces kept with `<text:s/>`, the language set, the `mimetype` kept first and stored |
 | **SubRip** `.srt` (`srt`), **WebVTT** `.vtt` (`vtt`) | one text per cue, cues less than 2 s apart kept together as a scene; tags, `{\an8}` codes, NOTE/STYLE blocks | texts replaced in place, numbers and timings untouched; `movie.en.srt` → `movie.fr.srt` |
 
 ### Engine and game dialects
@@ -312,6 +313,7 @@ texts written for tradforge.
   attribute would overlap.
 - Word: paragraphs with tracked changes and the texts of text boxes are not translated yet.
 - Excel: sheet names and comments are not translated (formulas refer to the names).
+- OpenDocument: the paragraphs of notes and frames, and paragraphs with tracked changes, are not translated yet.
 - ICU messages (`{count, plural, one {...} other {...}}`, in `.arb` and XLIFF files) are sent as they are: check
   their keywords came back untouched.
 - Apple: `.stringsdict` plurals are not supported, nor the substitutions of string catalogs (several plurals in one
@@ -326,7 +328,6 @@ texts written for tradforge.
 ## Roadmap
 
 1. **Desktop application**: open a file or a folder, translate, review — no command line needed.
-2. **Office documents**: `.odt`.
 
 ## Contributing
 

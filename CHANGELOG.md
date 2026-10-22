@@ -7,6 +7,9 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `odt` format: OpenDocument texts (LibreOffice Writer). Paragraphs and headings of the body, headers and footers,
+  spans and links kept as tags, spaces read and written as ODF does; the language is set and the `mimetype` stays
+  the first entry, stored.
 - `xlsx` format: Excel workbooks. The shared strings are translated in place (once for every cell that shows them),
   rich text keeps its formats, and the inline strings of the sheets and the text boxes of the drawings are
   translated too. Numbers, formulas, sheet names and strings without letters stay as they are.

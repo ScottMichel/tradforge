@@ -16,6 +16,7 @@ export const SOURCE_FORMATS = [
   "json",
   "lua",
   "markdown",
+  "odt",
   "paradox-yml",
   "po",
   "pptx",
@@ -634,6 +635,7 @@ export const FORMAT_PLACEHOLDERS: Readonly<Partial<Record<SourceFormat, readonly
   docx: ["markup"],
   pptx: ["markup"],
   xlsx: ["markup"],
+  odt: ["markup"],
 };
 
 /** The placeholder syntaxes to check: the configured ones, plus those of the formats the project uses. */

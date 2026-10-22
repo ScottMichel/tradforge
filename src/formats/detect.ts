@@ -22,6 +22,7 @@ export const FORMAT_EXTENSIONS: Readonly<Record<SourceFormat, readonly string[]>
   json: [".json"],
   lua: [".lua"],
   markdown: [".md", ".markdown"],
+  odt: [".odt"],
   srt: [".srt"],
   vtt: [".vtt"],
   renpy: [".rpy"],
@@ -176,7 +177,7 @@ export async function detectSources(root: string, sourceLanguage: string, target
       add({ format: "xcstrings", include: file, output: "{dir}/{name}{ext}" });
       continue;
     }
-    if (format === "docx" || format === "pptx" || format === "xlsx") {
+    if (format === "docx" || format === "odt" || format === "pptx" || format === "xlsx") {
       const officeDocument = documentSuggestion(format, file, markers);
       if ("reason" in officeDocument) skipped.push({ file, reason: officeDocument.reason });
       else add(officeDocument);
@@ -440,7 +441,7 @@ async function androidSuggestion(
  * a document is open (~$manual.docx) are left out.
  */
 /** The office document formats, all detected the same way. */
-type OfficeFormat = "docx" | "pptx" | "xlsx";
+type OfficeFormat = "docx" | "odt" | "pptx" | "xlsx";
 
 function documentSuggestion(
   format: OfficeFormat,

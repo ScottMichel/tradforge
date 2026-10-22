@@ -8,6 +8,7 @@ import { iosStringsReader } from "./ios/reader.js";
 import { jsonReader } from "./json/reader.js";
 import { luaReader } from "./lua/reader.js";
 import { markdownReader } from "./markdown/reader.js";
+import { odtReader } from "./odt/reader.js";
 import { paradoxReader } from "./paradox/reader.js";
 import { poReader } from "./po/reader.js";
 import { pptxReader } from "./pptx/reader.js";
@@ -33,6 +34,7 @@ export const READERS = {
   json: jsonReader,
   lua: luaReader,
   markdown: markdownReader,
+  odt: odtReader,
   "paradox-yml": paradoxReader,
   po: poReader,
   pptx: pptxReader,

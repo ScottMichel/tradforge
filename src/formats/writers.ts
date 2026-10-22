@@ -8,6 +8,7 @@ import { iosStringsWriter } from "./ios/writer.js";
 import { jsonWriter } from "./json/writer.js";
 import { luaWriter } from "./lua/writer.js";
 import { markdownWriter } from "./markdown/writer.js";
+import { odtWriter } from "./odt/writer.js";
 import { paradoxWriter } from "./paradox/writer.js";
 import { poWriter } from "./po/writer.js";
 import { pptxWriter } from "./pptx/writer.js";
@@ -33,6 +34,7 @@ export const WRITERS = {
   json: jsonWriter,
   lua: luaWriter,
   markdown: markdownWriter,
+  odt: odtWriter,
   "paradox-yml": paradoxWriter,
   po: poWriter,
   pptx: pptxWriter,

@@ -144,6 +144,10 @@ export type { MarkdownKind, MarkdownText } from "./formats/markdown/blocks.js";
 export { markdownTexts } from "./formats/markdown/blocks.js";
 export { markdownReader } from "./formats/markdown/reader.js";
 export { markdownWriter } from "./formats/markdown/writer.js";
+export type { OdtParagraph } from "./formats/odt/paragraphs.js";
+export { odtParagraphs, writeOdtParagraph } from "./formats/odt/paragraphs.js";
+export { odtParts, odtReader } from "./formats/odt/reader.js";
+export { odtWriter } from "./formats/odt/writer.js";
 export type { Dialect, Paragraph } from "./formats/office/paragraphs.js";
 export {
   DRAWING,
