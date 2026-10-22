@@ -27,6 +27,10 @@ The command line and the library are the `tradforge` package, in `packages/cli`:
 | — | Translation memory on disk, CSV review | `src/storage` |
 | — | Command line (drives the core) | `src/cli` |
 
+Each format is described in one place, the `format.ts` of its folder: reader, writer, extensions, the placeholder
+syntaxes it brings and how `tradforge init` recognises its files. `src/formats/registry.ts` gathers them; the core
+only knows the list of format ids, to check a configuration.
+
 Dependencies only point inwards: adapters import the core, the core never imports an adapter. Adding a format or an
 engine means writing an adapter; the core does not change. See [ADR 0001](adr/0001-hexagonal-architecture.md).
 

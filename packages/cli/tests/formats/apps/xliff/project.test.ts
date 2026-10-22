@@ -2,11 +2,12 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { effectivePlaceholders, parseConfig } from "../../../../src/core/config.js";
+import { parseConfig } from "../../../../src/core/config.js";
 import { TranslationMemory } from "../../../../src/core/memory.js";
 import { validateTranslation } from "../../../../src/core/validation/validate.js";
 import { buildProject } from "../../../../src/formats/project/build.js";
 import { extractSegments } from "../../../../src/formats/project/extract.js";
+import { effectivePlaceholders } from "../../../../src/formats/registry.js";
 
 describe("an XLIFF project", () => {
   let root: string;

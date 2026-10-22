@@ -1,4 +1,4 @@
-import { effectivePlaceholders, type TradforgeConfig } from "./config.js";
+import type { TradforgeConfig } from "./config.js";
 import { diffSources } from "./diff.js";
 import type { TranslationMemory } from "./memory.js";
 import { ProtectionError, protectPlaceholders, restorePlaceholders } from "./protection.js";
@@ -296,7 +296,7 @@ async function translateGroup(group: readonly Segment[], run: Run): Promise<Reje
   const { config, provider, memory } = run.options;
   const shields =
     provider.protectPlaceholders === true
-      ? group.map((segment) => protectPlaceholders(segment.source, effectivePlaceholders(config)))
+      ? group.map((segment) => protectPlaceholders(segment.source, config.validation.placeholders))
       : undefined;
 
   let answer: ReadonlyMap<number, string>;
@@ -436,7 +436,7 @@ function buildRequest(
 /** The finishing touches applied to every translation before it is checked: the typography of the language. */
 function polish(target: string, config: PipelineConfig): string {
   return config.translation.typography
-    ? fixTypography(target, config.targetLanguage, effectivePlaceholders(config))
+    ? fixTypography(target, config.targetLanguage, config.validation.placeholders)
     : target;
 }
 
@@ -444,7 +444,7 @@ function check(source: string, target: string, config: PipelineConfig): Validati
   return validateTranslation(
     { source, target },
     {
-      placeholders: effectivePlaceholders(config),
+      placeholders: config.validation.placeholders,
       glossary: config.validation.glossary ? config.translation.glossary : {},
     },
   );

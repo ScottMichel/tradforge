@@ -2,15 +2,8 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { parseConfig, SOURCE_FORMATS } from "../../../src/core/config.js";
+import { parseConfig } from "../../../src/core/config.js";
 import { extractSegments } from "../../../src/formats/project/extract.js";
-import { READERS } from "../../../src/formats/readers.js";
-
-describe("READERS", () => {
-  it("has a reader for every source format", () => {
-    for (const format of SOURCE_FORMATS) expect(READERS[format].format).toBe(format);
-  });
-});
 
 describe("extractSegments", () => {
   let root: string;

@@ -1,6 +1,7 @@
 import path from "node:path";
-import { MULTILINGUAL_FORMATS, type SourceConfig, type TradforgeConfig } from "../../core/config.js";
+import type { SourceConfig, TradforgeConfig } from "../../core/config.js";
 import { languageName } from "../../core/languages.js";
+import { formatFor } from "../registry.js";
 import { findFiles } from "./files.js";
 
 /** An output path is wrong: it would overwrite a source, leave the project, or be shared by two files. */
@@ -70,7 +71,7 @@ export async function listProjectFiles(root: string, config: TradforgeConfig): P
         source: config.sourceLanguage,
         target: config.targetLanguage,
       });
-      if (output === file && !MULTILINGUAL_FORMATS.includes(source.format)) {
+      if (output === file && formatFor(source.format).multilingual !== true) {
         throw new OutputError(`${file}: the output path "${source.output.path}" would overwrite its source file`);
       }
       if (output === ".." || output.startsWith("../")) {

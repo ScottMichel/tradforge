@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ConfigError, DEFAULT_OUTPUT, effectivePlaceholders, parseConfig } from "../../src/core/config.js";
+import { ConfigError, DEFAULT_OUTPUT, parseConfig } from "../../src/core/config.js";
 
 const minimal = {
   sourceLanguage: "en",
@@ -198,21 +198,6 @@ describe("parseConfig", () => {
         ],
       }),
     ).toEqual(["sources[0].priority", "sources[1].priority", "sources[1].context"]);
-  });
-
-  it("adds the placeholder syntaxes of the formats used by the project", () => {
-    expect(effectivePlaceholders(parseConfig(minimal))).not.toContain("paradox");
-    const paradox = parseConfig({
-      ...minimal,
-      sources: [...minimal.sources, { format: "paradox-yml", include: ["l/*.yml"] }],
-    });
-    expect(effectivePlaceholders(paradox)).toContain("paradox");
-    const none = parseConfig({
-      ...minimal,
-      sources: [{ format: "paradox-yml", include: ["x"] }],
-      validation: { placeholders: [] },
-    });
-    expect(effectivePlaceholders(none)).toEqual(["paradox"]);
   });
 
   it("keeps the chosen placeholder syntaxes, none included", () => {

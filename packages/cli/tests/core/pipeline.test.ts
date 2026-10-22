@@ -250,12 +250,13 @@ describe("translateSegments: quality rules", () => {
     expect(accepted.summary.translated).toBe(1);
   });
 
-  it("checks the placeholders of the formats the project uses", async () => {
+  it("checks the placeholder syntaxes of its configuration, those a format brings included", async () => {
     const provider = createMockProvider({ translate: () => "Le forgeron arrive." });
     const json = await run({ provider, segments: [segment("The smith of $PROVINCE$ arrives.")] });
     expect(json.summary.translated).toBe(1);
 
-    const paradox = parseConfig({ ...rawConfig(), sources: [{ format: "paradox-yml", include: ["l/*.yml"] }] });
+    // The formats layer adds the syntaxes of the project's formats to the configuration (withFormatPlaceholders).
+    const paradox = parseConfig({ ...rawConfig(), validation: { placeholders: ["paradox"] } });
     const strict = await run({ provider, segments: [segment("The smith of $PROVINCE$ arrives.")], config: paradox });
     expect(strict.memory.getFailure("The smith of $PROVINCE$ arrives.")?.reason).toContain("$PROVINCE$");
   });

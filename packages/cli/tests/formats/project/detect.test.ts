@@ -2,7 +2,8 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { detectSources, formatOf } from "../../../src/formats/project/detect.js";
+import { detectSources } from "../../../src/formats/project/detect.js";
+import { formatOf } from "../../../src/formats/registry.js";
 
 describe("formatOf", () => {
   it("knows the formats by their extension, whatever the case", () => {

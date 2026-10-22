@@ -29,10 +29,7 @@ export {
   DEEPL_FORMALITIES,
   DEEPL_MODELS,
   DEFAULT_OUTPUT,
-  effectivePlaceholders,
-  FORMAT_PLACEHOLDERS,
   GROUP_MODES,
-  MULTILINGUAL_FORMATS,
   OUTPUT_PLACEHOLDERS,
   PROVIDER_TYPES,
   parseConfig,
@@ -162,6 +159,7 @@ export { pptxReader, slideParts } from "./formats/documents/pptx/reader.js";
 export { pptxWriter } from "./formats/documents/pptx/writer.js";
 export { workbookParts, xlsxReader } from "./formats/documents/xlsx/reader.js";
 export { xlsxWriter } from "./formats/documents/xlsx/writer.js";
+export type { FormatDescriptor } from "./formats/format.js";
 export { luaReader } from "./formats/games/lua/reader.js";
 export { luaWriter } from "./formats/games/lua/writer.js";
 export { paradoxLanguage } from "./formats/games/paradox-yml/languages.js";
@@ -177,11 +175,21 @@ export { pzWriter } from "./formats/games/zomboid-txt/writer.js";
 export type { BuildOptions, BuiltFile } from "./formats/project/build.js";
 export { buildProject } from "./formats/project/build.js";
 export type { DetectedSource, Detection, SkippedFile } from "./formats/project/detect.js";
-export { detectSources, FORMAT_EXTENSIONS, formatOf } from "./formats/project/detect.js";
+export { detectSources } from "./formats/project/detect.js";
+export type { DetectionContext, DetectionResult, Suggestion } from "./formats/project/detection.js";
+export { documentSuggestion, languageMarkers, markedSuggestion } from "./formats/project/detection.js";
 export { extractOccurrences, extractSegments } from "./formats/project/extract.js";
 export type { OutputLanguages, ProjectFile } from "./formats/project/project.js";
 export { listProjectFiles, OutputError, outputPath } from "./formats/project/project.js";
-export { READERS, readerFor } from "./formats/readers.js";
+export {
+  effectivePlaceholders,
+  FORMATS,
+  formatFor,
+  formatOf,
+  readerFor,
+  withFormatPlaceholders,
+  writerFor,
+} from "./formats/registry.js";
 export type { Dialect, Paragraph } from "./formats/shared/office/paragraphs.js";
 export {
   DRAWING,
@@ -197,7 +205,6 @@ export { srtReader } from "./formats/subtitles/srt/reader.js";
 export { srtWriter } from "./formats/subtitles/srt/writer.js";
 export { vttReader } from "./formats/subtitles/vtt/reader.js";
 export { vttWriter } from "./formats/subtitles/vtt/writer.js";
-export { WRITERS, writerFor } from "./formats/writers.js";
 export type { AnthropicOptions } from "./providers/anthropic/provider.js";
 export { createAnthropicProvider } from "./providers/anthropic/provider.js";
 export type { DeepLOptions } from "./providers/deepl/provider.js";

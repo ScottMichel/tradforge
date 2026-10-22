@@ -1,7 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { benchmarkEngines, type EngineResult } from "../../core/benchmark.js";
-import { effectivePlaceholders } from "../../core/config.js";
 import { planRequests } from "../../core/pipeline.js";
 import { sampleSegments } from "../../core/sample.js";
 import { extractSegments } from "../../formats/project/extract.js";
@@ -36,7 +35,7 @@ export const compareCommand: Command = {
     const { root, config, workDir } = await projectOf(context);
     const specs = parseEngines(options.engines, config.provider);
     const segments = await extractSegments(root, config);
-    const sample = sampleSegments(segments, size, effectivePlaceholders(config));
+    const sample = sampleSegments(segments, size, config.validation.placeholders);
     if (sample.length === 0) {
       io.out("No text found: check the sources of the configuration.");
       return EXIT.ok;

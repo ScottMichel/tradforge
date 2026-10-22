@@ -6,7 +6,7 @@ import { isBinary } from "../../core/reader.js";
 import { groupOccurrences } from "../../core/segments.js";
 import type { Occurrence, Segment } from "../../core/types.js";
 import { decodeText } from "../../storage/encoding.js";
-import { readerFor } from "../readers.js";
+import { readerFor } from "../registry.js";
 import { listProjectFiles } from "./project.js";
 
 /** Reads every source of the configuration and returns the unique texts to translate, sorted by priority. */

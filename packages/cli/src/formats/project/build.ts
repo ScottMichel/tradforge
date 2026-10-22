@@ -8,7 +8,7 @@ import type { WriterOutput } from "../../core/writer.js";
 import { writeFileAtomic } from "../../storage/atomic.js";
 import { decodeText, EncodingError, encodeText } from "../../storage/encoding.js";
 import { readBytesIfExists } from "../../storage/read.js";
-import { writerFor } from "../writers.js";
+import { writerFor } from "../registry.js";
 import { listProjectFiles, OutputError } from "./project.js";
 
 export interface BuildOptions {

@@ -17,7 +17,7 @@ export type PlaceholderSyntax = (typeof PLACEHOLDER_SYNTAXES)[number];
 /**
  * The syntaxes checked when the configuration does not choose. Format-specific ones are left out: "paradox", "renpy"
  * and "rimworld" treat a [word] as code, which is right in those games and wrong elsewhere, and "markdown" reads
- * backticks as code. They come with their format instead (see FORMAT_PLACEHOLDERS in config.ts).
+ * backticks as code. They come with their format instead (see the placeholders of a format descriptor).
  */
 const FORMAT_SPECIFIC: readonly PlaceholderSyntax[] = ["paradox", "renpy", "rimworld", "markdown"];
 export const DEFAULT_PLACEHOLDER_SYNTAXES: readonly PlaceholderSyntax[] = PLACEHOLDER_SYNTAXES.filter(

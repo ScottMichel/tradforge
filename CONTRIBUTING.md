@@ -44,19 +44,22 @@ You do not need Ollama to work on tradforge: the tests use a mock provider and a
 
 ## Adding a format
 
-1. Add its name to `SOURCE_FORMATS` in `src/core/config.ts`.
-2. Write a reader in `src/formats/<family>/<format>/reader.ts` (`apps`, `documents`, `games` or
-   `subtitles`): a pure function from `{ file, content, priority, context }` to
-   occurrences (see the JSON and Lua readers).
-3. Write a writer in `src/formats/<family>/<format>/writer.ts`: it follows the structure of the source file and replaces the
-   texts that have a translation.
-4. Register both in `src/formats/readers.ts` and `src/formats/writers.ts`, and give its file extensions in
-   `FORMAT_EXTENSIONS` (`src/formats/project/detect.ts`) — TypeScript will tell you if you forget. A generic extension
-   (`.txt`, `.xml`, `.yml`) stays empty: teach `detectSources` to recognise the format by its path instead.
-5. Set `Occurrence.group` so that texts that belong together (a conversation, a scene) are translated in one batch.
-6. If the format has its own markup, add a placeholder syntax in `src/core/validation/placeholders.ts` and bring it
-   with the format in `FORMAT_PLACEHOLDERS` (`src/core/config.ts`) rather than turning it on for everyone.
-7. Test the edge cases, and add a round-trip test: what the writer writes, the reader must read back. If you can,
+Everything about a format lives in its own folder, `src/formats/<family>/<format>/` (`apps`, `documents`, `games` or
+`subtitles`), named after its id.
+
+1. Add its id to `SOURCE_FORMATS` in `src/core/config.ts`: the only place the core names formats.
+2. Write a reader (`reader.ts`): a pure function from `{ file, content, priority, context }` to occurrences (see the
+   JSON and Lua readers). A binary format (an office document) reads `bytes` instead: implement `BinaryReader`.
+3. Write a writer (`writer.ts`): it follows the structure of the source file and replaces the texts that have a
+   translation.
+4. Describe the format in `format.ts`: its reader and writer, its file extensions, the placeholder syntaxes it brings,
+   and `detect`, which recognises its files for `tradforge init` (helpers in `src/formats/project/detection.ts`). A
+   generic extension (`.txt`, `.xml`, `.yml`) stays empty: `detect` then looks at the path, and is asked first.
+5. Add the descriptor to `FORMATS` in `src/formats/registry.ts` — TypeScript will tell you if you forget.
+6. Set `Occurrence.group` so that texts that belong together (a conversation, a scene) are translated in one batch.
+7. If the format has its own markup, add a placeholder syntax in `src/core/validation/placeholders.ts`, keep it out of
+   the defaults, and bring it in the `placeholders` of the descriptor rather than turning it on for everyone.
+8. Test the edge cases, and add a round-trip test: what the writer writes, the reader must read back. If you can,
    check it on real files too (counting results, never copying their texts into the repository).
 
 ## Adding an engine

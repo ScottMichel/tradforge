@@ -1,6 +1,7 @@
 import path from "node:path";
 import { ConfigError, parseConfig, type TradforgeConfig } from "../core/config.js";
 import { stripBom } from "../core/reader.js";
+import { withFormatPlaceholders } from "../formats/registry.js";
 import { readFileIfExists } from "../storage/read.js";
 
 export const CONFIG_FILE = "tradforge.config.json";
@@ -40,7 +41,8 @@ export async function openProject(cwd: string, configFile?: string): Promise<Pro
 
   let config: TradforgeConfig;
   try {
-    config = parseConfig(raw);
+    // The placeholder syntaxes of the formats the project uses join the configured ones.
+    config = withFormatPlaceholders(parseConfig(raw));
   } catch (error) {
     if (error instanceof ConfigError) throw new ConfigFileError(`${file}: ${error.message}`, { cause: error });
     throw error;

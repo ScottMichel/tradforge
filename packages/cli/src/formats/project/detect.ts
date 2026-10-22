@@ -1,41 +1,9 @@
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { SOURCE_FORMATS, type SourceFormat } from "../../core/config.js";
 import type { TextEncoding } from "../../core/encodings.js";
-import { languageName } from "../../core/languages.js";
-import { androidLanguage } from "../apps/android/resources.js";
-import { gettextLanguage } from "../apps/po/plurals.js";
-import { parseResx } from "../apps/resx/resources.js";
-import { paradoxLanguage } from "../games/paradox-yml/languages.js";
-import { pzLanguageCode } from "../games/zomboid-txt/languages.js";
+import { FORMATS } from "../registry.js";
+import { type DetectionContext, languageMarkers, type Suggestion } from "./detection.js";
 import { findFiles } from "./files.js";
-
-/** The file extensions of each format, in lower case. Formats with a generic extension are found by their path. */
-export const FORMAT_EXTENSIONS: Readonly<Record<SourceFormat, readonly string[]>> = {
-  android: [], // .xml is too generic: Android resources are recognised by their path (res/values/strings.xml)
-  arb: [".arb"],
-  docx: [".docx"],
-  pptx: [".pptx"],
-  xlsx: [".xlsx"],
-  html: [".html", ".htm"],
-  "ios-strings": [".strings"],
-  json: [".json"],
-  lua: [".lua"],
-  markdown: [".md", ".markdown"],
-  odt: [".odt"],
-  srt: [".srt"],
-  vtt: [".vtt"],
-  renpy: [".rpy"],
-  resx: [".resx"],
-  po: [".po", ".pot"],
-  properties: [".properties"],
-  xcstrings: [".xcstrings"],
-  xliff: [".xlf", ".xliff"],
-  yaml: [".yml", ".yaml"], // Paradox .yml files are recognised by their path first
-  "paradox-yml": [], // .yml is too generic: Paradox files are recognised by their name (ui_l_english.yml)
-  "zomboid-txt": [], // .txt is too generic: Project Zomboid tables are recognised by their path (Translate/EN/UI_EN.txt)
-  "rimworld-xml": [], // .xml is too generic: RimWorld files are recognised by their path (Languages/English/Keyed/)
-};
 
 /** A source that detectSources suggests for the configuration. */
 export interface DetectedSource {
@@ -60,160 +28,56 @@ export interface Detection {
   readonly skipped: readonly SkippedFile[];
 }
 
-/** JSON files that configure tools (or describe a language) rather than hold texts. */
-const TOOL_CONFIGURATION =
-  /^(package|package-lock|composer|biome|jsconfig.*|tsconfig.*|tradforge\.config|language|.*\.schema)\.json$/i;
-
-/** The format of a file, from its extension. */
-export function formatOf(file: string): SourceFormat | undefined {
-  const extension = path.posix.extname(file).toLowerCase();
-  return SOURCE_FORMATS.find((format) => FORMAT_EXTENSIONS[format].includes(extension));
-}
-
-interface Suggestion {
-  readonly format: SourceFormat;
-  readonly include: string;
-  readonly output: string;
-  readonly encoding?: TextEncoding;
-}
+/** Formats recognised by their path (generic extensions such as .xml or .txt): asked first, about every file. */
+const BY_PATH = SOURCE_FORMATS.filter((format) => FORMATS[format].extensions.length === 0);
 
 /**
- * Looks at every file of a folder and suggests sources for the configuration.
- * JSON files are only kept with a language marker in their path (locales/en/ui.json, ui.en.json): a project holds
- * many JSON files that are not texts. Lua files are all kept: the Lua reader only extracts texts meant for people.
- * Project Zomboid translations (Translate/EN/) get the folder codes of the game when the target language is known.
+ * Looks at every file of a folder and suggests sources for the configuration. Each format recognises its own files
+ * (see the detect of its descriptor): first the formats found by their path, then the format of the file's extension.
+ * A format may also leave a file out with a reason, shown to the user, who decides.
  */
 export async function detectSources(root: string, sourceLanguage: string, targetLanguage?: string): Promise<Detection> {
   const markers = languageMarkers(sourceLanguage);
   const found = new Map<string, Suggestion & { files: number }>();
-  /** Script formats: every file is kept (their readers only extract texts meant for people), by folder. */
-  const scripts = new Map<"lua" | "renpy", { folders: Set<string>; files: number }>();
+  /** Script formats: one source per format, with one pattern per folder. */
+  const byFolder = new Map<SourceFormat, { folders: Set<string>; output: string; extension: string; files: number }>();
   const skipped: SkippedFile[] = [];
-  const add = (suggestion: Suggestion) => {
-    const existing = found.get(suggestion.include);
-    found.set(suggestion.include, { ...suggestion, files: (existing?.files ?? 0) + 1 });
-  };
 
   const files = await findFiles(root, ["**/*"], { exclude: [".tradforge"] });
   for (const file of files) {
-    const byPath =
-      pzSuggestion(file, sourceLanguage, targetLanguage) ?? paradoxSuggestion(file, sourceLanguage, targetLanguage);
-    if (byPath !== undefined) {
-      add(byPath);
-      continue;
+    const context: DetectionContext = {
+      root,
+      file,
+      files,
+      sourceLanguage,
+      ...(targetLanguage !== undefined ? { targetLanguage } : {}),
+      markers,
+    };
+    const extension = path.posix.extname(file).toLowerCase();
+    const candidates = [
+      ...BY_PATH,
+      ...SOURCE_FORMATS.filter((format) => FORMATS[format].extensions.includes(extension)),
+    ];
+    for (const format of candidates) {
+      const result = await FORMATS[format].detect(context);
+      if (result === undefined) continue;
+      if ("reason" in result) skipped.push({ file, reason: result.reason });
+      else if (result.byFolder === true) {
+        const entry = byFolder.get(result.format) ?? {
+          folders: new Set<string>(),
+          output: result.output,
+          extension,
+          files: 0,
+        };
+        entry.folders.add(path.posix.dirname(file));
+        entry.files++;
+        byFolder.set(result.format, entry);
+      } else {
+        const existing = found.get(result.include);
+        found.set(result.include, { ...result, files: (existing?.files ?? 0) + 1 });
+      }
+      break;
     }
-    const rimworld = await rimworldSuggestion(root, file, sourceLanguage, targetLanguage);
-    if (rimworld !== undefined) {
-      if ("reason" in rimworld) skipped.push({ file, reason: rimworld.reason });
-      else add(rimworld);
-      continue;
-    }
-    const android = await androidSuggestion(root, file, sourceLanguage, targetLanguage);
-    if (android !== undefined) {
-      if ("reason" in android) skipped.push({ file, reason: android.reason });
-      else add(android);
-      continue;
-    }
-    const format = formatOf(file);
-    if (format === "srt" || format === "vtt") {
-      const subtitles = subtitleSuggestion(file, format, sourceLanguage);
-      if ("reason" in subtitles) skipped.push({ file, reason: subtitles.reason });
-      else add(subtitles);
-      continue;
-    }
-    if (format === "lua" || format === "renpy") {
-      // Ren'Py: game/tl/ holds existing translations, renpy/ the engine shipped with some games.
-      if (format === "renpy" && /(^|\/)(game\/tl|renpy)\//.test(file)) continue;
-      const entry = scripts.get(format) ?? { folders: new Set<string>(), files: 0 };
-      entry.folders.add(path.posix.dirname(file));
-      entry.files++;
-      scripts.set(format, entry);
-      continue;
-    }
-    if (format === "po") {
-      const catalog = poSuggestion(file, markers, sourceLanguage);
-      if ("reason" in catalog) skipped.push({ file, reason: catalog.reason });
-      else add(catalog);
-      continue;
-    }
-    if (format === "xliff") {
-      const exchange = await xliffSuggestion(root, file, markers, sourceLanguage);
-      if ("reason" in exchange) skipped.push({ file, reason: exchange.reason });
-      else add(exchange);
-      continue;
-    }
-    if (format === "ios-strings") {
-      const strings = iosSuggestion(file, markers, targetLanguage);
-      if ("reason" in strings) skipped.push({ file, reason: strings.reason });
-      else add(strings);
-      continue;
-    }
-    if (format === "properties") {
-      const bundle = propertiesSuggestion(file, files, sourceLanguage, targetLanguage);
-      if ("reason" in bundle) skipped.push({ file, reason: bundle.reason });
-      else add(bundle);
-      continue;
-    }
-    if (format === "resx") {
-      const resources = await resxSuggestion(root, file, sourceLanguage, targetLanguage);
-      if ("reason" in resources) skipped.push({ file, reason: resources.reason });
-      else add(resources);
-      continue;
-    }
-    if (format === "arb") {
-      const marked = markedSuggestion("arb", file, markers, undefined);
-      if (marked === undefined) skipped.push({ file, reason: "no language marker in its name (like app_en.arb)" });
-      // Flutter writes the region after an underscore: app_pt_BR.arb
-      else
-        add(
-          targetLanguage === undefined
-            ? marked
-            : { ...marked, output: marked.output.replace("{lang}", gettextLanguage(targetLanguage)) },
-        );
-      continue;
-    }
-    if (format === "xcstrings") {
-      // A string catalog holds every language: the translation goes into the catalog itself.
-      add({ format: "xcstrings", include: file, output: "{dir}/{name}{ext}" });
-      continue;
-    }
-    if (format === "docx" || format === "odt" || format === "pptx" || format === "xlsx") {
-      const officeDocument = documentSuggestion(format, file, markers);
-      if ("reason" in officeDocument) skipped.push({ file, reason: officeDocument.reason });
-      else add(officeDocument);
-      continue;
-    }
-    if (format === "html") {
-      const pageSource = await htmlSuggestion(root, file, markers, sourceLanguage);
-      if ("reason" in pageSource) skipped.push({ file, reason: pageSource.reason });
-      else add(pageSource);
-      continue;
-    }
-    if (format === "markdown") {
-      const doc = markdownSuggestion(file, markers);
-      if ("reason" in doc) skipped.push({ file, reason: doc.reason });
-      else add(doc);
-      continue;
-    }
-    if (format === "yaml") {
-      const suggestion = markedSuggestion("yaml", file, markers, undefined);
-      if (suggestion === undefined)
-        skipped.push({ file, reason: "no language marker in its path (like locales/en.yml)" });
-      else add(suggestion);
-      continue;
-    }
-    if (format !== "json") continue;
-
-    if (TOOL_CONFIGURATION.test(path.posix.basename(file))) {
-      skipped.push({ file, reason: "configuration file of a tool" });
-      continue;
-    }
-    const suggestion = markedSuggestion("json", file, markers, targetLanguage);
-    if (suggestion === undefined) {
-      skipped.push({ file, reason: "no language marker in its path (like locales/en/ or ui.en.json)" });
-      continue;
-    }
-    add(suggestion);
   }
 
   const sources: DetectedSource[] = [...found.values()]
@@ -225,421 +89,17 @@ export async function detectSources(root: string, sourceLanguage: string, target
       ...(encoding !== undefined ? { encoding } : {}),
       files,
     }));
-  for (const format of ["lua", "renpy"] as const) {
-    const entry = scripts.get(format);
+  for (const format of SOURCE_FORMATS) {
+    const entry = byFolder.get(format);
     if (entry === undefined) continue;
-    const extension = format === "lua" ? "lua" : "rpy";
     sources.push({
       format,
       include: [...entry.folders]
         .sort()
-        .map((folder) => (folder === "." ? `*.${extension}` : `${folder}/*.${extension}`)),
-      // A separate folder: a game must not load the original and the translated script side by side.
-      output: "translations/{lang}/{dir}/{name}{ext}",
+        .map((folder) => (folder === "." ? `*${entry.extension}` : `${folder}/*${entry.extension}`)),
+      output: entry.output,
       files: entry.files,
     });
   }
   return { sources, skipped };
-}
-
-/** "en" → ["en", "english"]: folders are named after the code or the English name of the language. */
-function languageMarkers(language: string): string[] {
-  return [...new Set([language.toLowerCase(), languageName(language).toLowerCase()])];
-}
-
-/** A Project Zomboid Build 41 table: <...>/Translate/EN/UI_EN.txt. */
-function pzSuggestion(
-  file: string,
-  sourceLanguage: string,
-  targetLanguage: string | undefined,
-): Suggestion | undefined {
-  const code = pzLanguageCode(sourceLanguage);
-  const folder = path.posix.dirname(file);
-  const parts = folder.split("/");
-  const isTable =
-    parts.at(-2)?.toLowerCase() === "translate" &&
-    parts.at(-1)?.toUpperCase() === code &&
-    file.toUpperCase().endsWith(`_${code}.TXT`);
-  if (!isTable) return undefined;
-  const target = targetLanguage === undefined ? "{LANG}" : pzLanguageCode(targetLanguage);
-  const output = [...parts.slice(0, -1), target].join("/");
-  return {
-    format: "zomboid-txt",
-    include: `${folder}/*_${parts.at(-1)}.txt`,
-    output: `${output}/{stem}_${target}{ext}`,
-  };
-}
-
-/**
- * Subtitles in the source language (movie.en.srt: a pattern for the folder) or without a language (movie.srt: the
- * file itself, so that other languages in the folder are not taken). Subtitles in another language are left out.
- * Translations go next to them, as players expect: movie.fr.srt.
- */
-function subtitleSuggestion(
-  file: string,
-  format: "srt" | "vtt",
-  sourceLanguage: string,
-): Suggestion | { reason: string } {
-  const extension = path.posix.extname(file);
-  const folder = path.posix.dirname(file);
-  const marker = /[._-]([A-Za-z]{2,3}(?:-[A-Za-z]{2})?)$/.exec(path.posix.basename(file, extension))?.[1];
-  const output = "{dir}/{stem}.{lang}{ext}";
-  if (marker !== undefined && marker.toLowerCase() === sourceLanguage.toLowerCase()) {
-    const prefix = folder === "." ? "" : `${folder}/`;
-    return { format, include: `${prefix}*.${marker}${extension}`, output };
-  }
-  if (marker !== undefined && languageName(marker) !== marker) {
-    return { reason: `subtitles in another language (${languageName(marker)})` };
-  }
-  return { format, include: file, output };
-}
-
-/**
- * A Paradox localisation file: <...>/english/name_l_english.yml. The game's language names are used ("braz_por"),
- * and the files must start with a byte order mark.
- */
-function paradoxSuggestion(
-  file: string,
-  sourceLanguage: string,
-  targetLanguage: string | undefined,
-): Suggestion | undefined {
-  const source = paradoxLanguage(sourceLanguage);
-  if (!file.toLowerCase().endsWith(`_l_${source}.yml`)) return undefined;
-  const target = targetLanguage === undefined ? "{language}" : paradoxLanguage(targetLanguage);
-  const folder = path.posix.dirname(file);
-  const output = folder
-    .split("/")
-    .map((part) => (part.toLowerCase() === source ? target : part))
-    .join("/");
-  return {
-    format: "paradox-yml",
-    include: `${folder}/*_l_${source}.yml`,
-    output: `${output}/{stem}_l_${target}{ext}`,
-    encoding: "utf-8-bom",
-  };
-}
-
-/**
- * A RimWorld language file: <...>/Languages/English/Keyed/*.xml or .../DefInjected/<DefType>/*.xml, whose root is
- * LanguageData (LanguageInfo.xml and other XML files of the folder are left out).
- */
-async function rimworldSuggestion(
-  root: string,
-  file: string,
-  sourceLanguage: string,
-  targetLanguage: string | undefined,
-): Promise<Suggestion | { reason: string } | undefined> {
-  if (!file.toLowerCase().endsWith(".xml")) return undefined;
-  const parts = path.posix.dirname(file).split("/");
-  const english = languageName(sourceLanguage).toLowerCase();
-  const index = parts.findIndex(
-    (part, i) =>
-      part.toLowerCase() === "languages" &&
-      (parts[i + 1]?.toLowerCase().startsWith(english) ?? false) &&
-      ["keyed", "definjected"].includes(parts[i + 2]?.toLowerCase() ?? ""),
-  );
-  const isLanguageInfo =
-    parts.at(-2)?.toLowerCase() === "languages" && parts.at(-1)?.toLowerCase().startsWith(english) === true;
-  if (index === -1 && !isLanguageInfo) return undefined;
-
-  const head = (await readFile(path.join(root, file))).subarray(0, 1024).toString("utf8");
-  if (index === -1 || !/<LanguageData[\s>/]/.test(head)) {
-    return { reason: "not a RimWorld language file (its root is not LanguageData)" };
-  }
-  const target = targetLanguage === undefined ? "{language}" : languageName(targetLanguage);
-  const folder = parts.join("/");
-  const output = parts.map((part, i) => (i === index + 1 ? target : part)).join("/");
-  return { format: "rimworld-xml", include: `${folder}/*.xml`, output: `${output}/{name}{ext}` };
-}
-
-/**
- * A gettext catalog. A template (.pot) is always in the source language: the translations go next to it in a po/
- * folder (po/fr.po, as GNU projects do), or where gettext looks for them at run time (locale/fr/LC_MESSAGES/x.po).
- * A .po needs a marker of the source language in its path (locale/en/LC_MESSAGES/x.po, po/en.po): the others are
- * the translations of other languages.
- */
-function poSuggestion(
-  file: string,
-  markers: readonly string[],
-  sourceLanguage: string,
-): Suggestion | { reason: string } {
-  const folder = path.posix.dirname(file);
-  const prefix = folder === "." ? "" : `${folder}/`;
-  if (path.posix.extname(file).toLowerCase() === ".pot") {
-    const gnu = path.posix.basename(folder).toLowerCase() === "po";
-    return {
-      format: "po",
-      include: file,
-      output: gnu ? `${prefix}{lang}.po` : `${prefix}{lang}/LC_MESSAGES/{name}.po`,
-    };
-  }
-  const marked = markedSuggestion("po", file, markers, undefined);
-  if (marked !== undefined) return marked;
-  return { reason: `no marker of ${languageName(sourceLanguage)} in its path (like locale/en/LC_MESSAGES/ or en.po)` };
-}
-
-/**
- * An XLIFF file in the source language that holds no translation yet. The translation goes next to it, as Angular
- * names it (messages.xlf → messages.fr.xlf), unless the path has a marker of the language to replace. A file that
- * already names a target language is the translation of another language.
- */
-async function xliffSuggestion(
-  root: string,
-  file: string,
-  markers: readonly string[],
-  sourceLanguage: string,
-): Promise<Suggestion | { reason: string }> {
-  const head = (await readFile(path.join(root, file))).subarray(0, 4096).toString("utf8");
-  if (!/<(?:[\w-]+:)?xliff[\s>]/.test(head)) return { reason: "not an XLIFF document" };
-  const language = (pattern: RegExp) => pattern.exec(head)?.[1];
-  const source = language(/\s(?:source-language|srcLang)\s*=\s*["']([^"']+)/);
-  if (source !== undefined && baseLanguage(source) !== baseLanguage(sourceLanguage)) {
-    return { reason: `its source language is ${languageName(source)}` };
-  }
-  const target = language(/\s(?:target-language|trgLang)\s*=\s*["']([^"']+)/);
-  if (target !== undefined) return { reason: `already a translation into ${languageName(target)}` };
-  const marked = markedSuggestion("xliff", file, markers, undefined);
-  if (marked !== undefined) return marked;
-  const extension = path.posix.extname(file);
-  const name = path.posix.basename(file, extension);
-  const folder = path.posix.dirname(file);
-  const prefix = folder === "." ? "" : `${folder}/`;
-  return { format: "xliff", include: file, output: `${prefix}${name}.{lang}${extension}` };
-}
-
-function baseLanguage(code: string): string {
-  return code.toLowerCase().split(/[-_]/)[0] ?? "";
-}
-
-/**
- * Android string resources: <...>/res/values/strings.xml (or values-en/), whose root is <resources> and which hold
- * texts. One source per file: other files of the folder (colors, dimensions) must not be copied into values-fr/.
- */
-async function androidSuggestion(
-  root: string,
-  file: string,
-  sourceLanguage: string,
-  targetLanguage: string | undefined,
-): Promise<Suggestion | { reason: string } | undefined> {
-  const parts = path.posix.dirname(file).split("/");
-  const folder = parts.at(-1) ?? "";
-  if (!file.toLowerCase().endsWith(".xml") || parts.at(-2) !== "res" || !folder.startsWith("values")) return undefined;
-  const content = (await readFile(path.join(root, file))).toString("utf8");
-  if (!/<resources[\s>]/.test(content) || !/<(?:string|string-array|plurals)[\s>]/.test(content)) return undefined;
-  const source = androidLanguage(sourceLanguage);
-  if (folder !== "values" && folder !== `values-${source}` && folder !== `values-${baseLanguage(sourceLanguage)}`) {
-    return { reason: "Android strings of another language or configuration" };
-  }
-  const target = targetLanguage === undefined ? "{lang}" : androidLanguage(targetLanguage);
-  const output = [...parts.slice(0, -1), `values-${target}`].join("/");
-  return { format: "android", include: file, output: `${output}/{name}{ext}` };
-}
-
-/**
- * An office document: with a marker of the source language (en/manual.docx, manual.en.docx) or without any, the
- * translation goes next to it (manual.fr.docx). Documents of another language and the lock files Word leaves while
- * a document is open (~$manual.docx) are left out.
- */
-/** The office document formats, all detected the same way. */
-type OfficeFormat = "docx" | "odt" | "pptx" | "xlsx";
-
-function documentSuggestion(
-  format: OfficeFormat,
-  file: string,
-  markers: readonly string[],
-): Suggestion | { reason: string } {
-  const extension = path.posix.extname(file);
-  const name = path.posix.basename(file, extension);
-  if (name.startsWith("~$")) return { reason: "a lock file of an open document" };
-  const marked = markedSuggestion(format, file, markers, undefined);
-  if (marked !== undefined) return marked;
-  const suffix = /[._-]([A-Za-z]{2,3}(?:[-_][A-Za-z]{2,4})?)$/.exec(name)?.[1];
-  if (suffix !== undefined && languageName(suffix.replace("_", "-")) !== suffix.replace("_", "-")) {
-    return { reason: "a document in another language" };
-  }
-  const folder = path.posix.dirname(file);
-  const prefix = folder === "." ? "" : `${folder}/`;
-  return { format, include: file, output: `${prefix}${name}.{lang}${extension}` };
-}
-
-/** Folders that tools fill with generated pages (test coverage, builds). */
-const BUILD_FOLDERS = /(?:^|\/)(?:coverage|dist|build|out|target|_site|public\/build)(?:\/|$)/i;
-
-/**
- * HTML pages: those with a marker of the source language in their path (en/index.html, about.en.html), or that
- * declare it (<html lang="en">). Pages of build and coverage folders are generated, not written: they are left out.
- * A page that declares no language is left out too: a project holds many generated or third-party pages.
- */
-async function htmlSuggestion(
-  root: string,
-  file: string,
-  markers: readonly string[],
-  sourceLanguage: string,
-): Promise<Suggestion | { reason: string }> {
-  if (BUILD_FOLDERS.test(path.posix.dirname(file))) return { reason: "a generated page (build or coverage folder)" };
-  const marked = markedSuggestion("html", file, markers, undefined);
-  if (marked !== undefined) return marked;
-  const head = (await readFile(path.join(root, file))).subarray(0, 4096).toString("utf8");
-  const declared = /<html[^>]*\slang\s*=\s*["']?([\w-]+)/i.exec(head)?.[1];
-  if (declared === undefined) return { reason: 'no language marker in its path, and no <html lang="...">' };
-  if (baseLanguage(declared) !== baseLanguage(sourceLanguage)) return { reason: `a page in ${languageName(declared)}` };
-  // A separate folder per language, as static sites have it: fr/index.html.
-  return { format: "html", include: file, output: "{lang}/{dir}/{name}{ext}" };
-}
-
-/** Folders that hold documentation for readers. */
-const DOCUMENT_FOLDERS = /(?:^|\/)(?:docs?|documentation|content|guides?|wiki|manual|site)(?:\/|$)/i;
-/** Documents of a project that are rarely translated. */
-const PROJECT_FILES =
-  /^(?:changelog|changes|history|license|licence|copying|notice|authors|contributors|code_of_conduct|security)$/i;
-
-/**
- * Markdown documents: those with a marker of the source language (docs/en/, guide.en.md), READMEs, and the
- * documents of a documentation folder (docs/, content/). A translation goes next to its source: README.fr.md.
- * Documents in another language, and changelogs or licences, are left out.
- */
-function markdownSuggestion(file: string, markers: readonly string[]): Suggestion | { reason: string } {
-  const marked = markedSuggestion("markdown", file, markers, undefined);
-  if (marked !== undefined) return marked;
-  const extension = path.posix.extname(file);
-  const name = path.posix.basename(file, extension);
-  const folder = path.posix.dirname(file);
-  const suffix = /[._-]([A-Za-z]{2,3}(?:[-_][A-Za-z]{2,4})?)$/.exec(name)?.[1];
-  if (suffix !== undefined && languageName(suffix.replace("_", "-")) !== suffix.replace("_", "-")) {
-    return { reason: "a document in another language" };
-  }
-  if (PROJECT_FILES.test(name))
-    return { reason: "a project file rarely translated (add it to sources to translate it)" };
-  if (!/^readme$/i.test(name) && !DOCUMENT_FOLDERS.test(folder)) {
-    return { reason: "neither a README nor in a documentation folder (docs/, content/)" };
-  }
-  const prefix = folder === "." ? "" : `${folder}/`;
-  return { format: "markdown", include: file, output: `${prefix}${name}.{lang}${extension}` };
-}
-
-/**
- * .NET resources: Strings.resx (neutral, in the source language) or Strings.en.resx, whose translations are
- * Strings.fr.resx. Files of other cultures, and those without strings (images, forms), are left out.
- */
-async function resxSuggestion(
-  root: string,
-  file: string,
-  sourceLanguage: string,
-  targetLanguage: string | undefined,
-): Promise<Suggestion | { reason: string }> {
-  const folder = path.posix.dirname(file);
-  const prefix = folder === "." ? "" : `${folder}/`;
-  const name = path.posix.basename(file, path.posix.extname(file));
-  const culture = /^(.+)\.([A-Za-z]{2,3}(?:-[A-Za-z0-9]+)*)$/.exec(name);
-  const code = culture?.[2];
-  const isCulture = code !== undefined && languageName(code) !== code;
-  if (isCulture && baseLanguage(code) !== baseLanguage(sourceLanguage))
-    return { reason: "resources of another culture" };
-  let strings: number;
-  try {
-    strings = parseResx(file, (await readFile(path.join(root, file))).toString("utf8")).length;
-  } catch {
-    return { reason: "not a readable .resx file" };
-  }
-  if (strings === 0) return { reason: "no strings (images, files or form data only)" };
-  const base = isCulture ? (culture?.[1] ?? name) : name;
-  return { format: "resx", include: file, output: `${prefix}${base}.${targetLanguage ?? "{lang}"}.resx` };
-}
-
-/** A bundle name ending with a locale: messages_fr, messages_pt_BR. */
-const BUNDLE_LOCALE = /^(.+?)_([a-z]{2,3}(?:_[A-Z]{2})?)$/;
-/** Names that only resource bundles take, even without a translation next to them. */
-const BUNDLE_NAME = /(?:^|[_.-])(?:messages|strings|labels|i18n|l10n|texts?|translations?|resources|bundle)$/i;
-
-/**
- * Java resource bundles: messages.properties (the default, in the source language) or messages_en.properties, whose
- * translations are messages_fr.properties. A .properties file without a locale is only taken when translations sit
- * next to it or its name is that of a bundle: application.properties and gradle.properties are settings.
- */
-function propertiesSuggestion(
-  file: string,
-  files: readonly string[],
-  sourceLanguage: string,
-  targetLanguage: string | undefined,
-): Suggestion | { reason: string } {
-  const folder = path.posix.dirname(file);
-  const prefix = folder === "." ? "" : `${folder}/`;
-  const name = path.posix.basename(file, path.posix.extname(file));
-  const target = targetLanguage === undefined ? "{lang}" : gettextLanguage(targetLanguage);
-  const locale = BUNDLE_LOCALE.exec(name);
-  const code = locale?.[2];
-  if (locale !== null && code !== undefined && languageName(code.replace("_", "-")) !== code.replace("_", "-")) {
-    if (baseLanguage(code) !== baseLanguage(sourceLanguage)) return { reason: "bundle of another language" };
-    return { format: "properties", include: file, output: `${prefix}${locale[1]}_${target}.properties` };
-  }
-  const translations = files.some((other) => {
-    const otherName = path.posix.basename(other, path.posix.extname(other));
-    return path.posix.dirname(other) === folder && otherName.startsWith(`${name}_`) && other.endsWith(".properties");
-  });
-  if (!translations && !BUNDLE_NAME.test(name)) {
-    return { reason: "settings rather than texts (no translation next to it, and not the name of a bundle)" };
-  }
-  return { format: "properties", include: file, output: `${prefix}${name}_${target}.properties` };
-}
-
-/**
- * Apple .strings files sit in a folder per language: en.lproj/Localizable.strings (or Base.lproj, or the old
- * English.lproj). The translations go to fr.lproj/.
- */
-function iosSuggestion(
-  file: string,
-  markers: readonly string[],
-  targetLanguage: string | undefined,
-): Suggestion | { reason: string } {
-  const folder = path.posix.dirname(file);
-  const parts = folder.split("/");
-  const language = /^(.+)\.lproj$/i.exec(parts.at(-1) ?? "")?.[1];
-  if (language === undefined) return { reason: "not in a <language>.lproj folder" };
-  if (language.toLowerCase() !== "base" && !isMarker(language, markers)) {
-    return { reason: "strings of another language" };
-  }
-  const output = [...parts.slice(0, -1), `${targetLanguage ?? "{lang}"}.lproj`].join("/");
-  return { format: "ios-strings", include: `${folder}/*.strings`, output: `${output}/{name}{ext}` };
-}
-
-/** The include pattern and output template for a file with a language marker in its path, if it has one. */
-function markedSuggestion(
-  format: "arb" | "html" | "json" | "markdown" | "po" | "xliff" | "yaml" | OfficeFormat,
-  file: string,
-  markers: readonly string[],
-  targetLanguage: string | undefined,
-): Suggestion | undefined {
-  const folder = path.posix.dirname(file);
-  const folders = folder.split("/");
-  const index = folders.findIndex((part) => isMarker(part, markers));
-  if (index !== -1) {
-    const marker = folders[index] ?? "";
-    const inGame = folders[index - 1]?.toLowerCase() === "translate" && targetLanguage !== undefined;
-    const replacement = inGame ? pzLanguageCode(targetLanguage) : placeholderLike(marker, markers);
-    const output = folders.map((part, i) => (i === index ? replacement : part)).join("/");
-    return { format, include: `${folder}/*${path.posix.extname(file)}`, output: `${output}/{name}{ext}` };
-  }
-
-  const extension = path.posix.extname(file);
-  const name = path.posix.basename(file, extension);
-  for (const marker of markers) {
-    const inName = new RegExp(`(^|[._-])${marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=[._-]|$)`, "i");
-    if (inName.test(name)) {
-      const prefix = folder === "." ? "" : `${folder}/`;
-      return { format, include: file, output: `${prefix}${name.replace(inName, "$1{lang}")}${extension}` };
-    }
-  }
-  return undefined;
-}
-
-/** The output placeholder that writes the target language the way the source folder writes the source one. */
-function placeholderLike(marker: string, markers: readonly string[]): string {
-  if (marker.length > 3 && markers.includes(marker.toLowerCase())) return "{language}"; // english → french
-  return marker === marker.toUpperCase() ? "{LANG}" : "{lang}"; // EN → FR, en → fr
-}
-
-/** "en", "EN", "en-US", "en_us" and "English" are all markers of English. */
-function isMarker(part: string, markers: readonly string[]): boolean {
-  const lower = part.toLowerCase();
-  return markers.some((marker) => lower === marker || lower.startsWith(`${marker}-`) || lower.startsWith(`${marker}_`));
 }

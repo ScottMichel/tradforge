@@ -1,4 +1,3 @@
-import { effectivePlaceholders } from "./config.js";
 import { TranslationMemory } from "./memory.js";
 import { type PipelineConfig, translateSegments } from "./pipeline.js";
 import { BatchError, type Provider, RateLimitError, type Review, type ReviewItem } from "./provider.js";
@@ -32,7 +31,7 @@ export function selectForCheck(
   config: PipelineConfig,
   options: SelectOptions = {},
 ): CheckCandidate[] {
-  const syntaxes = effectivePlaceholders(config);
+  const syntaxes = config.validation.placeholders;
   const candidates: CheckCandidate[] = [];
   for (const { source } of segments) {
     const entry = memory.get(source);
