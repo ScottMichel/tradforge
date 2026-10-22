@@ -47,7 +47,7 @@ You do not need Ollama to work on tradforge: the tests use a mock provider and a
 Everything about a format lives in its own folder, `src/formats/<family>/<format>/` (`apps`, `documents`, `games` or
 `subtitles`), named after its id.
 
-1. Add its id to `SOURCE_FORMATS` in `src/core/config.ts`: the only place the core names formats.
+1. Add its id to `SOURCE_FORMATS` in `src/core/config/sources.ts`: the only place the core names formats.
 2. Write a reader (`reader.ts`): a pure function from `{ file, content, priority, context }` to occurrences (see the
    JSON and Lua readers). A binary format (an office document) reads `bytes` instead: implement `BinaryReader`.
 3. Write a writer (`writer.ts`): it follows the structure of the source file and replaces the texts that have a
@@ -64,7 +64,7 @@ Everything about a format lives in its own folder, `src/formats/<family>/<format
 
 ## Adding an engine
 
-1. Add its type to `PROVIDER_TYPES` in `src/core/config.ts`, and its settings as a new member of the `ProviderConfig`
+1. Add its type to `PROVIDER_TYPES` in `src/core/config/providers.ts`, and its settings as a new member of the `ProviderConfig`
    union, parsed in `parseProvider`. API keys come from environment variables, named in the configuration.
 2. Implement the `Provider` port of `src/core/provider.ts` in `src/providers/<engine>/provider.ts`. Throw
    `ProviderUnavailableError` when the engine cannot be used at all, `BatchError` when a batch can be retried smaller,
