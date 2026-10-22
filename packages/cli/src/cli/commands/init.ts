@@ -1,5 +1,5 @@
 import path from "node:path";
-import { detectSources } from "../../formats/detect.js";
+import { detectSources } from "../../formats/project/detect.js";
 import { writeFileAtomic } from "../../storage/atomic.js";
 import { readFileIfExists } from "../../storage/read.js";
 import { type Command, EXIT } from "../command.js";

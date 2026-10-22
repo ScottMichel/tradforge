@@ -1,4 +1,4 @@
-import { extractSegments } from "../../formats/extract.js";
+import { extractSegments } from "../../formats/project/extract.js";
 import { loadMemory } from "../../storage/memory-store.js";
 import { type Command, EXIT } from "../command.js";
 import { formatCount } from "../format.js";

@@ -1,4 +1,4 @@
-import { buildProject } from "../../formats/build.js";
+import { buildProject } from "../../formats/project/build.js";
 import { loadMemory } from "../../storage/memory-store.js";
 import { type Command, EXIT } from "../command.js";
 import { formatCount, plural } from "../format.js";

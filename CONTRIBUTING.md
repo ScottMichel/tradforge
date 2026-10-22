@@ -45,12 +45,13 @@ You do not need Ollama to work on tradforge: the tests use a mock provider and a
 ## Adding a format
 
 1. Add its name to `SOURCE_FORMATS` in `src/core/config.ts`.
-2. Write a reader in `src/formats/<format>/reader.ts`: a pure function from `{ file, content, priority, context }` to
+2. Write a reader in `src/formats/<family>/<format>/reader.ts` (`apps`, `documents`, `games` or
+   `subtitles`): a pure function from `{ file, content, priority, context }` to
    occurrences (see the JSON and Lua readers).
-3. Write a writer in `src/formats/<format>/writer.ts`: it follows the structure of the source file and replaces the
+3. Write a writer in `src/formats/<family>/<format>/writer.ts`: it follows the structure of the source file and replaces the
    texts that have a translation.
 4. Register both in `src/formats/readers.ts` and `src/formats/writers.ts`, and give its file extensions in
-   `FORMAT_EXTENSIONS` (`src/formats/detect.ts`) — TypeScript will tell you if you forget. A generic extension
+   `FORMAT_EXTENSIONS` (`src/formats/project/detect.ts`) — TypeScript will tell you if you forget. A generic extension
    (`.txt`, `.xml`, `.yml`) stays empty: teach `detectSources` to recognise the format by its path instead.
 5. Set `Occurrence.group` so that texts that belong together (a conversation, a scene) are translated in one batch.
 6. If the format has its own markup, add a placeholder syntax in `src/core/validation/placeholders.ts` and bring it

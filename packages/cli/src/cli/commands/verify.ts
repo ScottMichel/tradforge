@@ -1,7 +1,7 @@
 import type { ProviderConfig } from "../../core/config.js";
 import type { Provider } from "../../core/provider.js";
 import { type Judge, selectForCheck, verifyTranslations } from "../../core/verify.js";
-import { extractSegments } from "../../formats/extract.js";
+import { extractSegments } from "../../formats/project/extract.js";
 import { createProvider } from "../../providers/factory.js";
 import { loadMemory, saveMemory } from "../../storage/memory-store.js";
 import { type Command, EXIT, UsageError } from "../command.js";

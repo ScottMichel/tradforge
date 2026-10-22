@@ -1,7 +1,7 @@
 import { parseArgs } from "node:util";
 import { ProviderUnavailableError } from "../core/provider.js";
 import { ReadError } from "../core/reader.js";
-import { OutputError } from "../formats/project.js";
+import { OutputError } from "../formats/project/project.js";
 import { CsvError } from "../storage/csv.js";
 import { MemoryFileError } from "../storage/memory-store.js";
 import { VERSION } from "../version.js";

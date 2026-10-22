@@ -1,5 +1,5 @@
 import { groupOccurrences } from "../../core/segments.js";
-import { extractOccurrences } from "../../formats/extract.js";
+import { extractOccurrences } from "../../formats/project/extract.js";
 import { type Command, EXIT } from "../command.js";
 import { plural } from "../format.js";
 import { projectOf } from "../project.js";

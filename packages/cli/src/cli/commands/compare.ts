@@ -4,7 +4,7 @@ import { benchmarkEngines, type EngineResult } from "../../core/benchmark.js";
 import { effectivePlaceholders } from "../../core/config.js";
 import { planRequests } from "../../core/pipeline.js";
 import { sampleSegments } from "../../core/sample.js";
-import { extractSegments } from "../../formats/extract.js";
+import { extractSegments } from "../../formats/project/extract.js";
 import { createProvider } from "../../providers/factory.js";
 import { estimateUsage } from "../../providers/usage.js";
 import { writeFileAtomic } from "../../storage/atomic.js";

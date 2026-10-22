@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { extractSegments } from "../../formats/extract.js";
+import { extractSegments } from "../../formats/project/extract.js";
 import { writeFileAtomic } from "../../storage/atomic.js";
 import { loadMemory } from "../../storage/memory-store.js";
 import { exportReviewCsv } from "../../storage/review.js";

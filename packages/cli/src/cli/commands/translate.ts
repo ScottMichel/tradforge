@@ -1,6 +1,6 @@
 import type { ProviderConfig } from "../../core/config.js";
 import { type ProgressEvent, planRequests, selectSegments, translateSegments } from "../../core/pipeline.js";
-import { extractSegments } from "../../formats/extract.js";
+import { extractSegments } from "../../formats/project/extract.js";
 import { createProvider } from "../../providers/factory.js";
 import { estimateUsage, type UsageEstimate } from "../../providers/usage.js";
 import { loadMemory, memoryFilePath, saveMemory } from "../../storage/memory-store.js";

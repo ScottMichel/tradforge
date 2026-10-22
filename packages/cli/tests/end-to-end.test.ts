@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { parseConfig, type TradforgeConfig } from "../src/core/config.js";
 import { translateSegments } from "../src/core/pipeline.js";
-import { extractSegments } from "../src/formats/extract.js";
+import { extractSegments } from "../src/formats/project/extract.js";
 import { createMockProvider } from "../src/providers/mock/provider.js";
 import { loadMemory, saveMemory } from "../src/storage/memory-store.js";
 

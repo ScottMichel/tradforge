@@ -1,7 +1,7 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { openProject } from "../src/cli/config-file.js";
-import { extractSegments } from "../src/formats/extract.js";
+import { extractSegments } from "../src/formats/project/extract.js";
 
 describe("the example project", () => {
   it("has a valid configuration and only extracts texts meant for players", async () => {
