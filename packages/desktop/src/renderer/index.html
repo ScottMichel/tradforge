@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <!-- Only the application's own files. Inline styles are allowed because Vite injects them while developing. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:"
+    />
+    <title>tradforge</title>
+    <script type="module" src="./app.ts"></script>
+  </head>
+  <body>
+    <div class="app">
+      <nav class="steps" aria-label="Étapes">
+        <div class="brand">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 14h11a4 4 0 0 0 4-4V8H9a5 5 0 0 0-5 5z" />
+            <path d="M8 14v4M15 14v4M6 18h12" />
+          </svg>
+          <span>tradforge</span>
+        </div>
+        <a class="step" href="#project" data-step="project"><span class="step-number">1</span>Projet</a>
+        <a class="step" href="#settings" data-step="settings"><span class="step-number">2</span>Réglages</a>
+        <a class="step" href="#translate" data-step="translate"><span class="step-number">3</span>Traduction</a>
+        <a class="step" href="#review" data-step="review"><span class="step-number">4</span>Relecture</a>
+        <div class="menu-footer">
+          <p class="status" id="engine-status"><span class="status-dot" aria-hidden="true"></span><span>Aucun projet ouvert</span></p>
+          <p class="version" id="version"></p>
+        </div>
+      </nav>
+
+      <main class="screen">
+        <section data-step="project" aria-labelledby="project-title">
+          <header class="screen-header">
+            <div>
+              <p class="eyebrow">Étape 1 sur 4</p>
+              <h1 id="project-title">Que veux-tu traduire&nbsp;?</h1>
+            </div>
+          </header>
+
+          <div class="drop" id="drop">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <path d="M12 11v5M9.5 13.5 12 11l2.5 2.5" />
+            </svg>
+            <div class="drop-text">
+              <p class="drop-title">Glisse un dossier ici</p>
+              <p class="muted">Mod de jeu, application, sous-titres ou documents&nbsp;: les formats sont reconnus tout seuls.</p>
+            </div>
+            <div class="languages">
+              <label>Langue des textes <input id="project-from" class="language" value="en" list="language-codes" required /></label>
+              <label>Traduire en <input id="project-to" class="language" value="fr" list="language-codes" required /></label>
+            </div>
+            <button type="button" class="button primary" id="choose-folder">Ouvrir un dossier</button>
+          </div>
+
+          <div class="recent" id="recent" hidden>
+            <h2 class="subtitle">Projets récents</h2>
+            <ul class="recent-list" id="recent-list"></ul>
+          </div>
+
+          <p class="error" id="project-error" role="alert" hidden></p>
+          <div id="project-view"></div>
+
+          <footer class="actions" id="project-actions" hidden>
+            <button type="button" class="button dark" id="project-continue">Continuer vers les réglages</button>
+          </footer>
+        </section>
+
+        <section data-step="settings" aria-labelledby="settings-title" hidden>
+          <header class="screen-header">
+            <div>
+              <p class="eyebrow">Étape 2 sur 4</p>
+              <h1 id="settings-title">Réglages</h1>
+            </div>
+          </header>
+          <div class="needs-project" hidden></div>
+
+          <form class="card form" id="settings-form" novalidate>
+            <fieldset>
+              <legend>Langues</legend>
+              <div class="row">
+                <label>Langue des textes <input name="sourceLanguage" class="language" list="language-codes" required /></label>
+                <label>Traduire en <input name="targetLanguage" class="language" list="language-codes" required /></label>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>Moteur de traduction</legend>
+              <div class="row">
+                <label>Moteur
+                  <select name="engine">
+                    <option value="ollama">Ollama (local, gratuit)</option>
+                    <option value="deepl">DeepL</option>
+                    <option value="gemini">Gemini</option>
+                    <option value="anthropic">Claude</option>
+                    <option value="openai-compatible">API compatible OpenAI</option>
+                  </select>
+                </label>
+                <label>Modèle <input name="model" list="model-suggestions" autocomplete="off" /></label>
+                <datalist id="model-suggestions"></datalist>
+              </div>
+              <label class="address">Adresse <input name="address" autocomplete="off" /></label>
+              <p class="engine-check" id="engine-check"><span class="status-dot" aria-hidden="true"></span><span></span></p>
+            </fieldset>
+
+            <fieldset>
+              <legend>Consignes pour le modèle</legend>
+              <label class="wide">Ton, public, conventions… <textarea name="instructions" rows="3"></textarea></label>
+            </fieldset>
+
+            <p class="error" id="settings-error" role="alert" hidden></p>
+            <footer class="actions">
+              <p class="saved muted" id="settings-saved" hidden>Réglages enregistrés.</p>
+              <button type="submit" class="button">Enregistrer</button>
+              <button type="button" class="button dark" id="settings-continue">Continuer vers la traduction</button>
+            </footer>
+          </form>
+        </section>
+
+        <section data-step="translate" aria-labelledby="translate-title" hidden>
+          <header class="screen-header">
+            <div>
+              <p class="eyebrow">Étape 3 sur 4</p>
+              <h1 id="translate-title">Traduction</h1>
+            </div>
+          </header>
+          <div class="needs-project" hidden></div>
+
+          <div class="project-body">
+            <div class="stats" id="translate-stats"></div>
+
+            <div class="card run">
+              <p class="muted" id="translate-engine"></p>
+              <div class="progress-block" id="progress-block" hidden>
+                <progress id="progress" max="1" value="0"></progress>
+                <p id="progress-text" aria-live="polite"></p>
+              </div>
+              <p id="translate-result" aria-live="polite"></p>
+              <p class="error" id="translate-error" role="alert" hidden></p>
+              <div class="run-actions">
+                <label class="check"><input type="checkbox" id="retry-failed" /> Réessayer les échecs</label>
+                <button type="button" class="button primary" id="translate-start">Lancer la traduction</button>
+                <button type="button" class="button" id="translate-stop" hidden>Arrêter</button>
+              </div>
+            </div>
+
+            <div class="card build" id="build-card">
+              <div class="build-head">
+                <div>
+                  <h2 class="subtitle">Fichiers traduits</h2>
+                  <p class="muted">Écrit la version traduite de chaque fichier, à l'endroit prévu dans le projet.</p>
+                </div>
+                <button type="button" class="button dark build-button">Écrire les fichiers traduits</button>
+              </div>
+              <label class="check"><input type="checkbox" class="build-force" /> Remplacer même un fichier qui deviendrait beaucoup plus petit</label>
+              <p class="error build-error" role="alert" hidden></p>
+              <ul class="build-report"></ul>
+            </div>
+
+            <footer class="actions">
+              <a class="button dark" href="#review">Continuer vers la relecture</a>
+            </footer>
+          </div>
+        </section>
+
+        <section data-step="review" aria-labelledby="review-title" hidden>
+          <header class="screen-header">
+            <div>
+              <p class="eyebrow">Étape 4 sur 4</p>
+              <h1 id="review-title">Relecture</h1>
+            </div>
+          </header>
+          <div class="needs-project" hidden></div>
+
+          <div class="project-body">
+            <div class="toolbar">
+              <div class="filters" id="review-filters"></div>
+              <label class="search">Rechercher <input type="search" id="review-search" placeholder="Texte ou traduction" /></label>
+            </div>
+            <p class="error" id="review-error" role="alert" hidden></p>
+            <ul class="entries" id="review-list"></ul>
+            <p class="muted" id="review-more"></p>
+
+            <div class="card build">
+              <div class="build-head">
+                <div>
+                  <h2 class="subtitle">Fichiers traduits</h2>
+                  <p class="muted">Les traductions validées ici remplacent celles du moteur.</p>
+                </div>
+                <button type="button" class="button dark build-button">Écrire les fichiers traduits</button>
+              </div>
+              <label class="check"><input type="checkbox" class="build-force" /> Remplacer même un fichier qui deviendrait beaucoup plus petit</label>
+              <p class="error build-error" role="alert" hidden></p>
+              <ul class="build-report"></ul>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <datalist id="language-codes">
+      <option value="en"></option>
+      <option value="fr"></option>
+      <option value="de"></option>
+      <option value="es"></option>
+      <option value="it"></option>
+      <option value="pt"></option>
+      <option value="pt-BR"></option>
+      <option value="nl"></option>
+      <option value="pl"></option>
+      <option value="ru"></option>
+      <option value="uk"></option>
+      <option value="tr"></option>
+      <option value="ja"></option>
+      <option value="ko"></option>
+      <option value="zh-Hans"></option>
+      <option value="zh-Hant"></option>
+    </datalist>
+  </body>
+</html>

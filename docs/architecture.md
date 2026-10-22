@@ -17,6 +17,7 @@ The code is split in two layers ("hexagonal architecture", or ports and adapters
 - **Adapters** implement those ports, or drive the core:
 
 The command line and the library are the `tradforge` package, in `packages/cli`: the paths below are relative to it.
+The desktop application (`packages/desktop`) is one more adapter that drives the library; see the end of this page.
 
 | Port (in `src/core`) | Adapters | Folder |
 | --- | --- | --- |
@@ -87,6 +88,25 @@ Each error type tells the caller what to do:
 | `ProviderUnavailableError` | The engine cannot be used at all | stops and explains (`ollama serve`, `ollama pull`), exit 1 |
 | `OutputError` | An output would be dangerous to write | writes nothing, exit 1 |
 | `UsageError` | The command line itself is wrong | exit 2 |
+
+## The desktop application
+
+`packages/desktop` is an Electron application: a window that shows a web page, and a Node.js process behind it. It is
+an adapter like the command line: it drives the library, and adds no translation rule of its own.
+
+| Part | Runs in | Folder |
+| --- | --- | --- |
+| Main process — opens the window, checks every request of the page (`ipc.ts`) | Node.js | `src/main` |
+| Workspace — the steps of the command line (init, translate, review, build) as functions returning plain data | Node.js | `src/main/workspace.ts` |
+| Preload script — exposes the bridge to the page as `window.tradforge` | the window, before the page | `src/preload` |
+| Page — the four screens (project, settings, translation, review) | the window, like a web page | `src/renderer` |
+| Bridge — the functions the page may call | both sides (types only) | `src/shared/bridge.ts` |
+
+The page has no access to Node.js (`sandbox`, `contextIsolation`): it only reaches the computer through the bridge, so a
+text it shows can never run code, and the page builds its elements with `textContent` only, so a translated text never
+becomes markup. The window never opens another page or window (it may only reload itself), and loads a development
+server only from this computer. Every call reads the project folder again, so the application and the command line
+can be used on the same project.
 
 ## Decisions
 

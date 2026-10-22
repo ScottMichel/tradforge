@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "src",
+    "outDir": "dist",
+    "sourceMap": true,
+    // The built library, as the application runs it (packages/cli is built first).
+    "paths": {}
+  },
+  "include": ["src/main", "src/preload", "src/shared"]
+}

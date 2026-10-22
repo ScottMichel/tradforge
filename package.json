@@ -1,7 +1,7 @@
 {
   "name": "tradforge-workspace",
   "private": true,
-  "description": "The tradforge command line and library (packages/cli), and later its desktop application",
+  "description": "The tradforge command line and library (packages/cli), and its desktop application (packages/desktop)",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "dev": "npm run dev -w tradforge --",
+    "desktop": "npm run build -w tradforge && npm run dev -w tradforge-desktop",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "biome check .",

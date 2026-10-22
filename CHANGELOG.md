@@ -7,6 +7,12 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- Desktop application (`packages/desktop`, preview; `npm run desktop` from the sources): open a folder, choose the
+  formats found in it, set the languages and the engine (installed Ollama models listed, API keys detected without
+  being shown), translate with a live progress that can be stopped, correct and approve translations, write the
+  translated files. It works on the same `tradforge.config.json` and memory as the command line.
+- The library exports `openProject`, `renderConfig`, `CONFIG_FILE`, `ConfigFileError`, `stripJsonComments`,
+  `writeFileAtomic` and `memoryFilePath`, for programs that drive a project as the command line does.
 - `odt` format: OpenDocument texts (LibreOffice Writer). Paragraphs and headings of the body, headers and footers,
   spans and links kept as tags, spaces read and written as ODF does; the language is set and the `mimetype` stays
   the first entry, stored.

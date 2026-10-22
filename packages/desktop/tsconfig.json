@@ -1,0 +1,17 @@
+{
+  // The main process, the preload script and the tests (Node.js). The page has its own: src/renderer/tsconfig.json.
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "noEmit": true,
+    // Checked against the sources of the library, so that the check needs no build of it first.
+    "paths": { "tradforge": ["../cli/src/index.ts"] }
+  },
+  "include": ["src/main", "src/preload", "src/shared", "tests", "vite.config.ts", "vitest.config.ts"]
+}

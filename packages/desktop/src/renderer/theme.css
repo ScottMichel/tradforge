@@ -1,0 +1,184 @@
+/* The look of the mockup: a dark menu, a warm paper background, one ember accent. */
+:root {
+  --ink: #1c1d21;
+  --paper: #f6f5f2;
+  --surface: #ffffff;
+  --muted: #6b6a65;
+  --line: #e4e1da;
+  --line-soft: #ece9e3;
+  --line-strong: #d6d3cc;
+  --accent: #c2410c;
+  --accent-strong: #9a3412;
+  --accent-soft: #fff1e8;
+  --paper-soft: #faf9f6;
+  --success: #22c55e;
+  --success-soft: #ecfdf3;
+  --success-ink: #166534;
+  --warning: #f59e0b;
+  --danger: #b42318;
+  --danger-soft: #fef3f2;
+  --danger-line: #fecdca;
+
+  --menu-text: #e7e5e0;
+  --menu-muted: #b9b6ae;
+  --menu-active: #2c2d33;
+  --menu-panel: #26272c;
+  --menu-ring: #55565e;
+  --menu-logo: #f59e0b;
+
+  --radius: 8px;
+  --radius-large: 14px;
+  --font: "Inter Variable", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 14px;
+}
+
+a {
+  color: var(--accent);
+}
+
+a:hover {
+  color: var(--accent-strong);
+}
+
+code,
+kbd {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+}
+
+/* The menu of the four steps. */
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 24px 16px;
+  background: var(--ink);
+  color: var(--menu-text);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 24px;
+  color: var(--menu-logo);
+}
+
+.brand span {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  color: var(--menu-muted);
+  text-decoration: none;
+}
+
+.step:hover {
+  background: var(--menu-panel);
+  color: #ffffff;
+}
+
+.step:focus-visible {
+  outline: 2px solid var(--menu-logo);
+  outline-offset: 2px;
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--menu-ring);
+  border-radius: 11px;
+  font-size: 12px;
+}
+
+.step[aria-current] {
+  background: var(--menu-active);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.step[aria-current] .step-number {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: auto 0 0;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--menu-panel);
+  color: var(--menu-muted);
+  font-size: 12px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--menu-ring);
+}
+
+.status-dot.ready {
+  background: var(--success);
+}
+
+/* The screen of the current step. */
+
+.screen {
+  min-width: 0;
+  padding: 40px 48px;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 6px 0 0;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
