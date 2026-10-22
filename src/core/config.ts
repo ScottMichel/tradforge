@@ -18,6 +18,7 @@ export const SOURCE_FORMATS = [
   "markdown",
   "paradox-yml",
   "po",
+  "pptx",
   "properties",
   "renpy",
   "resx",
@@ -630,6 +631,7 @@ export const FORMAT_PLACEHOLDERS: Readonly<Partial<Record<SourceFormat, readonly
   html: ["markup"],
   // Word: the tags that stand for formats (<g1>), fields and pictures (<x1/>)
   docx: ["markup"],
+  pptx: ["markup"],
 };
 
 /** The placeholder syntaxes to check: the configured ones, plus those of the formats the project uses. */

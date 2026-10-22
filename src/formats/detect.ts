@@ -15,6 +15,7 @@ export const FORMAT_EXTENSIONS: Readonly<Record<SourceFormat, readonly string[]>
   android: [], // .xml is too generic: Android resources are recognised by their path (res/values/strings.xml)
   arb: [".arb"],
   docx: [".docx"],
+  pptx: [".pptx"],
   html: [".html", ".htm"],
   "ios-strings": [".strings"],
   json: [".json"],
@@ -174,8 +175,8 @@ export async function detectSources(root: string, sourceLanguage: string, target
       add({ format: "xcstrings", include: file, output: "{dir}/{name}{ext}" });
       continue;
     }
-    if (format === "docx") {
-      const officeDocument = documentSuggestion("docx", file, markers);
+    if (format === "docx" || format === "pptx") {
+      const officeDocument = documentSuggestion(format, file, markers);
       if ("reason" in officeDocument) skipped.push({ file, reason: officeDocument.reason });
       else add(officeDocument);
       continue;
@@ -437,7 +438,11 @@ async function androidSuggestion(
  * translation goes next to it (manual.fr.docx). Documents of another language and the lock files Word leaves while
  * a document is open (~$manual.docx) are left out.
  */
-function documentSuggestion(format: "docx", file: string, markers: readonly string[]): Suggestion | { reason: string } {
+function documentSuggestion(
+  format: "docx" | "pptx",
+  file: string,
+  markers: readonly string[],
+): Suggestion | { reason: string } {
   const extension = path.posix.extname(file);
   const name = path.posix.basename(file, extension);
   if (name.startsWith("~$")) return { reason: "a lock file of an open document" };
@@ -594,7 +599,7 @@ function iosSuggestion(
 
 /** The include pattern and output template for a file with a language marker in its path, if it has one. */
 function markedSuggestion(
-  format: "arb" | "docx" | "html" | "json" | "markdown" | "po" | "xliff" | "yaml",
+  format: "arb" | "docx" | "html" | "pptx" | "json" | "markdown" | "po" | "xliff" | "yaml",
   file: string,
   markers: readonly string[],
   targetLanguage: string | undefined,

@@ -10,6 +10,7 @@ import { luaReader } from "./lua/reader.js";
 import { markdownReader } from "./markdown/reader.js";
 import { paradoxReader } from "./paradox/reader.js";
 import { poReader } from "./po/reader.js";
+import { pptxReader } from "./pptx/reader.js";
 import { propertiesReader } from "./properties/reader.js";
 import { pzReader } from "./pz/reader.js";
 import { renpyReader } from "./renpy/reader.js";
@@ -33,6 +34,7 @@ export const READERS = {
   markdown: markdownReader,
   "paradox-yml": paradoxReader,
   po: poReader,
+  pptx: pptxReader,
   properties: propertiesReader,
   "zomboid-txt": pzReader,
   renpy: renpyReader,

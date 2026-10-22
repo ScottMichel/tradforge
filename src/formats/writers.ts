@@ -10,6 +10,7 @@ import { luaWriter } from "./lua/writer.js";
 import { markdownWriter } from "./markdown/writer.js";
 import { paradoxWriter } from "./paradox/writer.js";
 import { poWriter } from "./po/writer.js";
+import { pptxWriter } from "./pptx/writer.js";
 import { propertiesWriter } from "./properties/writer.js";
 import { pzWriter } from "./pz/writer.js";
 import { renpyWriter } from "./renpy/writer.js";
@@ -33,6 +34,7 @@ export const WRITERS = {
   markdown: markdownWriter,
   "paradox-yml": paradoxWriter,
   po: poWriter,
+  pptx: pptxWriter,
   properties: propertiesWriter,
   "zomboid-txt": pzWriter,
   renpy: renpyWriter,

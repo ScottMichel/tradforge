@@ -128,7 +128,7 @@ sources are required.
 | Setting | Meaning | Default |
 | --- | --- | --- |
 | `workDir` | Where the translation memory lives. **Worth committing**: it holds all the work. | `.tradforge` |
-| `sources[].format` | `json`, `yaml`, `markdown`, `html`, `docx`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `xcstrings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` or `rimworld-xml` (see [Supported formats](#supported-formats)) | required |
+| `sources[].format` | `json`, `yaml`, `markdown`, `html`, `docx`, `pptx`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `xcstrings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` or `rimworld-xml` (see [Supported formats](#supported-formats)) | required |
 | `sources[].include` | Glob patterns, relative to the configuration file | required |
 | `sources[].priority` | Lower is translated first (may be negative) | `0` |
 | `sources[].context` | Tells the model how the texts are used | none |
@@ -172,6 +172,7 @@ sources are required.
 | **Markdown** `.md` (`markdown`) | headings, paragraphs (wrapped lines joined), list items, quotes, table cells, and the `title`/`description` of a YAML front matter; code blocks, HTML blocks and link definitions left out; one group per section | `README.fr.md`, `docs/{lang}/`; texts in place, a paragraph on one line; `` `code` `` and link destinations `](url)` must come back untouched |
 | **HTML** `.html` (`html`) | the text between block tags, inline tags (`<a>`, `<strong>`, `<br>`) kept and checked; `alt`, `title`, `placeholder`, `aria-label`, `<title>` and description meta tags; read as browsers do (unclosed `<p>`, `&nbsp;`); scripts, styles and `<pre>` left out | `fr/index.html` or `about.fr.html`; texts in place, `<html lang>` set, everything else byte for byte |
 | **Word** `.docx` (`docx`) | every paragraph of the body, tables, headers, footers and notes, as one text: other formats as tags (`<g1>bold</g1>`), tabs, pictures and fields as `<x1/>`; the paragraph style as context | `manual.fr.docx`: the runs of each paragraph rebuilt in the order of the translation, the language set for spelling, every other part of the archive copied byte for byte |
+| **PowerPoint** `.pptx` (`pptx`) | every paragraph of the slides (text boxes, shapes, tables), then the speaker notes, as in Word; one group per slide; layouts and masters left out | `talk.fr.pptx`, as for Word |
 | **SubRip** `.srt` (`srt`), **WebVTT** `.vtt` (`vtt`) | one text per cue, cues less than 2 s apart kept together as a scene; tags, `{\an8}` codes, NOTE/STYLE blocks | texts replaced in place, numbers and timings untouched; `movie.en.srt` → `movie.fr.srt` |
 
 ### Engine and game dialects
@@ -323,7 +324,7 @@ texts written for tradforge.
 ## Roadmap
 
 1. **Desktop application**: open a file or a folder, translate, review — no command line needed.
-2. **Office documents**: `.pptx`, `.xlsx`, `.odt`.
+2. **Office documents**: `.xlsx`, `.odt`.
 
 ## Contributing
 

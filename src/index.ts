@@ -153,6 +153,8 @@ export type { PluralForms } from "./formats/po/plurals.js";
 export { gettextLanguage, pluralForms } from "./formats/po/plurals.js";
 export { poReader } from "./formats/po/reader.js";
 export { poWriter } from "./formats/po/writer.js";
+export { pptxReader, slideParts } from "./formats/pptx/reader.js";
+export { pptxWriter } from "./formats/pptx/writer.js";
 export type { OutputLanguages, ProjectFile } from "./formats/project.js";
 export { listProjectFiles, OutputError, outputPath } from "./formats/project.js";
 export { propertiesReader } from "./formats/properties/reader.js";

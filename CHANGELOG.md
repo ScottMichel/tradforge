@@ -7,6 +7,8 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `pptx` format: PowerPoint presentations. The paragraphs of the slides (text boxes, shapes, tables) and of the
+  speaker notes, read and written as for Word documents; the texts of a slide are translated together.
 - `docx` format: Word documents. Each paragraph is one text, its formats as tags, and its runs are rebuilt in the order
   of the translation; tables, headers, footers and notes are translated, the language is set for spelling, and
   every other part of the archive is copied byte for byte. `tradforge init` proposes `.docx` files
