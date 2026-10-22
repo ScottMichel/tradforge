@@ -226,6 +226,7 @@ export { estimateUsage } from "./providers/usage.js";
 export { writeFileAtomic } from "./storage/atomic.js";
 export { CsvError } from "./storage/csv.js";
 export { decodeText, EncodingError, encodeText } from "./storage/encoding.js";
+export { editJsonc } from "./storage/jsonc.js";
 export { loadMemory, MemoryFileError, memoryFilePath, saveMemory } from "./storage/memory-store.js";
 export type { ImportResult, ReviewStatus } from "./storage/review.js";
 export { exportReviewCsv, importReviewCsv } from "./storage/review.js";
