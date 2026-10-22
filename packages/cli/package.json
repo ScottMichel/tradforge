@@ -1,6 +1,6 @@
 {
   "name": "tradforge",
-  "version": "0.1.0",
+  "version": "0.63.0",
   "description": "Translate the texts of a project with a local LLM, with strict validation, a translation memory and incremental resume",
   "keywords": [
     "i18n",
