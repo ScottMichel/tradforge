@@ -11,7 +11,7 @@
     "dev": "npm run build:code && node scripts/dev.mjs",
     "build": "npm run build:code && vite build",
     "build:code": "tsc -p tsconfig.build.json && vite build -c vite.main.config.ts",
-    "package": "npm run build && electron-builder --win portable",
+    "package": "npm run build && electron-builder --win portable --publish never",
     "start": "electron .",
     "typecheck": "tsc --noEmit && tsc -p src/renderer/tsconfig.json",
     "test": "vitest run"

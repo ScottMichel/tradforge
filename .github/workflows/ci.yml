@@ -35,3 +35,23 @@ jobs:
       - run: npm run build
       - name: Run the built command line
         run: node packages/cli/dist/cli/bin.js --version
+
+  package:
+    name: Desktop application (Windows executable)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Build the portable executable
+        run: npm run desktop:package
+      # Downloadable from the page of the run, to try the application of any commit.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tradforge-portable
+          path: packages/desktop/release/tradforge-*-portable.exe
+          retention-days: 14
+          if-no-files-found: error

@@ -88,3 +88,16 @@ requests focused: one feature or fix at a time is much easier to review.
 
 By contributing, you agree that your contributions are licensed under the [MIT License](LICENSE), and you agree to
 follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Releasing (maintainers)
+
+1. `npm run release:version` shows the next version, computed from the Conventional Commits since the last tag:
+   each `feat` adds one to the minor number; without a feature, each `fix` or `perf` adds one to the patch. The major
+   number moves only when decided, with `--major` (1.0 will come with the new look of the desktop application).
+2. `node .github/scripts/version.mjs --write` sets it in both `package.json` and `src/version.ts` of the command line,
+   and dates the `## [Unreleased]` section of `CHANGELOG.md`; then `npm install` updates the lock file.
+3. Check it: `node .github/scripts/release.mjs vx.y.z release-notes.md` must pass. Commit.
+4. Tag and push: `git tag vx.y.z && git push origin vx.y.z`. The Release workflow builds the Windows executable, and
+   publishes it as a GitHub release with its SHA-256 checksum and the notes of the changelog.
+
+Every push to `main` also builds the executable: the CI run keeps it for 14 days, to try any commit.

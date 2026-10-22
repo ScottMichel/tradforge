@@ -14,6 +14,7 @@
     "dev": "npm run dev -w tradforge --",
     "desktop": "npm run dev -w tradforge-desktop",
     "desktop:package": "npm run package -w tradforge-desktop",
+    "release:version": "node .github/scripts/version.mjs",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "biome check .",

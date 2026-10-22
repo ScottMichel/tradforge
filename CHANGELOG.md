@@ -7,13 +7,19 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
-- Desktop application (`packages/desktop`, preview; `npm run desktop` from the sources): open a folder, choose the
-  formats found in it, set the languages and the engine (installed Ollama models listed, API keys detected without
-  being shown), translate with a live progress that can be stopped, correct and approve translations, write the
-  translated files. It works on the same `tradforge.config.json` and memory as the command line.
-  `npm run desktop:package` builds a portable Windows executable (unsigned for now).
+- Desktop application (`packages/desktop`, preview; `npm run desktop` from the sources): open a folder or a single
+  file, choose the formats found, set the languages and the engine (installed Ollama models listed, API keys detected
+  without being shown), translate with a live progress that can be stopped, correct and approve translations, write
+  the translated files. It works on the same `tradforge.config.json` and memory as the command line, and keeps the
+  comments of the configuration when it saves the settings. Its interface, error messages included, speaks English,
+  French, Spanish, German, Portuguese and Italian, chosen in the menu.
+  `npm run desktop:package` builds a portable Windows executable (unsigned for now). Every push builds it in the CI;
+  pushing a version tag publishes it as a GitHub release, with its SHA-256 checksum.
+- `npm run release:version`: the next version, computed from the Conventional Commits since the last release (each
+  feature adds one to the minor number).
 - The library exports `openProject`, `renderConfig`, `CONFIG_FILE`, `ConfigFileError`, `stripJsonComments`,
-  `writeFileAtomic` and `memoryFilePath`, for programs that drive a project as the command line does.
+  `writeFileAtomic` and `memoryFilePath`, for programs that drive a project as the command line does, and
+  `editJsonc`, which changes one value of a JSON file with comments and leaves the rest as it was.
 - `odt` format: OpenDocument texts (LibreOffice Writer). Paragraphs and headings of the body, headers and footers,
   spans and links kept as tags, spaces read and written as ODF does; the language is set and the `mimetype` stays
   the first entry, stored.

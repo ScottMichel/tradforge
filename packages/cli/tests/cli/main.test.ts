@@ -7,6 +7,7 @@ import { EXIT, runCli } from "../../src/cli/main.js";
 import type { ProviderConfig } from "../../src/core/config.js";
 import { type Provider, ProviderUnavailableError, RateLimitError } from "../../src/core/provider.js";
 import { createMockProvider } from "../../src/providers/mock/provider.js";
+import { VERSION } from "../../src/version.js";
 
 let root: string;
 
@@ -51,7 +52,7 @@ async function createProject(): Promise<void> {
 
 describe("the command line", () => {
   it("shows the version and the help", async () => {
-    expect(await cli("--version")).toMatchObject({ code: EXIT.ok, out: "0.1.0" });
+    expect(await cli("--version")).toMatchObject({ code: EXIT.ok, out: VERSION });
     const help = await cli("--help");
     expect(help.code).toBe(EXIT.ok);
     for (const command of ["init", "status", "extract", "diff", "translate", "build", "import", "export"]) {
