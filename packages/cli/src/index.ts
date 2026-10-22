@@ -1,3 +1,5 @@
+export type { ConfigDraft, Project } from "./cli/config-file.js";
+export { CONFIG_FILE, ConfigFileError, openProject, renderConfig, stripJsonComments } from "./cli/config-file.js";
 export type { BenchmarkOptions, Engine, EngineResult } from "./core/benchmark.js";
 export { benchmarkEngines } from "./core/benchmark.js";
 export type {
@@ -221,9 +223,10 @@ export type { OpenAiCompatibleOptions } from "./providers/openai-compatible/prov
 export { createOpenAiCompatibleProvider } from "./providers/openai-compatible/provider.js";
 export type { UsageEstimate } from "./providers/usage.js";
 export { estimateUsage } from "./providers/usage.js";
+export { writeFileAtomic } from "./storage/atomic.js";
 export { CsvError } from "./storage/csv.js";
 export { decodeText, EncodingError, encodeText } from "./storage/encoding.js";
-export { loadMemory, MemoryFileError, saveMemory } from "./storage/memory-store.js";
+export { loadMemory, MemoryFileError, memoryFilePath, saveMemory } from "./storage/memory-store.js";
 export type { ImportResult, ReviewStatus } from "./storage/review.js";
 export { exportReviewCsv, importReviewCsv } from "./storage/review.js";
 export { VERSION } from "./version.js";
