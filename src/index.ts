@@ -78,8 +78,8 @@ export {
   TimeoutError,
   VERDICTS,
 } from "./core/provider.js";
-export type { Reader, ReaderInput } from "./core/reader.js";
-export { ReadError } from "./core/reader.js";
+export type { BinaryReader, BinaryReaderInput, Reader, ReaderInput } from "./core/reader.js";
+export { isBinary, ReadError } from "./core/reader.js";
 export { reuseTranslation } from "./core/reuse.js";
 export { sampleSegments } from "./core/sample.js";
 export { groupOccurrences } from "./core/segments.js";
@@ -109,7 +109,14 @@ export type {
 export { DEFAULT_VALIDATION_OPTIONS, validateTranslation } from "./core/validation/validate.js";
 export type { CheckCandidate, Judge, SelectOptions, VerifyOptions, VerifySummary } from "./core/verify.js";
 export { selectForCheck, verifyTranslations } from "./core/verify.js";
-export type { Writer, WriterInput, WriterOutput } from "./core/writer.js";
+export type {
+  BinaryWriter,
+  BinaryWriterInput,
+  BinaryWriterOutput,
+  Writer,
+  WriterInput,
+  WriterOutput,
+} from "./core/writer.js";
 export { androidReader } from "./formats/android/reader.js";
 export { androidLanguage, pluralQuantities } from "./formats/android/resources.js";
 export { androidWriter } from "./formats/android/writer.js";
@@ -119,6 +126,10 @@ export type { BuildOptions, BuiltFile } from "./formats/build.js";
 export { buildProject } from "./formats/build.js";
 export type { DetectedSource, Detection, SkippedFile } from "./formats/detect.js";
 export { detectSources, FORMAT_EXTENSIONS, formatOf } from "./formats/detect.js";
+export type { Paragraph } from "./formats/docx/paragraphs.js";
+export { parseParagraphs, writeParagraph } from "./formats/docx/paragraphs.js";
+export { docxReader } from "./formats/docx/reader.js";
+export { docxWriter } from "./formats/docx/writer.js";
 export { extractOccurrences, extractSegments } from "./formats/extract.js";
 export type { HtmlDocument, HtmlText } from "./formats/html/document.js";
 export { decodeEntities, htmlTexts, parseHtml } from "./formats/html/document.js";
@@ -150,7 +161,7 @@ export { propertiesWriter } from "./formats/properties/writer.js";
 export { pzLanguageCode } from "./formats/pz/languages.js";
 export { pzReader } from "./formats/pz/reader.js";
 export { pzWriter } from "./formats/pz/writer.js";
-export { READERS } from "./formats/readers.js";
+export { READERS, readerFor } from "./formats/readers.js";
 export { renpyReader } from "./formats/renpy/reader.js";
 export { renpyWriter } from "./formats/renpy/writer.js";
 export { resxReader } from "./formats/resx/reader.js";
@@ -162,7 +173,7 @@ export { srtReader } from "./formats/srt/reader.js";
 export { srtWriter } from "./formats/srt/writer.js";
 export { vttReader } from "./formats/vtt/reader.js";
 export { vttWriter } from "./formats/vtt/writer.js";
-export { WRITERS } from "./formats/writers.js";
+export { WRITERS, writerFor } from "./formats/writers.js";
 export { catalogTexts, parseCatalog, xcodeJson } from "./formats/xcstrings/catalog.js";
 export { xcstringsReader } from "./formats/xcstrings/reader.js";
 export { xcstringsWriter } from "./formats/xcstrings/writer.js";
@@ -170,6 +181,8 @@ export { xliffReader } from "./formats/xliff/reader.js";
 export { xliffWriter } from "./formats/xliff/writer.js";
 export { yamlReader } from "./formats/yaml/reader.js";
 export { yamlWriter } from "./formats/yaml/writer.js";
+export type { ZipEntry, ZipInput } from "./formats/zip/zip.js";
+export { crc32, readZip, writeZip, ZipError } from "./formats/zip/zip.js";
 export type { AnthropicOptions } from "./providers/anthropic/provider.js";
 export { createAnthropicProvider } from "./providers/anthropic/provider.js";
 export type { DeepLOptions } from "./providers/deepl/provider.js";

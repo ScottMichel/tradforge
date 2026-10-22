@@ -7,6 +7,10 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `docx` format: Word documents. Each paragraph is one text, its formats as tags, and its runs are rebuilt in the order
+  of the translation; tables, headers, footers and notes are translated, the language is set for spelling, and
+  every other part of the archive is copied byte for byte. `tradforge init` proposes `.docx` files
+  (`manual.docx` → `manual.fr.docx`).
 - Formats can work on bytes (`BinaryReader`, `BinaryWriter`): the output encoding does not apply to them. Office
   documents use a small ZIP reader and writer of tradforge's own, without dependency.
 - `html` format: the texts of a page between block tags, inline tags kept and checked, and the attributes people

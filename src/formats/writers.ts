@@ -2,6 +2,7 @@ import type { SourceFormat } from "../core/config.js";
 import type { BinaryWriter, Writer } from "../core/writer.js";
 import { androidWriter } from "./android/writer.js";
 import { arbWriter } from "./arb/writer.js";
+import { docxWriter } from "./docx/writer.js";
 import { htmlWriter } from "./html/writer.js";
 import { iosStringsWriter } from "./ios/writer.js";
 import { jsonWriter } from "./json/writer.js";
@@ -24,6 +25,7 @@ import { yamlWriter } from "./yaml/writer.js";
 export const WRITERS = {
   android: androidWriter,
   arb: arbWriter,
+  docx: docxWriter,
   html: htmlWriter,
   "ios-strings": iosStringsWriter,
   json: jsonWriter,

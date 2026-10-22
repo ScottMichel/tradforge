@@ -10,6 +10,7 @@ import {
 export const SOURCE_FORMATS = [
   "android",
   "arb",
+  "docx",
   "html",
   "ios-strings",
   "json",
@@ -627,6 +628,8 @@ export const FORMAT_PLACEHOLDERS: Readonly<Partial<Record<SourceFormat, readonly
   markdown: ["markdown", "markup"],
   // HTML: the inline tags of a text (<a>, <strong>, <br>) must all come back
   html: ["markup"],
+  // Word: the tags that stand for formats (<g1>), fields and pictures (<x1/>)
+  docx: ["markup"],
 };
 
 /** The placeholder syntaxes to check: the configured ones, plus those of the formats the project uses. */

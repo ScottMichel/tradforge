@@ -14,6 +14,7 @@ import { parseResx } from "./resx/resources.js";
 export const FORMAT_EXTENSIONS: Readonly<Record<SourceFormat, readonly string[]>> = {
   android: [], // .xml is too generic: Android resources are recognised by their path (res/values/strings.xml)
   arb: [".arb"],
+  docx: [".docx"],
   html: [".html", ".htm"],
   "ios-strings": [".strings"],
   json: [".json"],
@@ -171,6 +172,12 @@ export async function detectSources(root: string, sourceLanguage: string, target
     if (format === "xcstrings") {
       // A string catalog holds every language: the translation goes into the catalog itself.
       add({ format: "xcstrings", include: file, output: "{dir}/{name}{ext}" });
+      continue;
+    }
+    if (format === "docx") {
+      const officeDocument = documentSuggestion("docx", file, markers);
+      if ("reason" in officeDocument) skipped.push({ file, reason: officeDocument.reason });
+      else add(officeDocument);
       continue;
     }
     if (format === "html") {
@@ -425,6 +432,26 @@ async function androidSuggestion(
   return { format: "android", include: file, output: `${output}/{name}{ext}` };
 }
 
+/**
+ * An office document: with a marker of the source language (en/manual.docx, manual.en.docx) or without any, the
+ * translation goes next to it (manual.fr.docx). Documents of another language and the lock files Word leaves while
+ * a document is open (~$manual.docx) are left out.
+ */
+function documentSuggestion(format: "docx", file: string, markers: readonly string[]): Suggestion | { reason: string } {
+  const extension = path.posix.extname(file);
+  const name = path.posix.basename(file, extension);
+  if (name.startsWith("~$")) return { reason: "a lock file of an open document" };
+  const marked = markedSuggestion(format, file, markers, undefined);
+  if (marked !== undefined) return marked;
+  const suffix = /[._-]([A-Za-z]{2,3}(?:[-_][A-Za-z]{2,4})?)$/.exec(name)?.[1];
+  if (suffix !== undefined && languageName(suffix.replace("_", "-")) !== suffix.replace("_", "-")) {
+    return { reason: "a document in another language" };
+  }
+  const folder = path.posix.dirname(file);
+  const prefix = folder === "." ? "" : `${folder}/`;
+  return { format, include: file, output: `${prefix}${name}.{lang}${extension}` };
+}
+
 /** Folders that tools fill with generated pages (test coverage, builds). */
 const BUILD_FOLDERS = /(?:^|\/)(?:coverage|dist|build|out|target|_site|public\/build)(?:\/|$)/i;
 
@@ -567,7 +594,7 @@ function iosSuggestion(
 
 /** The include pattern and output template for a file with a language marker in its path, if it has one. */
 function markedSuggestion(
-  format: "arb" | "html" | "json" | "markdown" | "po" | "xliff" | "yaml",
+  format: "arb" | "docx" | "html" | "json" | "markdown" | "po" | "xliff" | "yaml",
   file: string,
   markers: readonly string[],
   targetLanguage: string | undefined,

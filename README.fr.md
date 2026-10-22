@@ -133,7 +133,7 @@ langues et les sources sont obligatoires.
 | Réglage | Signification | Par défaut |
 | --- | --- | --- |
 | `workDir` | Dossier de la mémoire de traduction. **À versionner** : il contient tout le travail. | `.tradforge` |
-| `sources[].format` | `json`, `yaml`, `markdown`, `html`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `xcstrings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` ou `rimworld-xml` (voir [Formats pris en charge](#formats-pris-en-charge)) | obligatoire |
+| `sources[].format` | `json`, `yaml`, `markdown`, `html`, `docx`, `lua`, `po`, `xliff`, `android`, `ios-strings`, `xcstrings`, `properties`, `resx`, `arb`, `srt`, `vtt`, `renpy`, `zomboid-txt`, `paradox-yml` ou `rimworld-xml` (voir [Formats pris en charge](#formats-pris-en-charge)) | obligatoire |
 | `sources[].include` | Motifs de fichiers, relatifs au fichier de configuration | obligatoire |
 | `sources[].priority` | Plus petit = traduit en premier (peut être négatif) | `0` |
 | `sources[].context` | Indique au modèle comment les textes sont utilisés | aucun |
@@ -176,6 +176,7 @@ langues et les sources sont obligatoires.
 | **Flutter** `.arb` (`arb`) | chaque message, la description de son `@clé` comme contexte | `app_fr.arb` (`app_pt_BR.arb`), `@@locale` renommé, métadonnées conservées |
 | **Markdown** `.md` (`markdown`) | titres, paragraphes (lignes coupées jointes), éléments de liste, citations, cellules de tableau, et `title`/`description` d'un en-tête YAML ; blocs de code, blocs HTML et définitions de liens ignorés ; un groupe par section | `README.fr.md`, `docs/{lang}/` ; textes sur place, un paragraphe sur une ligne ; `` `code` `` et destinations de liens `](url)` doivent revenir intacts |
 | **HTML** `.html` (`html`) | le texte entre balises de bloc, balises en ligne (`<a>`, `<strong>`, `<br>`) gardées et vérifiées ; `alt`, `title`, `placeholder`, `aria-label`, `<title>` et balises meta de description ; lu comme un navigateur (`<p>` non fermés, `&nbsp;`) ; scripts, styles et `<pre>` ignorés | `fr/index.html` ou `about.fr.html` ; textes sur place, `<html lang>` renseigné, tout le reste à l'octet près |
+| **Word** `.docx` (`docx`) | chaque paragraphe du corps, des tableaux, en-têtes, pieds de page et notes, comme un texte : autres mises en forme en balises (`<g1>gras</g1>`), tabulations, images et champs en `<x1/>` ; le style du paragraphe comme contexte | `manuel.fr.docx` : les runs de chaque paragraphe reconstruits dans l'ordre de la traduction, la langue renseignée pour l'orthographe, toutes les autres parties de l'archive recopiées à l'octet près |
 | **SubRip** `.srt` (`srt`), **WebVTT** `.vtt` (`vtt`) | un texte par réplique, les répliques à moins de 2 s d'écart regroupées en scène ; balises, codes `{\an8}`, blocs NOTE/STYLE | textes remplacés sur place, numéros et minutages intacts ; `film.en.srt` → `film.fr.srt` |
 
 ### Dialectes de moteurs et de jeux
@@ -315,6 +316,7 @@ des textes écrits pour tradforge.
   liste en ligne doit tenir sur une ligne.
 - HTML : les attributs d'une balise en ligne au milieu d'un texte (`<a title="...">`) restent tels quels ; le texte et
   l'attribut se chevaucheraient.
+- Word : les paragraphes avec des modifications suivies et les textes des zones de texte ne sont pas encore traduits.
 - Les messages ICU (`{count, plural, one {...} other {...}}`, dans les fichiers `.arb` et XLIFF) sont envoyés tels
   quels : vérifiez que leurs mots-clés sont revenus intacts.
 - Apple : les pluriels `.stringsdict` ne sont pas pris en charge, ni les substitutions des catalogues (plusieurs
@@ -331,7 +333,7 @@ des textes écrits pour tradforge.
 ## Feuille de route
 
 1. **Application de bureau** : ouvrir un fichier ou un dossier, traduire, relire — sans ligne de commande.
-2. **Documents bureautiques** : `.docx`, `.odt`, `.pptx`, `.xlsx`.
+2. **Documents bureautiques** : `.pptx`, `.xlsx`, `.odt`.
 
 ## Contribuer
 
