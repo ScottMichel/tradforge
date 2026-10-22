@@ -76,11 +76,12 @@ dialogues: `cd packages/cli/examples/game`, then `tradforge translate --dry-run`
 
 ## Desktop application (preview)
 
-The same work without a command line, in four screens: **Project** (open a folder, choose the formats found in it),
+The same work without a command line, in four screens: **Project** (open a folder or a single file, choose the formats found),
 **Settings** (languages, engine, instructions; installed Ollama models are listed, API keys are detected but never
 shown), **Translation** (live progress, stop at any time) and **Review** (correct and approve translations, then write
 the translated files). It works on the same `tradforge.config.json` and memory as the command line: you can switch
-from one to the other on the same project. Its interface is in French for now.
+from one to the other on the same project. Its interface speaks English, French, Spanish, German, Portuguese and
+Italian (chosen in the menu), and so do its error messages.
 
 It is not published yet. To run it from the sources (after step 2 above):
 
@@ -346,7 +347,7 @@ texts written for tradforge.
 
 ## Roadmap
 
-1. **Desktop application**: downloads on GitHub, a signed executable (SignPath Foundation), an English interface.
+1. **Desktop application**: a signed executable (SignPath Foundation), more interface languages.
 
 ## Contributing
 

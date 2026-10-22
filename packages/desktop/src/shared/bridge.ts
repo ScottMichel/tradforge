@@ -28,9 +28,12 @@ export interface ProjectStats {
   readonly pending: number;
 }
 
-/** An opened folder: a tradforge project already, or the formats found in it. */
+/** An opened folder or file: a tradforge project already, or the formats found in it. */
 export interface ProjectView {
+  /** The folder of the project: the one opened, or the folder of the file opened. */
   readonly root: string;
+  /** The file opened alone, relative to the root. */
+  readonly file?: string;
   /** True when the folder has a tradforge.config.json. */
   readonly configured: boolean;
   readonly sourceLanguage: string;
@@ -58,8 +61,8 @@ export interface SettingsView {
 
 /** Whether the engine can be used now. The API key itself never crosses the bridge. */
 export type EngineStatus =
-  | { readonly kind: "ollama"; readonly ready: true; readonly models: readonly string[] }
-  | { readonly kind: "ollama"; readonly ready: false; readonly message: string }
+  | { readonly kind: "ollama"; readonly ready: true; readonly host: string; readonly models: readonly string[] }
+  | { readonly kind: "ollama"; readonly ready: false; readonly host: string; readonly httpStatus?: number }
   | { readonly kind: "api"; readonly ready: boolean; readonly keyVariable: string };
 
 /** Sent while a translation runs. */
@@ -103,18 +106,48 @@ export interface BuiltView {
   readonly written: boolean;
 }
 
-export interface TradforgeBridge {
+/**
+ * What went wrong, as a code the page words in the language of the interface. The detail is the technical message
+ * (from the library, in English), shown under the explanation for those who need it.
+ */
+export const ERROR_CODES = [
+  "not-found",
+  "file-not-supported",
+  "config-exists",
+  "no-format-chosen",
+  "languages-locked",
+  "busy",
+  "empty-translation",
+  "text-gone",
+  "config-invalid",
+  "file-unreadable",
+  "output-refused",
+  "engine-unavailable",
+  "memory-unreadable",
+  "unexpected",
+] as const;
+export type ErrorCode = (typeof ERROR_CODES)[number];
+
+export interface ErrorView {
+  readonly code: ErrorCode;
+  readonly params: Readonly<Record<string, string>>;
+  readonly detail?: string;
+}
+
+/** Electron would turn a thrown error into "Error invoking remote method...": the main process sends this instead. */
+export type Outcome<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: ErrorView };
+
+/** What the page asks the main process for. */
+export interface Requests {
   /** The version of the tradforge library the application runs. */
   version(): Promise<string>;
-  /** Asks the user for a folder; undefined when they cancel. */
-  chooseFolder(): Promise<string | undefined>;
-  /** The path of a file or folder dropped on the page. */
-  pathOf(file: File): string;
-  /** Opens a folder: its configuration, or what detection finds in it. */
-  openFolder(root: string, sourceLanguage: string, targetLanguage: string): Promise<ProjectView>;
+  /** Asks the user for a folder or a file, with a dialog titled in the language of the interface. */
+  choose(kind: "folder" | "file", title: string): Promise<string | undefined>;
+  /** Opens a folder or one file: its project, or what detection finds. */
+  open(path: string, sourceLanguage: string, targetLanguage: string): Promise<ProjectView>;
   /** Writes tradforge.config.json with the chosen detected formats (their indexes in ProjectView.sources). */
   createProject(
-    root: string,
+    path: string,
     sourceLanguage: string,
     targetLanguage: string,
     chosen: readonly number[],
@@ -126,8 +159,6 @@ export interface TradforgeBridge {
   translate(root: string, retryFailed: boolean): Promise<TranslationResult>;
   /** Stops the running translation between two batches; what is done is kept. */
   stopTranslation(): Promise<void>;
-  /** Listens to the progress of translations; returns what stops listening. */
-  onProgress(listener: (progress: ProgressView) => void): () => void;
   entries(root: string): Promise<readonly EntryView[]>;
   /** Saves a translation checked by a human: no engine will replace it. */
   review(root: string, source: string, target: string): Promise<EntryView>;
@@ -135,26 +166,20 @@ export interface TradforgeBridge {
   build(root: string, force: boolean): Promise<readonly BuiltView[]>;
 }
 
-/** The message each request of the bridge sends to the main process. */
-export type Channel =
-  | "tradforge:version"
-  | "tradforge:choose-folder"
-  | "tradforge:open-folder"
-  | "tradforge:create-project"
-  | "tradforge:settings"
-  | "tradforge:save-settings"
-  | "tradforge:engine-status"
-  | "tradforge:translate"
-  | "tradforge:stop-translation"
-  | "tradforge:entries"
-  | "tradforge:review"
-  | "tradforge:build";
+/** window.tradforge: every request answers an Outcome, plus two helpers that stay in the page. */
+export type TradforgeBridge = {
+  readonly [K in keyof Requests]: Requests[K] extends (...args: infer A) => Promise<infer R>
+    ? (...args: A) => Promise<Outcome<R>>
+    : never;
+} & {
+  /** The path of a file or folder dropped on the page. */
+  pathOf(file: File): string;
+  /** Listens to the progress of translations; returns what stops listening. */
+  onProgress(listener: (progress: ProgressView) => void): () => void;
+};
+
+/** The message each request sends to the main process: "tradforge:" and its name. */
+export type Channel = `tradforge:${keyof Requests}`;
 
 /** Sent by the main process to the page. */
 export type Event = "tradforge:progress";
-
-/**
- * What a request answers. Electron would turn a thrown error into "Error invoking remote method...": the main
- * process sends the message instead, and the preload script throws it again, as it was.
- */
-export type Outcome<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly message: string };

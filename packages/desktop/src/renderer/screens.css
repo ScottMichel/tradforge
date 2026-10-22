@@ -629,3 +629,33 @@ progress::-webkit-progress-value {
     align-items: center;
   }
 }
+
+.error-detail {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.open-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ui-language {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 12px;
+  color: var(--menu-muted);
+  font-size: 11px;
+}
+
+.ui-language select {
+  min-height: 34px;
+  padding: 4px 8px;
+  border: 1px solid var(--menu-ring);
+  background: var(--menu-panel);
+  color: var(--menu-text);
+}

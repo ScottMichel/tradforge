@@ -1,6 +1,7 @@
-import { BrowserWindow, dialog, type IpcMainInvokeEvent, ipcMain } from "electron";
-import { VERSION } from "tradforge";
-import { type Channel, ENGINE_TYPES, type EngineType, type Outcome, type SettingsView } from "../shared/bridge.js";
+import { BrowserWindow, dialog, type IpcMainInvokeEvent, ipcMain, type OpenDialogOptions } from "electron";
+import { FORMATS, VERSION } from "tradforge";
+import { ENGINE_TYPES, type EngineType, type Outcome, type Requests, type SettingsView } from "../shared/bridge.js";
+import { AppError, describeError } from "./errors.js";
 import type { Workspace } from "./workspace.js";
 
 /**
@@ -11,28 +12,31 @@ export function registerBridge(workspace: Workspace): void {
   /** The running translation: one at a time, and nothing else changes the memory meanwhile. */
   let running: AbortController | undefined;
   const idle = () => {
-    if (running !== undefined) throw new Error("Wait for the translation to finish, or stop it");
+    if (running !== undefined) throw new AppError("busy", {}, "Wait for the translation to finish, or stop it");
   };
 
-  handle("tradforge:version", () => VERSION);
-  handle("tradforge:choose-folder", async (event) => {
+  handle("version", () => VERSION);
+  handle("choose", async (event, kind, title) => {
+    const options: OpenDialogOptions =
+      choice(kind) === "folder"
+        ? { title: text(title), properties: ["openDirectory"] }
+        : { title: text(title), properties: ["openFile"], filters: [{ name: "tradforge", extensions: EXTENSIONS }] };
     const window = BrowserWindow.fromWebContents(event.sender);
-    const options = { properties: ["openDirectory" as const] };
     const result =
       window === null ? await dialog.showOpenDialog(options) : await dialog.showOpenDialog(window, options);
     return result.canceled ? undefined : result.filePaths[0];
   });
-  handle("tradforge:open-folder", (_, root, from, to) => workspace.openFolder(text(root), text(from), text(to)));
-  handle("tradforge:create-project", (_, root, from, to, chosen) =>
-    workspace.createProject(text(root), text(from), text(to), indexes(chosen)),
+  handle("open", (_, path, from, to) => workspace.open(text(path), text(from), text(to)));
+  handle("createProject", (_, path, from, to, chosen) =>
+    workspace.createProject(text(path), text(from), text(to), indexes(chosen)),
   );
-  handle("tradforge:settings", (_, root) => workspace.settings(text(root)));
-  handle("tradforge:save-settings", (_, root, settings) => {
+  handle("settings", (_, root) => workspace.settings(text(root)));
+  handle("saveSettings", (_, root, settings) => {
     idle();
     return workspace.saveSettings(text(root), settingsOf(settings));
   });
-  handle("tradforge:engine-status", (_, root, settings) => workspace.engineStatus(text(root), settingsOf(settings)));
-  handle("tradforge:translate", async (event, root, retryFailed) => {
+  handle("engineStatus", (_, root, settings) => workspace.engineStatus(text(root), settingsOf(settings)));
+  handle("translate", async (event, root, retryFailed) => {
     idle();
     const controller = new AbortController();
     running = controller;
@@ -48,27 +52,32 @@ export function registerBridge(workspace: Workspace): void {
       running = undefined;
     }
   });
-  handle("tradforge:stop-translation", () => {
+  handle("stopTranslation", () => {
     running?.abort();
   });
-  handle("tradforge:entries", (_, root) => workspace.entries(text(root)));
-  handle("tradforge:review", (_, root, source, target) => {
+  handle("entries", (_, root) => workspace.entries(text(root)));
+  handle("review", (_, root, source, target) => {
     idle();
     return workspace.review(text(root), text(source), text(target));
   });
-  handle("tradforge:build", (_, root, force) => {
+  handle("build", (_, root, force) => {
     idle();
     return workspace.build(text(root), flag(force));
   });
 }
 
-/** Sends the result, or the message of the error: see Outcome. */
-function handle(channel: Channel, listener: (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown): void {
-  ipcMain.handle(channel, async (event, ...args): Promise<Outcome<unknown>> => {
+/** The extensions of every format, for the file dialog ("json", "docx"...). */
+const EXTENSIONS = [...new Set(Object.values(FORMATS).flatMap((format) => format.extensions))]
+  .map((extension) => extension.replace(/^\./, ""))
+  .sort();
+
+/** Sends the result, or the error as the page words it: see Outcome. */
+function handle(request: keyof Requests, listener: (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown): void {
+  ipcMain.handle(`tradforge:${request}`, async (event, ...args): Promise<Outcome<unknown>> => {
     try {
       return { ok: true, value: await listener(event, ...args) };
     } catch (error) {
-      return { ok: false, message: error instanceof Error ? error.message : String(error) };
+      return { ok: false, error: describeError(error) };
     }
   });
 }
@@ -80,6 +89,11 @@ function text(value: unknown): string {
 
 function flag(value: unknown): boolean {
   if (typeof value !== "boolean") throw new TypeError("Expected true or false");
+  return value;
+}
+
+function choice(value: unknown): "folder" | "file" {
+  if (value !== "folder" && value !== "file") throw new TypeError("Expected folder or file");
   return value;
 }
 

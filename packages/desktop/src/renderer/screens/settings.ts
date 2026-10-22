@@ -1,5 +1,7 @@
 import { ENGINE_TYPES, type EngineStatus, type EngineType, type SettingsView } from "../../shared/bridge.js";
+import { api } from "../api.js";
 import { busy, byId, h, inside, showError } from "../dom.js";
+import { t } from "../i18n/index.js";
 import { configuredRoot, currentProject, setProject } from "../state.js";
 import { installedModel } from "../view.js";
 
@@ -11,11 +13,6 @@ const SUGGESTED_MODELS: Readonly<Record<Exclude<EngineType, "ollama">, readonly 
   gemini: ["gemini-flash-latest", "gemini-pro-latest"],
   anthropic: ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5"],
   "openai-compatible": ["gpt-5-mini", "mistral-small-latest"],
-};
-
-const ADDRESS_LABELS: Partial<Record<EngineType, string>> = {
-  ollama: "Adresse d'Ollama",
-  "openai-compatible": "Adresse de l'API",
 };
 
 /** Waits for typing to pause before asking the engine again. */
@@ -32,6 +29,8 @@ const instructionsField = inside<HTMLTextAreaElement>(form, '[name="instructions
 /** Called with the status of the saved engine, for the menu. */
 let onEngineStatus: (settings: SettingsView, status: EngineStatus) => void = () => {};
 let checkTimer: ReturnType<typeof setTimeout> | undefined;
+/** The last check shown, drawn again when the language of the interface changes. */
+let lastCheck: { readonly settings: SettingsView; readonly status: EngineStatus } | undefined;
 
 export function setupSettings(engineStatusShown: typeof onEngineStatus): void {
   onEngineStatus = engineStatusShown;
@@ -64,19 +63,25 @@ export async function enterSettings(): Promise<void> {
   showError(error, undefined);
   saved.hidden = true;
   try {
-    fill(await window.tradforge.settings(root));
+    fill(await api.settings(root));
     await runCheck();
   } catch (failure) {
     showError(error, failure);
   }
 }
 
+/** The texts that depend on the language and are not static. */
+export function translateSettings(): void {
+  showEngineFields();
+  if (lastCheck !== undefined) showCheck(lastCheck.settings, lastCheck.status);
+}
+
 /** Reads the status of the saved engine, for the menu (also when the settings screen is not shown). */
 export async function refreshEngineStatus(): Promise<void> {
   const root = configuredRoot();
   if (root === undefined) return;
-  const settings = await window.tradforge.settings(root);
-  onEngineStatus(settings, await window.tradforge.engineStatus(root, settings));
+  const settings = await api.settings(root);
+  onEngineStatus(settings, await api.engineStatus(root, settings));
 }
 
 function fill(settings: SettingsView): void {
@@ -106,15 +111,16 @@ async function save(): Promise<boolean> {
   if (root === undefined) return false;
   showError(error, undefined);
   try {
-    const settings = await window.tradforge.saveSettings(root, read());
+    const settings = await api.saveSettings(root, read());
     fill(settings);
     saved.hidden = false;
     // The project screen shows the languages: read the project again.
     const project = currentProject();
     if (project !== undefined) {
-      setProject(await window.tradforge.openFolder(root, project.sourceLanguage, project.targetLanguage));
+      const reopened = await api.open(root, project.sourceLanguage, project.targetLanguage);
+      setProject(project.file === undefined ? reopened : { ...reopened, file: project.file });
     }
-    onEngineStatus(settings, await window.tradforge.engineStatus(root, settings));
+    onEngineStatus(settings, await api.engineStatus(root, settings));
     return true;
   } catch (failure) {
     showError(error, failure);
@@ -124,10 +130,10 @@ async function save(): Promise<boolean> {
 
 function showEngineFields(): void {
   const engine = read().engine;
-  const label = ADDRESS_LABELS[engine];
   const address = inside<HTMLLabelElement>(form, ".address");
-  address.hidden = label === undefined;
-  if (label !== undefined) address.firstChild?.replaceWith(`${label} `);
+  const hasAddress = engine === "ollama" || engine === "openai-compatible";
+  address.hidden = !hasAddress;
+  byId("address-label").textContent = engine === "ollama" ? t().ollamaAddress : t().apiAddress;
   field("address").placeholder = engine === "ollama" ? "http://localhost:11434" : "https://api.openai.com/v1";
   field("model").placeholder = engine === "ollama" ? "mistral-small" : engine === "deepl" ? "deepl" : "";
   if (engine !== "ollama") suggest(SUGGESTED_MODELS[engine]);
@@ -146,32 +152,29 @@ async function runCheck(): Promise<void> {
   const root = configuredRoot();
   if (root === undefined) return;
   const settings = read();
-  showCheck(settings, await window.tradforge.engineStatus(root, settings));
+  showCheck(settings, await api.engineStatus(root, settings));
 }
 
 function showCheck(settings: SettingsView, status: EngineStatus): void {
+  lastCheck = { settings, status };
+  const messages = t();
   const [dot, text] = [inside(check, ".status-dot"), inside(check, "span:last-child")];
   const model = settings.model || (settings.engine === "ollama" ? "mistral-small" : "");
   let ready = status.ready;
   let message: string;
   if (status.kind === "ollama") {
     if (!status.ready) {
-      message = `${status.message} Lance Ollama (https://ollama.com), puis reviens ici.`;
+      message =
+        status.httpStatus !== undefined
+          ? messages.ollamaError(status.host, status.httpStatus)
+          : messages.ollamaDown(status.host);
     } else {
       suggest(status.models);
-      if (installedModel(model, status.models)) {
-        message = `Ollama est prêt, ${model} est installé.`;
-      } else {
-        ready = false;
-        message = `Ollama est prêt, mais ${model} n'est pas installé : lance « ollama pull ${model} » ou choisis un modèle installé.`;
-      }
+      ready = installedModel(model, status.models);
+      message = ready ? messages.ollamaReady(model) : messages.ollamaMissingModel(model);
     }
-  } else if (status.ready) {
-    message = `Clé d'API trouvée dans la variable ${status.keyVariable}.`;
   } else {
-    message =
-      `Aucune clé d'API : crée la variable d'environnement ${status.keyVariable} avec ta clé, puis relance ` +
-      "l'application. La clé n'est jamais écrite dans le projet.";
+    message = status.ready ? messages.apiKeyFound(status.keyVariable) : messages.apiKeyMissing(status.keyVariable);
   }
   dot.classList.toggle("ready", ready);
   dot.classList.toggle("problem", !ready);

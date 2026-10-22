@@ -3,13 +3,16 @@ import "@fontsource-variable/jetbrains-mono";
 import "./theme.css";
 import "./screens.css";
 import type { EngineStatus, SettingsView } from "../shared/bridge.js";
+import { api } from "./api.js";
 import { byId, h, inside } from "./dom.js";
-import { setupBuild } from "./screens/build.js";
+import { UI_LANGUAGES } from "./i18n/catalog.js";
+import { currentLanguage, onLanguageChange, setLanguage, startLanguage, t } from "./i18n/index.js";
+import { setupBuild, translateBuild } from "./screens/build.js";
 import { enterProject, render as renderProject, setupProject } from "./screens/project.js";
-import { enterReview, setupReview } from "./screens/review.js";
-import { enterSettings, refreshEngineStatus, setupSettings } from "./screens/settings.js";
-import { enterTranslate, setupTranslate } from "./screens/translate.js";
-import { configuredRoot, onProjectChange } from "./state.js";
+import { enterReview, render as renderReview, setupReview } from "./screens/review.js";
+import { enterSettings, refreshEngineStatus, setupSettings, translateSettings } from "./screens/settings.js";
+import { enterTranslate, setupTranslate, translateTranslate } from "./screens/translate.js";
+import { configuredRoot, currentProject, onProjectChange } from "./state.js";
 import { type Step, stepFromHash } from "./steps.js";
 import { engineLabel } from "./view.js";
 
@@ -39,23 +42,61 @@ function showNeedsProject(section: HTMLElement): void {
   const notice = inside(section, ".needs-project");
   notice.hidden = !missing;
   notice.replaceChildren(
-    h("p", {}, "Ouvre d'abord un projet."),
-    h("a", { class: "button dark", href: "#project" }, "Choisir un dossier"),
+    h("p", {}, t().needsProject),
+    h("a", { class: "button dark", href: "#project" }, t().chooseProject),
   );
   for (const child of section.children) {
     if (child instanceof HTMLElement && !child.matches(".screen-header, .needs-project")) child.hidden = missing;
   }
 }
 
+/** The engine in the menu, kept to be worded again in another language. */
+let engineShown: { readonly settings: SettingsView; readonly status: EngineStatus } | undefined;
+
 function showEngineStatus(settings: SettingsView, status: EngineStatus): void {
-  const line = byId("engine-status");
-  inside(line, ".status-dot").classList.toggle("ready", status.ready);
-  inside(line, ".status-dot").classList.toggle("problem", !status.ready);
-  const state =
-    status.kind === "ollama" ? (status.ready ? "prêt" : "ne répond pas") : status.ready ? "clé trouvée" : "pas de clé";
-  inside(line, "span:last-child").textContent = `${engineLabel(settings.engine)} ${state} · ${settings.model}`;
+  engineShown = { settings, status };
+  drawEngineStatus();
 }
 
+function drawEngineStatus(): void {
+  const line = byId("engine-status");
+  const text = inside(line, "span:last-child");
+  const dot = inside(line, ".status-dot");
+  if (engineShown === undefined || configuredRoot() === undefined) {
+    dot.classList.remove("ready", "problem");
+    text.textContent = t().noProject;
+    return;
+  }
+  const { settings, status } = engineShown;
+  const messages = t();
+  const name = engineLabel(settings.engine, messages.openAiCompatible);
+  const word =
+    status.kind === "ollama"
+      ? status.ready
+        ? messages.menuReady
+        : messages.menuDown
+      : status.ready
+        ? messages.menuKey
+        : messages.menuNoKey;
+  dot.classList.toggle("ready", status.ready);
+  dot.classList.toggle("problem", !status.ready);
+  text.textContent = word(name, settings.model);
+}
+
+function setupLanguageMenu(): void {
+  const select = byId<HTMLSelectElement>("ui-language");
+  select.replaceChildren(
+    ...UI_LANGUAGES.map((language) => h("option", { value: language.code, lang: language.code }, language.name)),
+  );
+  select.value = currentLanguage();
+  select.addEventListener("change", () => {
+    const chosen = UI_LANGUAGES.find((language) => language.code === select.value);
+    if (chosen !== undefined) setLanguage(chosen.code);
+  });
+}
+
+startLanguage();
+setupLanguageMenu();
 setupProject();
 setupSettings(showEngineStatus);
 setupTranslate();
@@ -65,12 +106,26 @@ setupBuild();
 onProjectChange((project) => {
   renderProject(project);
   if (project?.configured === true) void refreshEngineStatus().catch(() => {});
-  else inside(byId("engine-status"), "span:last-child").textContent = "Aucun projet ouvert";
+  drawEngineStatus();
+});
+
+// Another language: the static texts are already done (i18n/index.ts); each screen words its own texts again.
+onLanguageChange(() => {
+  renderProject(currentProject());
+  for (const section of document.querySelectorAll<HTMLElement>("section[data-step]")) {
+    if (section.dataset.step !== "project") showNeedsProject(section);
+  }
+  translateSettings();
+  translateTranslate();
+  if (configuredRoot() !== undefined) renderReview();
+  translateBuild();
+  drawEngineStatus();
 });
 
 window.addEventListener("hashchange", () => show(stepFromHash(window.location.hash)));
 show(stepFromHash(window.location.hash));
+drawEngineStatus();
 
-void window.tradforge.version().then((number) => {
+void api.version().then((number) => {
   byId("version").textContent = `tradforge ${number}`;
 });

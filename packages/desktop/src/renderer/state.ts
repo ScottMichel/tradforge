@@ -1,4 +1,5 @@
 import type { ProjectView } from "../shared/bridge.js";
+import { samePath } from "./view.js";
 
 /** What the screens share: the open project. Each screen reads the rest again from the main process when shown. */
 
@@ -37,7 +38,7 @@ export function recentFolders(): string[] {
 }
 
 export function rememberFolder(root: string): void {
-  const recent = [root, ...recentFolders().filter((folder) => folder !== root)].slice(0, MAX_RECENT);
+  const recent = [root, ...recentFolders().filter((folder) => !samePath(folder, root))].slice(0, MAX_RECENT);
   try {
     localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
   } catch {

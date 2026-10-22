@@ -1,9 +1,12 @@
 import type { ProjectView } from "../../shared/bridge.js";
+import { api } from "../api.js";
 import { busy, byId, h, showError } from "../dom.js";
+import { languageName, number } from "../i18n/format.js";
+import { t } from "../i18n/index.js";
 import { currentProject, recentFolders, rememberFolder, setProject } from "../state.js";
-import { count, formatLabel, languageLabel, outputFor, plural } from "../view.js";
+import { formatLabel, outputFor } from "../view.js";
 
-/** Step 1: open a folder, see the formats found in it, and make it a tradforge project. */
+/** Step 1: open a folder or a file, see the formats found, and make it a tradforge project. */
 
 /** Left-out files listed at once; the others are behind "show all". */
 const SKIPPED_SHOWN = 3;
@@ -15,16 +18,29 @@ const view = byId("project-view");
 const actions = byId("project-actions");
 const proceed = byId<HTMLButtonElement>("project-continue");
 
-export function setupProject(): void {
-  const choose = byId<HTMLButtonElement>("choose-folder");
-  choose.addEventListener("click", () =>
-    busy(choose, async () => {
-      const root = await window.tradforge.chooseFolder();
-      if (root !== undefined) await open(root);
-    }),
-  );
+/** What was opened: the folder, or the file inside it. */
+function openedPath(project: ProjectView): string {
+  if (project.file === undefined) return project.root;
+  const separator = project.root.includes("\\") ? "\\" : "/";
+  return `${project.root.replace(/[\\/]+$/, "")}${separator}${project.file}`;
+}
 
-  // A folder dropped on the window opens like a chosen one.
+export function setupProject(): void {
+  for (const [id, kind] of [
+    ["choose-folder", "folder"],
+    ["choose-file", "file"],
+  ] as const) {
+    const button = byId<HTMLButtonElement>(id);
+    button.addEventListener("click", () =>
+      busy(button, async () => {
+        const title = kind === "folder" ? t().chooseFolderTitle : t().chooseFileTitle;
+        const path = await api.choose(kind, title);
+        if (path !== undefined) await open(path);
+      }),
+    );
+  }
+
+  // A folder or a file dropped on the window opens like a chosen one.
   const drop = byId("drop");
   document.addEventListener("dragover", (event) => {
     event.preventDefault();
@@ -44,7 +60,7 @@ export function setupProject(): void {
   for (const input of [from, to]) {
     input.addEventListener("change", () => {
       const project = currentProject();
-      if (project !== undefined && !project.configured) void open(project.root);
+      if (project !== undefined && !project.configured) void open(openedPath(project));
     });
   }
 
@@ -58,7 +74,7 @@ export function setupProject(): void {
           .map((box) => Number(box.dataset.source));
         try {
           showError(error, undefined);
-          setProject(await window.tradforge.createProject(project.root, from.value, to.value, chosen));
+          setProject(await api.createProject(openedPath(project), from.value, to.value, chosen));
         } catch (failure) {
           showError(error, failure);
           return;
@@ -71,11 +87,11 @@ export function setupProject(): void {
   showRecent();
 }
 
-async function open(root: string): Promise<void> {
+async function open(path: string): Promise<void> {
   showError(error, undefined);
   try {
-    const project = await window.tradforge.openFolder(root, from.value.trim(), to.value.trim());
-    rememberFolder(project.root);
+    const project = await api.open(path, from.value.trim(), to.value.trim());
+    rememberFolder(openedPath(project));
     setProject(project);
     showRecent();
   } catch (failure) {
@@ -86,36 +102,38 @@ async function open(root: string): Promise<void> {
 /** Called when the step is shown: the project may have changed in another step. */
 export async function enterProject(): Promise<void> {
   const project = currentProject();
-  if (project?.configured === true) await open(project.root);
+  if (project?.configured === true) await open(openedPath(project));
   else render(project);
 }
 
 export function render(project: ProjectView | undefined): void {
   view.replaceChildren();
   actions.hidden = project === undefined;
+  showRecent();
   if (project === undefined) return;
   if (project.configured) {
     from.value = project.sourceLanguage;
     to.value = project.targetLanguage;
   }
-  proceed.textContent = project.configured ? "Continuer vers les réglages" : "Créer le projet et continuer";
+  proceed.textContent = project.configured ? t().continueToSettings : t().createAndContinue;
   proceed.disabled = project.sources.length === 0;
   view.append(projectCard(project));
 }
 
 function projectCard(project: ProjectView): HTMLElement {
-  const languages = `${languageLabel(project.sourceLanguage)} → ${languageLabel(project.targetLanguage)}`;
+  const messages = t();
+  const languages = `${languageName(project.sourceLanguage)} → ${languageName(project.targetLanguage)}`;
   const summary =
     project.sources.length === 0
-      ? "Aucun fichier à traduire trouvé"
-      : `${plural(project.sources.length, "format")} · ${languages}`;
+      ? messages.noFormatFound
+      : `${messages.formatCount(project.sources.length)} · ${languages}`;
   const badge = project.configured
     ? h(
         "span",
         { class: "badge success" },
-        `Projet tradforge · ${count(project.stats?.translated ?? 0)} sur ${plural(project.stats?.total ?? 0, "texte traduit", "textes traduits")}`,
+        messages.projectBadge(project.stats?.translated ?? 0, project.stats?.total ?? 0),
       )
-    : h("span", { class: "badge" }, "Nouveau projet : choisis les formats à traduire");
+    : h("span", { class: "badge" }, messages.newProjectBadge);
 
   const rows = project.sources.map((source, index) =>
     h(
@@ -129,14 +147,14 @@ function projectCard(project: ProjectView): HTMLElement {
             type: "checkbox",
             checked: true,
             "data-source": String(index),
-            "aria-label": `Traduire ${formatLabel(source.format)}`,
+            "aria-label": messages.translateFormat(formatLabel(source.format, messages)),
           }),
         ),
-      h("td", { class: "strong" }, formatLabel(source.format)),
+      h("td", { class: "strong" }, formatLabel(source.format, messages)),
       h(
         "td",
         { class: "mono" },
-        source.include.join(", ") + (source.files !== undefined ? ` · ${count(source.files)}` : ""),
+        source.include.join(", ") + (source.files !== undefined ? ` · ${number(source.files)}` : ""),
       ),
       h("td", { class: "mono muted" }, outputFor(source.output, project.targetLanguage)),
     ),
@@ -144,19 +162,25 @@ function projectCard(project: ProjectView): HTMLElement {
   const head = h(
     "tr",
     {},
-    !project.configured && h("th", {}, "Traduire"),
-    h("th", {}, "Format"),
-    h("th", {}, "Fichiers"),
-    h("th", {}, "Sera écrit dans"),
+    !project.configured && h("th", {}, messages.columnTranslate),
+    h("th", {}, messages.columnFormat),
+    h("th", {}, messages.columnFiles),
+    h("th", {}, messages.columnOutput),
   );
 
   return h(
     "section",
-    { class: "card", "aria-label": "Projet ouvert" },
+    { class: "card", "aria-labelledby": "project-path" },
     h(
       "div",
       { class: "card-head" },
-      h("div", {}, h("p", { class: "strong path" }, project.root), h("p", { class: "muted" }, summary)),
+      h(
+        "div",
+        {},
+        h("p", { class: "strong path", id: "project-path" }, project.root),
+        project.file !== undefined && h("p", { class: "mono" }, messages.fileOnly(project.file)),
+        h("p", { class: "muted" }, summary),
+      ),
       badge,
     ),
     rows.length > 0 &&
@@ -168,17 +192,13 @@ function projectCard(project: ProjectView): HTMLElement {
 function skippedNote(project: ProjectView): HTMLElement {
   const describe = ({ file, reason }: { file: string; reason: string }) => `${file} (${reason})`;
   const first = project.skipped.slice(0, SKIPPED_SHOWN).map(describe).join(", ");
-  const note = h(
-    "div",
-    { class: "card-foot muted" },
-    `${plural(project.skipped.length, "fichier laissé", "fichiers laissés")} de côté : ${first}`,
-  );
+  const note = h("div", { class: "card-foot muted" }, t().skipped(project.skipped.length, first));
   if (project.skipped.length > SKIPPED_SHOWN) {
     note.append(
       h(
         "details",
         {},
-        h("summary", {}, "Tout afficher"),
+        h("summary", {}, t().showAll),
         h("ul", {}, ...project.skipped.map((skipped) => h("li", {}, describe(skipped)))),
       ),
     );

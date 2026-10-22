@@ -1,3 +1,7 @@
+import type { ErrorView } from "../shared/bridge.js";
+import { Failure } from "./api.js";
+import { t } from "./i18n/index.js";
+
 /**
  * Builds elements with text only (textContent, never innerHTML): a text read from a translated file can never
  * become markup, so a file cannot inject anything into the page.
@@ -36,10 +40,22 @@ export function inside<T extends Element = HTMLElement>(parent: ParentNode, sele
   return element;
 }
 
-/** Shows the message of an error in a paragraph, or hides it. */
-export function showError(paragraph: HTMLElement, error: unknown): void {
-  paragraph.textContent = error === undefined ? "" : error instanceof Error ? error.message : String(error);
-  paragraph.hidden = error === undefined;
+/**
+ * Shows an error in its box, or hides the box: what happened in the language of the interface, then the technical
+ * message of the library, smaller, for those who need it.
+ */
+export function showError(box: HTMLElement, error: unknown): void {
+  box.hidden = error === undefined;
+  if (error === undefined) {
+    box.replaceChildren();
+    return;
+  }
+  const view: ErrorView =
+    error instanceof Failure
+      ? error.view
+      : { code: "unexpected", params: {}, detail: error instanceof Error ? error.message : String(error) };
+  box.replaceChildren(h("p", {}, t().errors[view.code](view.params)));
+  if (view.detail !== undefined) box.append(h("p", { class: "error-detail" }, t().technicalDetail(view.detail)));
 }
 
 /** Disables a button while its action runs, so that a double click never runs it twice. */

@@ -1,29 +1,29 @@
 import { describe, expect, it } from "vitest";
+import { CATALOGS } from "../src/renderer/i18n/catalog.js";
 import {
   countByState,
-  duration,
+  engineLabel,
   filterEntries,
   formatLabel,
   installedModel,
-  languageLabel,
   outputFor,
-  plural,
+  samePath,
 } from "../src/renderer/view.js";
 import type { EntryView } from "../src/shared/bridge.js";
 
 describe("formatLabel", () => {
-  it("names the formats as their users know them", () => {
-    expect(formatLabel("zomboid-txt")).toBe("Project Zomboid");
-    expect(formatLabel("docx")).toBe("Word");
-    expect(formatLabel("something-new")).toBe("something-new");
+  it("names the formats as their users know them, in the language of the interface when it has words", () => {
+    expect(formatLabel("zomboid-txt", CATALOGS.en)).toBe("Project Zomboid");
+    expect(formatLabel("docx", CATALOGS.fr)).toBe("Word");
+    expect(formatLabel("srt", CATALOGS.de)).toBe("SRT-Untertitel");
+    expect(formatLabel("something-new", CATALOGS.en)).toBe("something-new");
   });
 });
 
-describe("languageLabel", () => {
-  it("names a language in French, and keeps a code it does not know", () => {
-    expect(languageLabel("de")).toBe("allemand");
-    expect(languageLabel("pt-BR")).toBe("portugais brésilien");
-    expect(languageLabel("not a code")).toBe("not a code");
+describe("engineLabel", () => {
+  it("keeps the brands and translates the generic name", () => {
+    expect(engineLabel("anthropic", CATALOGS.fr.openAiCompatible)).toBe("Claude");
+    expect(engineLabel("openai-compatible", CATALOGS.es.openAiCompatible)).toBe("API compatible con OpenAI");
   });
 });
 
@@ -35,20 +35,12 @@ describe("outputFor", () => {
   });
 });
 
-describe("plural", () => {
-  it("follows French: 0 and 1 take the singular", () => {
-    expect(plural(0, "texte traduit", "textes traduits")).toBe("0 texte traduit");
-    expect(plural(1, "fichier")).toBe("1 fichier");
-    expect(plural(1500, "fichier")).toBe(`1${"\u{202f}"}500 fichiers`);
-  });
-});
-
-describe("duration", () => {
-  it("rounds the time left as a person would say it", () => {
-    expect(duration(20_000)).toBe("moins d'une minute");
-    expect(duration(3 * 60_000 + 10_000)).toBe("environ 3 min");
-    expect(duration(80 * 60_000)).toBe("environ 1 h 20");
-    expect(duration(120 * 60_000)).toBe("environ 2 h");
+describe("samePath", () => {
+  it("sees one path whatever its slashes, and without case on Windows only", () => {
+    expect(samePath("C:\\Mods\\Guide.md", "c:/mods/Guide.md")).toBe(true);
+    expect(samePath("C:/Mods/", "C:\\Mods")).toBe(true);
+    expect(samePath("/home/me/Mods", "/home/me/mods")).toBe(false);
+    expect(samePath("C:/Mods/a.md", "C:/Mods/b.md")).toBe(false);
   });
 });
 

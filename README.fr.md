@@ -81,12 +81,13 @@ dialogues en Lua : `cd packages/cli/examples/game`, puis `tradforge translate --
 
 ## Application de bureau (aperçu)
 
-Le même travail sans ligne de commande, en quatre écrans : **Projet** (ouvrir un dossier, choisir les formats trouvés
+Le même travail sans ligne de commande, en quatre écrans : **Projet** (ouvrir un dossier ou un seul fichier, choisir les formats trouvés
 dedans), **Réglages** (langues, moteur, consignes ; les modèles Ollama installés sont proposés, les clés d'API sont
 détectées mais jamais affichées), **Traduction** (progression en direct, arrêt à tout moment) et **Relecture**
 (corriger et valider les traductions, puis écrire les fichiers traduits). Elle travaille sur le même
 `tradforge.config.json` et la même mémoire que la ligne de commande : vous pouvez passer de l'une à l'autre sur un même
-projet. Son interface est en français pour l'instant.
+projet. Son interface parle français, anglais, espagnol, allemand, portugais et italien (au choix dans le menu), et
+ses messages d'erreur aussi.
 
 Elle n'est pas encore publiée. Pour la lancer depuis les sources (après l'étape 2 ci-dessus) :
 
@@ -359,7 +360,7 @@ des textes écrits pour tradforge.
 
 ## Feuille de route
 
-1. **Application de bureau** : téléchargement sur GitHub, exécutable signé (SignPath Foundation), interface en anglais.
+1. **Application de bureau** : exécutable signé (SignPath Foundation), d'autres langues pour l'interface.
 
 ## Contribuer
 

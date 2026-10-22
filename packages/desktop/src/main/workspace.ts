@@ -1,11 +1,15 @@
-import { readFile, stat } from "node:fs/promises";
+import { glob, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import {
   buildProject,
   CONFIG_FILE,
   createProvider,
+  DEFAULT_OUTPUT,
+  type Detection,
   detectSources,
+  editJsonc,
   extractSegments,
+  formatOf,
   loadMemory,
   openProject,
   type Project,
@@ -31,6 +35,7 @@ import type {
   SourceView,
   TranslationResult,
 } from "../shared/bridge.js";
+import { AppError } from "./errors.js";
 
 /**
  * What the application does with a project folder, on top of the library: the same steps as the command line
@@ -62,12 +67,17 @@ export function createWorkspace(dependencies: WorkspaceDependencies = {}) {
   const engine = dependencies.createProvider ?? ((config: ProviderConfig) => createProvider(config, { env, fetch }));
 
   return {
-    async openFolder(root: string, sourceLanguage: string, targetLanguage: string): Promise<ProjectView> {
-      await mustBeFolder(root);
-      if (await hasConfig(root)) return projectView(await openProject(root));
-      const { sources, skipped } = await detectSources(root, sourceLanguage, targetLanguage);
+    /** A folder, or one file: then its folder is the project, and the file its only source. */
+    async open(target: string, sourceLanguage: string, targetLanguage: string): Promise<ProjectView> {
+      const { root, file } = await locate(target);
+      if (await hasConfig(root)) {
+        const project = await projectView(await openProject(root));
+        return file === undefined ? project : { ...project, file };
+      }
+      const { sources, skipped } = await candidates(root, file, sourceLanguage, targetLanguage);
       return {
         root,
+        ...(file !== undefined ? { file } : {}),
         configured: false,
         sourceLanguage,
         targetLanguage,
@@ -77,18 +87,20 @@ export function createWorkspace(dependencies: WorkspaceDependencies = {}) {
     },
 
     async createProject(
-      root: string,
+      target: string,
       sourceLanguage: string,
       targetLanguage: string,
       chosen: readonly number[],
     ): Promise<ProjectView> {
-      await mustBeFolder(root);
-      if (await hasConfig(root)) throw new Error(`${CONFIG_FILE} already exists in ${root}`);
-      const { sources } = await detectSources(root, sourceLanguage, targetLanguage);
+      const { root, file } = await locate(target);
+      if (await hasConfig(root))
+        throw new AppError("config-exists", { root }, `${CONFIG_FILE} already exists in ${root}`);
+      const { sources } = await candidates(root, file, sourceLanguage, targetLanguage);
       const kept = sources.filter((_, index) => chosen.includes(index));
-      if (kept.length === 0) throw new Error("Choose at least one format to translate");
+      if (kept.length === 0) throw new AppError("no-format-chosen", {}, "Choose at least one format to translate");
       await writeFileAtomic(configFile(root), renderConfig({ sourceLanguage, targetLanguage, sources: kept }));
-      return projectView(await openProject(root));
+      const project = await projectView(await openProject(root));
+      return file === undefined ? project : { ...project, file };
     },
 
     async settings(root: string): Promise<SettingsView> {
@@ -104,15 +116,23 @@ export function createWorkspace(dependencies: WorkspaceDependencies = {}) {
       if (!sameLanguages(project.config, languages)) {
         const memory = await loadMemory(project.workDir, project.config);
         if (memory.entryList().length > 0 || memory.failureList().length > 0) {
-          throw new Error(
-            `The memory of this project holds translations from ${project.config.sourceLanguage} → ` +
-              `${project.config.targetLanguage}: open a copy of the project to translate it into another language`,
+          const { sourceLanguage: from, targetLanguage: to } = project.config;
+          throw new AppError(
+            "languages-locked",
+            { from, to },
+            `The memory of this project holds translations from ${from} → ${to}: ` +
+              "open a copy of the project to translate it into another language",
           );
         }
       }
-      if (JSON.stringify(changed) !== JSON.stringify(raw)) {
-        await writeFileAtomic(configFile(root), `${JSON.stringify(changed, null, 2)}\n`);
+      // Only the values that changed are rewritten: the comments that explain the settings stay.
+      const text = await readFile(configFile(root), "utf8");
+      let edited = text;
+      for (const path of EDITED_PATHS) {
+        const [before, after] = [valueAt(raw, path), valueAt(changed, path)];
+        if (JSON.stringify(before) !== JSON.stringify(after)) edited = editJsonc(edited, path, after);
       }
+      if (edited !== text) await writeFileAtomic(configFile(root), edited);
       return settingsView(await openProject(root));
     },
 
@@ -159,10 +179,12 @@ export function createWorkspace(dependencies: WorkspaceDependencies = {}) {
     },
 
     async review(root: string, source: string, target: string): Promise<EntryView> {
-      if (target.trim() === "") throw new Error("A translation cannot be empty");
+      if (target.trim() === "") throw new AppError("empty-translation", {}, "A translation cannot be empty");
       const { config, workDir } = await openProject(root);
       const segment = (await extractSegments(root, config)).find((candidate) => candidate.source === source);
-      if (segment === undefined) throw new Error(`This text is not in the project anymore: ${source}`);
+      if (segment === undefined) {
+        throw new AppError("text-gone", { source }, `This text is not in the project anymore: ${source}`);
+      }
       const memory = await loadMemory(workDir, config);
       memory.importTranslation(source, target);
       await saveMemory(workDir, memory);
@@ -260,6 +282,20 @@ function withSettings(raw: Record<string, unknown>, settings: SettingsView): Rec
   };
 }
 
+/** The parts of the configuration that the settings screen edits. */
+const EDITED_PATHS: readonly (readonly string[])[] = [
+  ["sourceLanguage"],
+  ["targetLanguage"],
+  ["provider"],
+  ["translation", "instructions"],
+];
+
+function valueAt(raw: Record<string, unknown>, path: readonly string[]): unknown {
+  let value: unknown = raw;
+  for (const key of path) value = isObject(value) ? value[key] : undefined;
+  return value;
+}
+
 function setOrDelete(target: Record<string, unknown>, key: string, value: string): void {
   if (value.trim() === "") delete target[key];
   else target[key] = value.trim();
@@ -278,14 +314,59 @@ async function ollamaStatus(address: string, fetch: typeof globalThis.fetch): Pr
   const host = address.trim().replace(/\/+$/, "");
   try {
     const response = await fetch(`${host}/api/tags`, { signal: AbortSignal.timeout(OLLAMA_STATUS_TIMEOUT_MS) });
-    if (!response.ok) return { kind: "ollama", ready: false, message: `Ollama at ${host} answered ${response.status}` };
+    if (!response.ok) return { kind: "ollama", ready: false, host, httpStatus: response.status };
     const body: unknown = await response.json();
     const models = isObject(body) && Array.isArray(body.models) ? body.models : [];
     const names = models.flatMap((model) => (isObject(model) && typeof model.name === "string" ? [model.name] : []));
-    return { kind: "ollama", ready: true, models: names.sort() };
+    return { kind: "ollama", ready: true, host, models: names.sort() };
   } catch {
-    return { kind: "ollama", ready: false, message: `Ollama does not answer at ${host}: is it running?` };
+    return { kind: "ollama", ready: false, host };
   }
+}
+
+/** The project folder of what was opened, and the file when one was opened alone (relative, with "/"). */
+async function locate(target: string): Promise<{ root: string; file?: string }> {
+  const info = await stat(target).catch(() => undefined);
+  if (info === undefined) throw new AppError("not-found", { path: target }, `Nothing at ${target}`);
+  if (info.isDirectory()) return { root: target };
+  return { root: path.dirname(target), file: path.basename(target) };
+}
+
+/**
+ * The sources a new project would have. For a file opened alone: the source detection finds for it, narrowed to
+ * that file, or else its format by extension, written next to it ({dir}/{name}.{lang}{ext}).
+ */
+async function candidates(
+  root: string,
+  file: string | undefined,
+  sourceLanguage: string,
+  targetLanguage: string,
+): Promise<Detection> {
+  const detection = await detectSources(root, sourceLanguage, targetLanguage);
+  if (file === undefined) return detection;
+  for (const source of detection.sources) {
+    if (await matchesAny(root, source.include, file)) {
+      return { sources: [{ ...source, include: [escapeGlob(file)], files: 1 }], skipped: [] };
+    }
+  }
+  const format = formatOf(file);
+  if (format === undefined) throw new AppError("file-not-supported", { file }, `${file}: not a format tradforge reads`);
+  const source = { format, include: [escapeGlob(file)], files: 1, output: DEFAULT_OUTPUT.path };
+  return { sources: [source], skipped: [] };
+}
+
+async function matchesAny(root: string, patterns: readonly string[], file: string): Promise<boolean> {
+  for (const pattern of patterns) {
+    for await (const match of glob(pattern, { cwd: root })) {
+      if (match.replaceAll("\\", "/") === file) return true;
+    }
+  }
+  return false;
+}
+
+/** A file name as a pattern that matches only itself: "Notes [draft].md" has glob characters. */
+function escapeGlob(file: string): string {
+  return file.replace(/[[\]*?{}()!]/g, (char) => `[${char}]`);
 }
 
 /** A JSON object, as opposed to an array or a value. */
@@ -311,13 +392,8 @@ async function hasConfig(root: string): Promise<boolean> {
   );
 }
 
-async function mustBeFolder(root: string): Promise<void> {
-  const info = await stat(root).catch(() => undefined);
-  if (info === undefined || !info.isDirectory()) throw new Error(`No folder at ${root}`);
-}
-
 async function readRawConfig(root: string): Promise<Record<string, unknown>> {
   const raw: unknown = JSON.parse(stripJsonComments(await readFile(configFile(root), "utf8")));
-  if (!isObject(raw)) throw new Error(`${configFile(root)} must hold a JSON object`);
+  if (!isObject(raw)) throw new AppError("config-invalid", {}, `${configFile(root)} must hold a JSON object`);
   return raw;
 }

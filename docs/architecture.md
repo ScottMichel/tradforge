@@ -100,13 +100,18 @@ an adapter like the command line: it drives the library, and adds no translation
 | Workspace — the steps of the command line (init, translate, review, build) as functions returning plain data | Node.js | `src/main/workspace.ts` |
 | Preload script — exposes the bridge to the page as `window.tradforge` | the window, before the page | `src/preload` |
 | Page — the four screens (project, settings, translation, review) | the window, like a web page | `src/renderer` |
-| Bridge — the functions the page may call | both sides (types only) | `src/shared/bridge.ts` |
+| Interface languages — one catalog per language, English being the reference | the window | `src/renderer/i18n` |
+| Bridge — the requests the page may make, and the error codes | both sides (types only) | `src/shared/bridge.ts` |
 
 The page has no access to Node.js (`sandbox`, `contextIsolation`): it only reaches the computer through the bridge, so a
 text it shows can never run code, and the page builds its elements with `textContent` only, so a translated text never
 becomes markup. The window never opens another page or window (it may only reload itself), and loads a development
 server only from this computer. Every call reads the project folder again, so the application and the command line
 can be used on the same project.
+
+The main process never sends a sentence to the page: an error crosses the bridge as a code with its values (and the
+message of the library as a technical detail), and the page words it in the language of the interface. A catalog
+missing a text does not compile; plurals, numbers and language names come from `Intl`.
 
 Vite bundles the main process with the sources of the library into one file, and builds the page; tsc compiles the
 preload script. The packaged application (electron-builder, a portable `.exe`) therefore holds no `node_modules`.

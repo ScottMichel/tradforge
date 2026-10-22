@@ -1,8 +1,18 @@
 import type { EngineType, EntryState, EntryView } from "../shared/bridge.js";
 
-/** How the page shows the data of the library: pure functions, without the page (tested in Node.js). */
+/**
+ * How the page shows the data of the library: pure functions, without the page (tested in Node.js). The words that
+ * depend on the language of the interface come from its catalog (i18n/).
+ */
 
-const FORMAT_LABELS: Readonly<Record<string, string>> = {
+/** The names that are translated: the other formats are known by their own name. */
+export interface FormatNames {
+  readonly xcodeCatalog: string;
+  readonly srtSubtitles: string;
+  readonly vttSubtitles: string;
+}
+
+const FORMAT_LABELS: Readonly<Record<string, string | ((names: FormatNames) => string)>> = {
   json: "JSON",
   yaml: "YAML",
   markdown: "Markdown",
@@ -16,75 +26,56 @@ const FORMAT_LABELS: Readonly<Record<string, string>> = {
   xliff: "XLIFF",
   android: "Android",
   "ios-strings": "Apple .strings",
-  xcstrings: "Catalogue Xcode",
+  xcstrings: (names) => names.xcodeCatalog,
   properties: "Java .properties",
   resx: ".NET .resx",
   arb: "Flutter .arb",
-  srt: "Sous-titres SRT",
-  vtt: "Sous-titres WebVTT",
+  srt: (names) => names.srtSubtitles,
+  vtt: (names) => names.vttSubtitles,
   renpy: "Ren'Py",
   "zomboid-txt": "Project Zomboid",
   "paradox-yml": "Paradox",
   "rimworld-xml": "RimWorld",
 };
 
-export function formatLabel(format: string): string {
-  return FORMAT_LABELS[format] ?? format;
+export function formatLabel(format: string, names: FormatNames): string {
+  const label = FORMAT_LABELS[format] ?? format;
+  return typeof label === "string" ? label : label(names);
 }
 
-const ENGINE_LABELS: Readonly<Record<EngineType, string>> = {
+const ENGINE_LABELS: Readonly<Record<Exclude<EngineType, "openai-compatible">, string>> = {
   ollama: "Ollama",
   deepl: "DeepL",
   gemini: "Gemini",
   anthropic: "Claude",
-  "openai-compatible": "API compatible OpenAI",
 };
 
-export function engineLabel(engine: EngineType): string {
-  return ENGINE_LABELS[engine];
-}
-
-function displayName(locale: string, code: string): string | undefined {
-  try {
-    return new Intl.DisplayNames([locale], { type: "language" }).of(code);
-  } catch {
-    return undefined; // not a language code
-  }
-}
-
-/** "de" → "allemand". */
-export function languageLabel(code: string): string {
-  return displayName("fr", code) ?? code;
+/** The name of an engine; "OpenAI-compatible API" is translated, the others are brands. */
+export function engineLabel(engine: EngineType, openAiCompatible: string): string {
+  return engine === "openai-compatible" ? openAiCompatible : ENGINE_LABELS[engine];
 }
 
 /** The output path of a source for one language, as the library fills it ({dir} and {name} stay per file). */
 export function outputFor(pattern: string, language: string): string {
-  const english = (displayName("en", language) ?? language).toLowerCase();
+  let english = language;
+  try {
+    english = new Intl.DisplayNames(["en"], { type: "language" }).of(language) ?? language;
+  } catch {
+    // Not a language code: kept as it is.
+  }
   return pattern
     .replaceAll("{lang}", language)
     .replaceAll("{LANG}", language.toUpperCase())
-    .replaceAll("{language}", english);
+    .replaceAll("{language}", english.toLowerCase());
 }
 
-const numbers = new Intl.NumberFormat("fr-FR");
-
-export function count(value: number): string {
-  return numbers.format(value);
-}
-
-/** "0 texte", "1 texte", "2 textes": in French, 0 and 1 take the singular. */
-export function plural(value: number, one: string, many = `${one}s`): string {
-  return `${count(value)} ${value > 1 ? many : one}`;
-}
-
-/** The time left, rounded as a person would say it. */
-export function duration(ms: number): string {
-  const minutes = Math.round(ms / 60_000);
-  if (minutes < 1) return "moins d'une minute";
-  if (minutes < 60) return `environ ${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest === 0 ? `environ ${hours} h` : `environ ${hours} h ${String(rest).padStart(2, "0")}`;
+/** The same file or folder, written with "\" or "/", and without case on Windows ("C:\Mods" and "c:/mods"). */
+export function samePath(a: string, b: string): boolean {
+  const normal = (value: string) => {
+    const slashes = value.replaceAll("\\", "/").replace(/\/+$/, "");
+    return /^[A-Za-z]:\//.test(slashes) ? slashes.toLowerCase() : slashes;
+  };
+  return normal(a) === normal(b);
 }
 
 /** Ollama lists "mistral-small:latest" for a model configured as "mistral-small". */

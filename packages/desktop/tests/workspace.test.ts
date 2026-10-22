@@ -38,7 +38,7 @@ async function created() {
 
 describe("openFolder", () => {
   it("shows what detection finds in a folder that is not a project yet", async () => {
-    const project = await createWorkspace().openFolder(root, "en", "fr");
+    const project = await createWorkspace().open(root, "en", "fr");
     expect(project).toMatchObject({ root, configured: false, sourceLanguage: "en", targetLanguage: "fr" });
     expect(project.sources).toEqual([
       { format: "json", include: ["locales/en/*.json"], files: 1, output: "locales/{lang}/{name}{ext}" },
@@ -49,7 +49,7 @@ describe("openFolder", () => {
 
   it("opens an existing project with its configuration and its progress", async () => {
     const workspace = await created();
-    const project = await workspace.openFolder(root, "de", "it");
+    const project = await workspace.open(root, "de", "it");
     expect(project).toMatchObject({ configured: true, sourceLanguage: "en", targetLanguage: "fr", skipped: [] });
     expect(project.sources).toEqual([
       { format: "json", include: ["locales/en/*.json"], output: "locales/{lang}/{name}{ext}" },
@@ -57,8 +57,48 @@ describe("openFolder", () => {
     expect(project.stats).toEqual({ total: 3, translated: 0, reviewed: 0, failed: 0, pending: 3 });
   });
 
-  it("refuses a folder that does not exist", async () => {
-    await expect(createWorkspace().openFolder(join(root, "missing"), "en", "fr")).rejects.toThrow(/missing/);
+  it("refuses a path where there is nothing, with a code the page words", async () => {
+    const missing = join(root, "missing");
+    await expect(createWorkspace().open(missing, "en", "fr")).rejects.toMatchObject({
+      code: "not-found",
+      params: { path: missing },
+    });
+  });
+});
+
+describe("open one file", () => {
+  it("makes its folder the project and the file its only source", async () => {
+    await writeFile(join(root, "intro.en.srt"), "1\n00:00:01,000 --> 00:00:02,000\nHello there.\n");
+    const project = await createWorkspace().open(join(root, "intro.en.srt"), "en", "fr");
+    expect(project).toMatchObject({ root, file: "intro.en.srt", configured: false });
+    expect(project.sources).toHaveLength(1);
+    expect(project.sources[0]).toMatchObject({ format: "srt", include: ["intro.en.srt"], files: 1 });
+  });
+
+  it("takes the format of the extension when detection leaves the file out, and writes it next to it", async () => {
+    await writeFile(join(root, "Notes [draft].md"), "# Notes\n\nSome notes for the team.\n");
+    const workspace = createWorkspace();
+    const opened = await workspace.open(join(root, "Notes [draft].md"), "en", "fr");
+    expect(opened.sources).toEqual([
+      { format: "markdown", include: ["Notes [[]draft[]].md"], files: 1, output: "{dir}/{name}.{lang}{ext}" },
+    ]);
+    const project = await workspace.createProject(join(root, "Notes [draft].md"), "en", "fr", [0]);
+    expect(project).toMatchObject({ configured: true, file: "Notes [draft].md" });
+    expect(project.stats?.total).toBe(2);
+  });
+
+  it("refuses a file that no format reads", async () => {
+    await writeFile(join(root, "photo.png"), "not really a picture");
+    await expect(createWorkspace().open(join(root, "photo.png"), "en", "fr")).rejects.toMatchObject({
+      code: "file-not-supported",
+      params: { file: "photo.png" },
+    });
+  });
+
+  it("opens the project of its folder when there is one", async () => {
+    const workspace = await created();
+    const project = await workspace.open(join(root, "package.json"), "en", "fr");
+    expect(project).toMatchObject({ configured: true, file: "package.json" });
   });
 });
 
@@ -66,7 +106,7 @@ describe("createProject", () => {
   it("writes a configuration with the chosen formats only", async () => {
     await writeFile(join(root, "notes.en.md"), "# Notes\n\nSome notes for the team.\n");
     const workspace = createWorkspace();
-    const found = await workspace.openFolder(root, "en", "fr");
+    const found = await workspace.open(root, "en", "fr");
     expect(found.sources.map((source) => source.format)).toEqual(["json", "markdown"]);
 
     const project = await workspace.createProject(root, "en", "fr", [1]);
@@ -114,10 +154,23 @@ describe("settings", () => {
       address: "",
       instructions: "A tabletop game.",
     });
-    const raw = JSON.parse(await readFile(join(root, "tradforge.config.json"), "utf8"));
+    const raw = JSON.parse(stripJsonComments(await readFile(join(root, "tradforge.config.json"), "utf8")));
     expect(raw.provider).toEqual({ type: "deepl" });
     expect(raw.translation.glossary).toEqual({ NPC: "PNJ" });
     expect(raw.sources[0].format).toBe("json");
+  });
+
+  it("keeps the comments of the configuration, which explain every setting", async () => {
+    const workspace = await created();
+    const file = join(root, "tradforge.config.json");
+    const before = await readFile(file, "utf8");
+    const settings = await workspace.settings(root);
+    await workspace.saveSettings(root, { ...settings, model: "qwen3:14b", instructions: "" });
+    const after = await readFile(file, "utf8");
+    const comments = (text: string) => text.split("\n").filter((line) => line.trim().startsWith("//"));
+    expect(comments(after)).toEqual(comments(before));
+    expect(after).toContain('"provider": {\n    "type": "ollama",\n    "model": "qwen3:14b",');
+    expect(after).not.toContain('"instructions"');
   });
 
   it("keeps the settings of the same engine that the application does not edit", async () => {
@@ -131,7 +184,7 @@ describe("settings", () => {
     });
     const settings = await workspace.settings(root);
     await workspace.saveSettings(root, { ...settings, model: "gemini-pro-latest" });
-    expect(JSON.parse(await readFile(file, "utf8")).provider).toEqual({
+    expect(JSON.parse(stripJsonComments(await readFile(file, "utf8"))).provider).toEqual({
       type: "gemini",
       model: "gemini-pro-latest",
       apiKeyEnv: "MY_GEMINI",
@@ -177,7 +230,12 @@ describe("engineStatus", () => {
       return Response.json({ models: [{ name: "qwen3:14b" }, { name: "mistral-small:latest" }] });
     };
     const status = await createWorkspace({ fetch: fetch as typeof globalThis.fetch }).engineStatus(root, ollama);
-    expect(status).toEqual({ kind: "ollama", ready: true, models: ["mistral-small:latest", "qwen3:14b"] });
+    expect(status).toEqual({
+      kind: "ollama",
+      ready: true,
+      host: "http://localhost:11434",
+      models: ["mistral-small:latest", "qwen3:14b"],
+    });
     expect(asked).toEqual(["http://localhost:11434/api/tags"]);
   });
 
@@ -186,8 +244,7 @@ describe("engineStatus", () => {
       throw new TypeError("fetch failed");
     };
     const status = await createWorkspace({ fetch: fetch as typeof globalThis.fetch }).engineStatus(root, ollama);
-    expect(status).toMatchObject({ kind: "ollama", ready: false });
-    expect(status.kind === "ollama" && !status.ready && status.message).toMatch(/http:\/\/localhost:11434/);
+    expect(status).toEqual({ kind: "ollama", ready: false, host: "http://localhost:11434" });
   });
 
   it("reads the name of the key variable from the configuration of the same engine", async () => {
@@ -231,7 +288,7 @@ describe("translate, review and build", () => {
       { source: "Quit the game", target: "FR Quit the game", state: "machine", file: "locales/en/app.json" },
       { source: "Say {name}", state: "failed", reason: expect.stringContaining("{name}"), file: "locales/en/app.json" },
     ]);
-    expect((await workspace.openFolder(root, "en", "fr")).stats).toMatchObject({ translated: 2, failed: 1 });
+    expect((await workspace.open(root, "en", "fr")).stats).toMatchObject({ translated: 2, failed: 1 });
   });
 
   it("stops between batches when asked, and keeps what is done", async () => {
