@@ -1,10 +1,11 @@
 import type { TradforgeConfig } from "./config.js";
 import { diffSources } from "./diff.js";
 import type { TranslationMemory } from "./memory.js";
+import { isAborted, oneAtATime, SharedPause, sleep } from "./pipeline/concurrency.js";
+import { buildRequest, chunkByGroup, Neighbours, type RequestContext } from "./pipeline/requests.js";
 import { ProtectionError, protectPlaceholders, restorePlaceholders } from "./protection.js";
 import {
   BatchError,
-  type ContextLine,
   type PreviousTranslation,
   type Provider,
   ProviderUnavailableError,
@@ -398,41 +399,6 @@ export function planRequests(
   return chunkByGroup(todo, config.translation.batchSize).map((batch) => buildRequest(batch, context, undefined));
 }
 
-/** What building a request needs. */
-interface RequestContext {
-  readonly config: PipelineConfig;
-  readonly memory: TranslationMemory;
-  readonly previous: ReadonlyMap<string, PreviousTranslation>;
-  readonly neighbours: Neighbours;
-}
-
-/** Ids are positions in the group: the answer is matched back by position. */
-function buildRequest(
-  group: readonly Segment[],
-  context: RequestContext,
-  shields: readonly { readonly text: string }[] | undefined,
-): TranslationRequest {
-  const { config } = context;
-  const { instructions, glossary, contextLines } = config.translation;
-  const surrounding = context.neighbours.around(group, contextLines, context.memory);
-  return {
-    sourceLanguage: config.sourceLanguage,
-    targetLanguage: config.targetLanguage,
-    items: group.map((segment, id) => {
-      const previous = context.previous.get(segment.source);
-      return {
-        id,
-        source: shields?.[id]?.text ?? segment.source,
-        ...(segment.context !== undefined ? { context: segment.context } : {}),
-        ...(previous !== undefined ? { previous } : {}),
-      };
-    }),
-    ...(instructions !== undefined ? { instructions } : {}),
-    glossary,
-    ...(surrounding !== undefined ? { surrounding } : {}),
-  };
-}
-
 /** The finishing touches applied to every translation before it is checked: the typography of the language. */
 function polish(target: string, config: PipelineConfig): string {
   return config.translation.typography
@@ -448,154 +414,6 @@ function check(source: string, target: string, config: PipelineConfig): Validati
       glossary: config.validation.glossary ? config.translation.glossary : {},
     },
   );
-}
-
-/** The texts of each file in order, to find the lines around a batch. */
-class Neighbours {
-  private readonly byFile = new Map<string, Segment[]>();
-  private readonly position = new Map<Segment, number>();
-
-  constructor(segments: readonly Segment[]) {
-    for (const segment of segments) {
-      const file = fileOf(segment);
-      const list = this.byFile.get(file) ?? [];
-      this.position.set(segment, list.length);
-      list.push(segment);
-      this.byFile.set(file, list);
-    }
-  }
-
-  /** Up to `count` lines before the first text and after the last one, in their files; undefined if none. */
-  around(group: readonly Segment[], count: number, memory: TranslationMemory) {
-    const first = group[0];
-    const last = group.at(-1);
-    if (count === 0 || first === undefined || last === undefined) return undefined;
-    const inGroup = new Set(group);
-    const line = (segment: Segment): ContextLine => {
-      const translation = memory.get(segment.source)?.target;
-      return { source: segment.source, ...(translation !== undefined ? { translation } : {}) };
-    };
-    const before = this.slice(first, -count).filter((segment) => !inGroup.has(segment));
-    const after = this.slice(last, count).filter((segment) => !inGroup.has(segment));
-    if (before.length === 0 && after.length === 0) return undefined;
-    return { before: before.map(line), after: after.map(line) };
-  }
-
-  /** The `offset` texts after (positive) or before (negative) a text, in its file. */
-  private slice(segment: Segment, offset: number): Segment[] {
-    const list = this.byFile.get(fileOf(segment)) ?? [];
-    const index = this.position.get(segment) ?? 0;
-    return offset < 0 ? list.slice(Math.max(0, index + offset), index) : list.slice(index + 1, index + 1 + offset);
-  }
-}
-
-function fileOf(segment: Segment): string {
-  return segment.locations[0]?.file ?? "";
-}
-
-/**
- * Batches of at most `size` texts that keep each conversation group whole whenever it fits:
- * a group that does not fit in the current batch starts a new one; a group larger than a batch is split.
- */
-function chunkByGroup(segments: readonly Segment[], size: number): Segment[][] {
-  const batches: Segment[][] = [];
-  let current: Segment[] = [];
-  for (const unit of groupRuns(segments)) {
-    if (unit.length > size) {
-      if (current.length > 0) batches.push(current);
-      current = [];
-      for (const part of chunk(unit, size)) batches.push(part);
-      continue;
-    }
-    if (current.length + unit.length > size) {
-      batches.push(current);
-      current = [];
-    }
-    for (const segment of unit) current.push(segment);
-  }
-  if (current.length > 0) batches.push(current);
-  return batches;
-}
-
-/** Consecutive texts of the same group, together; a text without a group stands alone. */
-function groupRuns(segments: readonly Segment[]): Segment[][] {
-  const runs: Segment[][] = [];
-  for (const segment of segments) {
-    const last = runs.at(-1);
-    if (last !== undefined && segment.group !== undefined && last[0]?.group === segment.group) last.push(segment);
-    else runs.push([segment]);
-  }
-  return runs;
-}
-
-/** One wait shared by every batch of the run. A rate limit met during a wait joins it rather than adding another. */
-class SharedPause {
-  private current: Promise<void> | undefined;
-
-  constructor(
-    private readonly wait: (ms: number, signal?: AbortSignal) => Promise<void>,
-    private readonly signal: AbortSignal | undefined,
-  ) {}
-
-  /** Starts a wait, unless one is running. True when it started one. */
-  start(ms: number): boolean {
-    if (this.current !== undefined) return false;
-    this.current = this.wait(ms, this.signal).finally(() => {
-      this.current = undefined;
-    });
-    return true;
-  }
-
-  /** Ends with the current wait, at once if there is none. Rejects if the run is interrupted meanwhile. */
-  done(): Promise<void> {
-    return this.current ?? Promise.resolve();
-  }
-}
-
-/** Waits, or rejects as soon as the signal aborts: Ctrl+C never waits for the end of a rate limit. */
-function sleep(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted === true) {
-      reject(signal.reason);
-      return;
-    }
-    const onAbort = () => {
-      clearTimeout(timer);
-      reject(signal?.reason);
-    };
-    const timer = setTimeout(() => {
-      signal?.removeEventListener("abort", onAbort);
-      resolve();
-    }, ms);
-    signal?.addEventListener("abort", onAbort, { once: true });
-  });
-}
-
-/**
- * Runs the calls one after the other, never at the same time: two batches that end together must not write the
- * memory file at once. Each call waits for the previous one, even if it failed.
- */
-function oneAtATime(task: () => Promise<void>): () => Promise<void> {
-  let last: Promise<void> = Promise.resolve();
-  return () => {
-    const current = last.then(task, task);
-    last = current.catch(() => {}); // a failed save is reported to its caller, not to the next one
-    return current;
-  };
-}
-
-/**
- * A function call, not `signal?.aborted` inline: TypeScript would remember the value checked before an
- * await and consider it unchanged, while an interruption can happen at any time.
- */
-function isAborted(signal: AbortSignal | undefined): boolean {
-  return signal?.aborted ?? false;
-}
-
-function chunk<T>(items: readonly T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let start = 0; start < items.length; start += size) chunks.push(items.slice(start, start + size));
-  return chunks;
 }
 
 function countChars(segments: readonly Segment[]): number {

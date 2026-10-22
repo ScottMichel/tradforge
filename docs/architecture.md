@@ -39,17 +39,20 @@ engine means writing an adapter; the core does not change. See [ADR 0001](adr/00
 | Module | Role |
 | --- | --- |
 | `types.ts` | The data model: `Occurrence` (a text found at one place), `Segment` (a unique text and all its places), `TranslationEntry`, `FailedTranslation` |
-| `config.ts` | `parseConfig`: untrusted JSON in, complete typed configuration out, every problem reported at once |
+| `config.ts`, `config/` | `parseConfig`: untrusted JSON in, complete typed configuration out, every problem reported at once; one module per part (`sources`, `providers`, `translation`, `validation`) |
 | `segments.ts` | `groupOccurrences`: identical texts become one segment, translated once, kept in file order |
 | `groups.ts` | `groupRule`: applies the grouping rule of a source (conversations kept in one batch) |
 | `validation/` | `validateTranslation`: placeholders, markup, line breaks, markers, spaces, untranslated, glossary, length |
 | `typography.ts` | `fixTypography`: typography of the target language (French non-breaking spaces) |
 | `protection.ts` | `protectPlaceholders` / `restorePlaceholders`: placeholders hidden behind numbered tags for some engines |
 | `reuse.ts` | `reuseTranslation`: adapts the translation of a text whose punctuation only changed |
-| `memory.ts` | `TranslationMemory`: translations by source text, review protection, failure log, statistics |
-| `pipeline.ts` | `translateSegments`: reuse, batches by group, context lines, retries, validation, saving after every batch, progress, interruption |
+| `memory.ts` | `TranslationMemory`: translations by source text, review protection, failure log, back-translation checks, statistics |
+| `pipeline.ts` | `translateSegments`: reuse, retries, rate limits, validation, saving after every batch, progress, interruption; `planRequests` for estimates |
+| `pipeline/` | `requests`: batches that keep groups whole, context lines, requests; `concurrency`: the shared pause, the wait Ctrl+C ends, saves one at a time |
+| `suspicion.ts`, `verify.ts` | Translations that deserve a second look, translated back and judged by a language model |
+| `sample.ts`, `benchmark.ts` | A sample of the project, translated by several engines to compare them |
 | `diff.ts` | `diffSources`: new, removed and slightly changed texts (Levenshtein similarity) |
-| `languages.ts` | `languageName`: "fr" → "French" |
+| `languages.ts`, `encodings.ts` | `languageName`: "fr" → "French"; the text encodings a project may use |
 | `reader.ts`, `writer.ts`, `provider.ts` | The ports |
 
 ## Life of a text
