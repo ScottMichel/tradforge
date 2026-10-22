@@ -121,6 +121,8 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Changed
 
+- The repository is an npm workspace: the `tradforge` package (command line and library) lives in `packages/cli`,
+  ready for the desktop application next to it. The scripts still run from the root (`npm run check`, `npm run dev`).
 - Texts are no longer sorted alphabetically before translation, but kept in the order of their files.
 - The `translate` summary tells how many translations were reused.
 

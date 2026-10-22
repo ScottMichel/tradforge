@@ -1,0 +1,62 @@
+{
+  "name": "tradforge",
+  "version": "0.1.0",
+  "description": "Translate the texts of a project with a local LLM, with strict validation, a translation memory and incremental resume",
+  "keywords": [
+    "i18n",
+    "localization",
+    "translation",
+    "llm",
+    "ollama",
+    "cli",
+    "typescript",
+    "game-modding"
+  ],
+  "author": "Kazuugnii",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ScottMichel/tradforge.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/ScottMichel/tradforge#readme",
+  "bugs": {
+    "url": "https://github.com/ScottMichel/tradforge/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "tradforge": "./dist/cli/bin.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "dev": "tsx src/cli/bin.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "prepack": "node scripts/copy-documents.mjs",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@vitest/coverage-v8": "^5.0.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

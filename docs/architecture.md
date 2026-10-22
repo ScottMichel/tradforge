@@ -16,11 +16,14 @@ The code is split in two layers ("hexagonal architecture", or ports and adapters
   reason about. It defines **ports**: the interfaces it needs from the outside world.
 - **Adapters** implement those ports, or drive the core:
 
+The command line and the library are the `tradforge` package, in `packages/cli`: the paths below are relative to it.
+
 | Port (in `src/core`) | Adapters | Folder |
 | --- | --- | --- |
-| `Reader` — extract texts from one file | JSON, Lua, SRT, WebVTT, Ren'Py, Project Zomboid, Paradox, RimWorld | `src/formats/<format>/reader.ts` |
-| `Writer` — write the translated version of one file | the same formats | `src/formats/<format>/writer.ts` |
-| `Provider` — translate a batch of texts | Ollama, mock | `src/providers/<engine>/provider.ts` |
+| `Reader` — extract texts from one text file | JSON, YAML, Lua, gettext, XLIFF, Android, Apple, Java, .NET, Flutter, subtitles, game formats, Markdown, HTML | `src/formats/<format>/reader.ts` |
+| `Writer` — write the translated version of one text file | the same formats | `src/formats/<format>/writer.ts` |
+| `BinaryReader`, `BinaryWriter` — the same, on bytes | Word, PowerPoint, Excel, OpenDocument (ZIP archives of XML) | `src/formats/<format>/` |
+| `Provider` — translate a batch of texts, judge back-translations | Ollama, OpenAI-compatible APIs, Claude, Gemini, DeepL, mock | `src/providers/<engine>/provider.ts` |
 | — | Translation memory on disk, CSV review | `src/storage` |
 | — | Command line (drives the core) | `src/cli` |
 

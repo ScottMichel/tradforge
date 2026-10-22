@@ -11,14 +11,28 @@ const INVISIBLE =
   /[\u{0}-\u{8}\u{b}\u{c}\u{e}-\u{1f}\u{7f}-\u{a0}\u{ad}\u{2000}-\u{200f}\u{2028}-\u{202f}\u{205f}-\u{206f}\u{feff}\u{e000}-\u{f8ff}\u{fff0}-\u{ffff}]/u;
 
 const root = path.join(import.meta.dirname, "..");
+/** The repository root, where the documents of the project live. */
+const repository = path.join(root, "..", "..");
 
 describe("code hygiene", () => {
   it("has no invisible character in the code, the tests or the examples", async () => {
     const problems: string[] = [];
-    const patterns = ["src/**/*.ts", "tests/**/*.ts", "examples/**/*.{json,lua}", "docs/**/*.md"];
-    const documents = ["README.md", "README.fr.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "CHANGELOG.md"];
-    for await (const file of glob([...patterns, ...documents], { cwd: root })) {
-      const lines = (await readFile(path.join(root, file), "utf8")).split("\n");
+    const code = ["src/**/*.ts", "tests/**/*.ts", "examples/**/*.{json,lua}"];
+    const documents = [
+      "docs/**/*.md",
+      "README.md",
+      "README.fr.md",
+      "CONTRIBUTING.md",
+      "CODE_OF_CONDUCT.md",
+      "CHANGELOG.md",
+    ];
+    const files: string[] = [];
+    for await (const file of glob(code, { cwd: root })) files.push(path.join(root, file));
+    for await (const file of glob(documents, { cwd: repository })) files.push(path.join(repository, file));
+    expect(files.some((file) => file.endsWith("README.fr.md"))).toBe(true); // the documents were found
+    for (const absolute of files) {
+      const file = path.relative(repository, absolute);
+      const lines = (await readFile(absolute, "utf8")).split("\n");
       lines.forEach((line, index) => {
         const match = INVISIBLE.exec(line);
         if (match !== null) {

@@ -71,8 +71,8 @@ into guarantees:
    tradforge build       # writes the translated files
    ```
 
-Want to see it first? The [`examples/game`](examples/game) folder is a tiny game with a JSON interface and Lua
-dialogues: `cd examples/game`, then `tradforge translate --dry-run`.
+Want to see it first? The [`packages/cli/examples/game`](packages/cli/examples/game) folder is a tiny game with a JSON interface and Lua
+dialogues: `cd packages/cli/examples/game`, then `tradforge translate --dry-run`.
 
 ## Commands
 

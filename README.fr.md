@@ -76,8 +76,8 @@ traduction d'un gros mod de jeu (voir [l'étude de cas](#étude-de-cas)) et tran
    tradforge build       # écrit les fichiers traduits
    ```
 
-Envie de voir d'abord ? Le dossier [`examples/game`](examples/game) est un petit jeu avec une interface en JSON et des
-dialogues en Lua : `cd examples/game`, puis `tradforge translate --dry-run`.
+Envie de voir d'abord ? Le dossier [`packages/cli/examples/game`](packages/cli/examples/game) est un petit jeu avec une interface en JSON et des
+dialogues en Lua : `cd packages/cli/examples/game`, puis `tradforge translate --dry-run`.
 
 ## Commandes
 

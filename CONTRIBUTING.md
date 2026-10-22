@@ -21,7 +21,7 @@ npm run check      # typecheck + lint + tests
 | `npm run typecheck` | TypeScript, strict mode |
 | `npm run lint` / `npm run format` | Check / fix lint and formatting (Biome) |
 | `npm run coverage` | Test coverage report |
-| `npm run build` | Compile to `dist/` |
+| `npm run build` | Compile to `packages/cli/dist/` |
 
 You do not need Ollama to work on tradforge: the tests use a mock provider and a fake `fetch`.
 
@@ -29,6 +29,8 @@ You do not need Ollama to work on tradforge: the tests use a mock provider and a
 
 - **Tests first.** Write the test, watch it fail, make it pass. Every behaviour has a test; every bug fix starts with a
   test that reproduces it.
+- **One package per program.** The command line and the library live in `packages/cli` (the `tradforge` package
+  on npm); the paths below are relative to it. Run the scripts from the repository root.
 - **Pure core.** `src/core` never touches the disk or the network. Files, network and the command line live in adapters
   (`src/formats`, `src/providers`, `src/storage`, `src/cli`). See [docs/architecture.md](docs/architecture.md).
 - **Strict TypeScript**, ES modules, `.js` extensions in imports. Prefer type guards (`value is X`) to `as` casts,
