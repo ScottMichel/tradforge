@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseParagraphs, writeParagraph } from "../../../src/formats/docx/paragraphs.js";
+import { parseParagraphs, writeParagraph } from "../../../src/formats/office/paragraphs.js";
 
 const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
 const body = (paragraphs: string) => `<w:document ${W}><w:body>${paragraphs}</w:body></w:document>`;

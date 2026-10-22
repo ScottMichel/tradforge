@@ -1,6 +1,6 @@
 import type { BinaryWriter } from "../../core/writer.js";
 import { partText, readPackage, withPart, writePackage } from "../office/package.js";
-import { parseParagraphs, writeParagraph } from "./paragraphs.js";
+import { parseParagraphs, writeParagraph } from "../office/paragraphs.js";
 import { textParts } from "./reader.js";
 
 /** <w:lang w:val="en-US"/>: the language Word checks a text in. */

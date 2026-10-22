@@ -1,8 +1,8 @@
 import { type BinaryReader, ReadError } from "../../core/reader.js";
 import type { Occurrence } from "../../core/types.js";
 import { partText, readPackage, withPart } from "../office/package.js";
+import { parseParagraphs } from "../office/paragraphs.js";
 import type { ZipEntry } from "../zip/zip.js";
-import { parseParagraphs } from "./paragraphs.js";
 
 /** The parts of a Word document that hold texts for readers: the body, then headers, footers and notes. */
 const TEXT_PART = /^word\/(?:document|header\d*|footer\d*|footnotes|endnotes)\.xml$/;
