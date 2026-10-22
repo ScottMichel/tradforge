@@ -20,6 +20,7 @@ import { srtReader } from "./srt/reader.js";
 import { vttReader } from "./vtt/reader.js";
 import { xcstringsReader } from "./xcstrings/reader.js";
 import { xliffReader } from "./xliff/reader.js";
+import { xlsxReader } from "./xlsx/reader.js";
 import { yamlReader } from "./yaml/reader.js";
 
 /** One reader per format. `satisfies` makes a missing format a compile error. */
@@ -44,6 +45,7 @@ export const READERS = {
   vtt: vttReader,
   xcstrings: xcstringsReader,
   xliff: xliffReader,
+  xlsx: xlsxReader,
   yaml: yamlReader,
 } as const satisfies Record<SourceFormat, Reader | BinaryReader>;
 

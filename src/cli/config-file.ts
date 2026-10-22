@@ -134,11 +134,11 @@ export function renderConfig(draft: ConfigDraft): string {
   // Folder where tradforge keeps its translation memory. Worth committing: it holds all the work.
   "workDir": ".tradforge",
 
-  // Files to translate. Formats: "json", "yaml", "markdown", "html", "docx" (Word), "pptx" (PowerPoint), "lua",
-  // "po" (gettext), "xliff", "android" (res/values/strings.xml), "ios-strings" (Apple .strings), "xcstrings" (Xcode catalogs, translated
-  // in place), "properties" (Java), "resx" (.NET), "arb" (Flutter), "srt", "vtt", "renpy" (Ren'Py scripts),
-  // "zomboid-txt" (Project Zomboid Build 41 tables), "paradox-yml" (Paradox localisation), "rimworld-xml" (RimWorld
-  // language files).
+  // Files to translate. Formats: "json", "yaml", "markdown", "html", "docx" (Word), "pptx" (PowerPoint),
+  // "xlsx" (Excel), "lua", "po" (gettext), "xliff", "android" (res/values/strings.xml), "ios-strings" (Apple
+  // .strings), "xcstrings" (Xcode catalogs, translated in place), "properties" (Java), "resx" (.NET), "arb" (Flutter),
+  // "srt", "vtt", "renpy" (Ren'Py scripts), "zomboid-txt" (Project Zomboid Build 41 tables), "paradox-yml" (Paradox
+  // localisation), "rimworld-xml" (RimWorld language files).
   // Check the output paths before running "tradforge build".
   // Lower "priority" = translated first (default 0). "context" helps the model choose the right meaning.
   // "group": "auto" (default), "none", "file", or { "keyPattern": "^Dialog_(\\\\w+)_" } to keep conversations together.

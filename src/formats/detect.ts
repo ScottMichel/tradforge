@@ -16,6 +16,7 @@ export const FORMAT_EXTENSIONS: Readonly<Record<SourceFormat, readonly string[]>
   arb: [".arb"],
   docx: [".docx"],
   pptx: [".pptx"],
+  xlsx: [".xlsx"],
   html: [".html", ".htm"],
   "ios-strings": [".strings"],
   json: [".json"],
@@ -175,7 +176,7 @@ export async function detectSources(root: string, sourceLanguage: string, target
       add({ format: "xcstrings", include: file, output: "{dir}/{name}{ext}" });
       continue;
     }
-    if (format === "docx" || format === "pptx") {
+    if (format === "docx" || format === "pptx" || format === "xlsx") {
       const officeDocument = documentSuggestion(format, file, markers);
       if ("reason" in officeDocument) skipped.push({ file, reason: officeDocument.reason });
       else add(officeDocument);
@@ -438,8 +439,11 @@ async function androidSuggestion(
  * translation goes next to it (manual.fr.docx). Documents of another language and the lock files Word leaves while
  * a document is open (~$manual.docx) are left out.
  */
+/** The office document formats, all detected the same way. */
+type OfficeFormat = "docx" | "pptx" | "xlsx";
+
 function documentSuggestion(
-  format: "docx" | "pptx",
+  format: OfficeFormat,
   file: string,
   markers: readonly string[],
 ): Suggestion | { reason: string } {
@@ -599,7 +603,7 @@ function iosSuggestion(
 
 /** The include pattern and output template for a file with a language marker in its path, if it has one. */
 function markedSuggestion(
-  format: "arb" | "docx" | "html" | "pptx" | "json" | "markdown" | "po" | "xliff" | "yaml",
+  format: "arb" | "html" | "json" | "markdown" | "po" | "xliff" | "yaml" | OfficeFormat,
   file: string,
   markers: readonly string[],
   targetLanguage: string | undefined,

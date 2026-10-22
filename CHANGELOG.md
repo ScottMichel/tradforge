@@ -7,6 +7,9 @@ All notable changes to tradforge are documented in this file. The format follows
 
 ### Added
 
+- `xlsx` format: Excel workbooks. The shared strings are translated in place (once for every cell that shows them),
+  rich text keeps its formats, and the inline strings of the sheets and the text boxes of the drawings are
+  translated too. Numbers, formulas, sheet names and strings without letters stay as they are.
 - `pptx` format: PowerPoint presentations. The paragraphs of the slides (text boxes, shapes, tables) and of the
   speaker notes, read and written as for Word documents; the texts of a slide are translated together.
 - `docx` format: Word documents. Each paragraph is one text, its formats as tags, and its runs are rebuilt in the order

@@ -27,6 +27,7 @@ export const SOURCE_FORMATS = [
   "vtt",
   "xcstrings",
   "xliff",
+  "xlsx",
   "yaml",
   "zomboid-txt",
 ] as const;
@@ -632,6 +633,7 @@ export const FORMAT_PLACEHOLDERS: Readonly<Partial<Record<SourceFormat, readonly
   // Word: the tags that stand for formats (<g1>), fields and pictures (<x1/>)
   docx: ["markup"],
   pptx: ["markup"],
+  xlsx: ["markup"],
 };
 
 /** The placeholder syntaxes to check: the configured ones, plus those of the formats the project uses. */

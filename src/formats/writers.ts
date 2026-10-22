@@ -20,6 +20,7 @@ import { srtWriter } from "./srt/writer.js";
 import { vttWriter } from "./vtt/writer.js";
 import { xcstringsWriter } from "./xcstrings/writer.js";
 import { xliffWriter } from "./xliff/writer.js";
+import { xlsxWriter } from "./xlsx/writer.js";
 import { yamlWriter } from "./yaml/writer.js";
 
 /** One writer per format. `satisfies` makes a missing format a compile error. */
@@ -44,6 +45,7 @@ export const WRITERS = {
   vtt: vttWriter,
   xcstrings: xcstringsWriter,
   xliff: xliffWriter,
+  xlsx: xlsxWriter,
   yaml: yamlWriter,
 } as const satisfies Record<SourceFormat, Writer | BinaryWriter>;
 

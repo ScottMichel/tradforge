@@ -145,7 +145,14 @@ export { markdownTexts } from "./formats/markdown/blocks.js";
 export { markdownReader } from "./formats/markdown/reader.js";
 export { markdownWriter } from "./formats/markdown/writer.js";
 export type { Dialect, Paragraph } from "./formats/office/paragraphs.js";
-export { DRAWING, parseParagraphs, WORD, writeParagraph } from "./formats/office/paragraphs.js";
+export {
+  DRAWING,
+  INLINE_STRING,
+  parseParagraphs,
+  SPREADSHEET,
+  WORD,
+  writeParagraph,
+} from "./formats/office/paragraphs.js";
 export { paradoxLanguage } from "./formats/paradox/languages.js";
 export { paradoxReader } from "./formats/paradox/reader.js";
 export { paradoxWriter } from "./formats/paradox/writer.js";
@@ -181,6 +188,8 @@ export { xcstringsReader } from "./formats/xcstrings/reader.js";
 export { xcstringsWriter } from "./formats/xcstrings/writer.js";
 export { xliffReader } from "./formats/xliff/reader.js";
 export { xliffWriter } from "./formats/xliff/writer.js";
+export { workbookParts, xlsxReader } from "./formats/xlsx/reader.js";
+export { xlsxWriter } from "./formats/xlsx/writer.js";
 export { yamlReader } from "./formats/yaml/reader.js";
 export { yamlWriter } from "./formats/yaml/writer.js";
 export type { ZipEntry, ZipInput } from "./formats/zip/zip.js";

@@ -35,8 +35,35 @@ export interface Dialect {
   readonly trailers: ReadonlySet<string>;
   /** Elements whose paragraphs are not looked at. */
   readonly skipped: ReadonlySet<string>;
-  readonly writeRun: (properties: string, text: string) => string;
+  /** A run of text; rich: the paragraph holds other formats or atoms too (a spreadsheet string then needs runs). */
+  readonly writeRun: (properties: string, text: string, rich: boolean) => string;
 }
+
+/**
+ * SpreadsheetML: the strings of an Excel workbook (<si> of the shared strings, <is> of an inline string). A plain
+ * string is a <t>; a rich one is made of runs.
+ */
+export const SPREADSHEET: Dialect = {
+  paragraph: "si",
+  paragraphProperties: "",
+  run: "r",
+  runProperties: "rPr",
+  text: "t",
+  anchors: new Set(),
+  trackedChanges: new Set(),
+  containers: new Set(),
+  // phonetic guides (Japanese) would no longer match a translated text
+  dropped: new Set(["rPh", "phoneticPr"]),
+  trailers: new Set(),
+  skipped: new Set(),
+  writeRun: (properties, text, rich) =>
+    rich || properties !== ""
+      ? `<r>${properties}<t xml:space="preserve">${text}</t></r>`
+      : `<t xml:space="preserve">${text}</t>`,
+};
+
+/** The inline strings of a worksheet (<c t="inlineStr"><is>...</is></c>), written as shared strings are. */
+export const INLINE_STRING: Dialect = { ...SPREADSHEET, paragraph: "is" };
 
 export const WORD: Dialect = {
   paragraph: "w:p",
@@ -174,10 +201,7 @@ function readParagraph(src: string, element: XmlElement, dialect: Dialect): Para
     }
     for (const child of content) {
       if (child.name === dialect.text) {
-        const text = child.children
-          .map((node) => (node.kind === "text" || node.kind === "cdata" ? node.value : ""))
-          .join("");
-        pieces.push({ kind: "text", text, style: styleOf });
+        pieces.push({ kind: "text", text: textOf(child), style: styleOf });
       } else if (!dialect.dropped.has(child.name)) {
         const xml = dialect.runAtom?.(styleOf.properties, raw(child)) ?? raw(child);
         pieces.push({ kind: "atom", xml });
@@ -189,6 +213,7 @@ function readParagraph(src: string, element: XmlElement, dialect: Dialect): Para
     if (child.name === dialect.paragraphProperties || dialect.dropped.has(child.name)) continue;
     if (dialect.trackedChanges.has(child.name)) return undefined;
     if (child.name === dialect.run) readRun(child, undefined);
+    else if (child.name === dialect.text) pieces.push({ kind: "text", text: textOf(child), style: NO_FORMAT });
     else if (dialect.anchors.has(child.name)) anchors.push(raw(child));
     else if (dialect.trailers.has(child.name)) trailers.push(raw(child));
     else if (dialect.containers.has(child.name)) {
@@ -264,6 +289,11 @@ function readParagraph(src: string, element: XmlElement, dialect: Dialect): Para
   };
 }
 
+/** The text of a text element (<w:t>, <a:t>, <t>). */
+function textOf(element: XmlElement): string {
+  return element.children.map((node) => (node.kind === "text" || node.kind === "cdata" ? node.value : "")).join("");
+}
+
 function sameStyle(a: Style, b: Style): boolean {
   return a.properties === b.properties && a.container?.open === b.container?.open;
 }
@@ -278,7 +308,8 @@ export function writeParagraph(paragraph: Paragraph, translation: string): strin
   const run = (text: string) => {
     if (text === "") return;
     const style = paragraph.tags[(stack.at(-1) ?? 0) - 1] ?? paragraph.base;
-    xml += paragraph.dialect.writeRun(style.properties, escapeXmlText(text.replaceAll("\n", " "), false));
+    const rich = paragraph.tags.length > 0 || paragraph.atoms.length > 0;
+    xml += paragraph.dialect.writeRun(style.properties, escapeXmlText(text.replaceAll("\n", " "), false), rich);
   };
   let position = 0;
   for (const match of translation.matchAll(/<g(\d+)>|<\/g(\d+)>|<x(\d+)\/>/g)) {
