@@ -57,7 +57,8 @@ if (process.argv.includes("--write")) {
   }
   const versionFile = "packages/cli/src/version.ts";
   writeFileSync(versionFile, readFileSync(versionFile, "utf8").replace(/VERSION = "[^"]+"/, `VERSION = "${next}"`));
-  const date = new Date().toISOString().slice(0, 10);
+  // The local date (sv gives YYYY-MM-DD): after midnight here, UTC may still be the day before.
+  const date = new Date().toLocaleDateString("sv");
   const changelog = readFileSync("CHANGELOG.md", "utf8");
   if (!changelog.includes("## [Unreleased]")) throw new Error('CHANGELOG.md has no "## [Unreleased]" section');
   writeFileSync("CHANGELOG.md", changelog.replace("## [Unreleased]", `## [Unreleased]\n\n## [${next}] - ${date}`));
