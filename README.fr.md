@@ -79,6 +79,27 @@ traduction d'un gros mod de jeu (voir [l'étude de cas](#étude-de-cas)) et tran
 Envie de voir d'abord ? Le dossier [`packages/cli/examples/game`](packages/cli/examples/game) est un petit jeu avec une interface en JSON et des
 dialogues en Lua : `cd packages/cli/examples/game`, puis `tradforge translate --dry-run`.
 
+## Application de bureau (aperçu)
+
+Le même travail sans ligne de commande, en quatre écrans : **Projet** (ouvrir un dossier, choisir les formats trouvés
+dedans), **Réglages** (langues, moteur, consignes ; les modèles Ollama installés sont proposés, les clés d'API sont
+détectées mais jamais affichées), **Traduction** (progression en direct, arrêt à tout moment) et **Relecture**
+(corriger et valider les traductions, puis écrire les fichiers traduits). Elle travaille sur le même
+`tradforge.config.json` et la même mémoire que la ligne de commande : vous pouvez passer de l'une à l'autre sur un même
+projet. Son interface est en français pour l'instant.
+
+Elle n'est pas encore publiée. Pour la lancer depuis les sources (après l'étape 2 ci-dessus) :
+
+```sh
+npm run desktop           # lance l'application
+npm run desktop:package   # construit un exécutable Windows portable dans packages/desktop/release/
+```
+
+L'exécutable portable est un seul `.exe` : pas d'installation, un double clic suffit. Il n'est **pas encore signé** :
+au premier lancement, Windows SmartScreen signale un éditeur inconnu ; choisissez « Informations complémentaires », puis
+« Exécuter quand même ». Les clés d'API sont lues dans les variables d'environnement, comme avec la ligne de commande :
+définissez-les avant de lancer l'application.
+
 ## Commandes
 
 | Commande | Rôle |
@@ -338,7 +359,7 @@ des textes écrits pour tradforge.
 
 ## Feuille de route
 
-1. **Application de bureau** : ouvrir un fichier ou un dossier, traduire, relire — sans ligne de commande.
+1. **Application de bureau** : téléchargement sur GitHub, exécutable signé (SignPath Foundation), interface en anglais.
 
 ## Contribuer
 

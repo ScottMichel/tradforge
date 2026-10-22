@@ -108,6 +108,9 @@ becomes markup. The window never opens another page or window (it may only reloa
 server only from this computer. Every call reads the project folder again, so the application and the command line
 can be used on the same project.
 
+Vite bundles the main process with the sources of the library into one file, and builds the page; tsc compiles the
+preload script. The packaged application (electron-builder, a portable `.exe`) therefore holds no `node_modules`.
+
 ## Decisions
 
 The reasons behind the main choices are recorded as Architecture Decision Records in [`docs/adr`](adr):

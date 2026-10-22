@@ -14,3 +14,6 @@ CLAUDE.md
 packages/cli/README.md
 packages/cli/LICENSE
 packages/cli/CHANGELOG.md
+
+# Packaged desktop application (npm run desktop:package)
+packages/desktop/release/

@@ -1,12 +1,11 @@
 {
+  // The preload script only: the main process is bundled by Vite (vite.main.config.ts), the page too.
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": false,
     "rootDir": "src",
     "outDir": "dist",
-    "sourceMap": true,
-    // The built library, as the application runs it (packages/cli is built first).
-    "paths": {}
+    "sourceMap": true
   },
-  "include": ["src/main", "src/preload", "src/shared"]
+  "include": ["src/preload"]
 }

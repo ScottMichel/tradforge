@@ -33,7 +33,9 @@ function openWindow(): void {
     if (!isSamePage(window.webContents.getURL(), event.url)) event.preventDefault();
   });
 
-  const page = pageToLoad(process.env.TRADFORGE_DEV_SERVER, app.getAppPath());
+  // A packaged application always shows its own page: the development server is for the sources only.
+  const devServer = app.isPackaged ? undefined : process.env.TRADFORGE_DEV_SERVER;
+  const page = pageToLoad(devServer, app.getAppPath());
   void ("url" in page ? window.loadURL(page.url) : window.loadFile(page.file));
 }
 

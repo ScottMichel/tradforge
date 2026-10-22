@@ -13,5 +13,13 @@
     // Checked against the sources of the library, so that the check needs no build of it first.
     "paths": { "tradforge": ["../cli/src/index.ts"] }
   },
-  "include": ["src/main", "src/preload", "src/shared", "tests", "vite.config.ts", "vitest.config.ts"]
+  "include": [
+    "src/main",
+    "src/preload",
+    "src/shared",
+    "tests",
+    "vite.config.ts",
+    "vite.main.config.ts",
+    "vitest.config.ts"
+  ]
 }

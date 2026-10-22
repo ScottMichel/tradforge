@@ -89,9 +89,12 @@ function showProgress(event: ProgressView): void {
 
 function showResult(summary: TranslationResult): void {
   if (summary.total === 0) {
-    result.textContent = retry.checked
-      ? "Rien à traduire : tous les textes ont une traduction."
-      : "Rien à traduire. Coche « Réessayer les échecs » pour reprendre ceux qui ont échoué.";
+    const failures = currentProject()?.stats?.failed ?? 0;
+    result.textContent =
+      failures > 0 && !retry.checked
+        ? `Rien de nouveau à traduire, ${plural(failures, "texte")} en échec : coche « Réessayer les échecs » ` +
+          `pour ${failures > 1 ? "les" : "le"} reprendre.`
+        : "Rien à traduire : tous les textes ont une traduction.";
     return;
   }
   const reused = summary.reused > 0 ? ` (dont ${count(summary.reused)} repris d'un texte presque identique)` : "";

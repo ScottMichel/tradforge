@@ -74,6 +74,25 @@ into guarantees:
 Want to see it first? The [`packages/cli/examples/game`](packages/cli/examples/game) folder is a tiny game with a JSON interface and Lua
 dialogues: `cd packages/cli/examples/game`, then `tradforge translate --dry-run`.
 
+## Desktop application (preview)
+
+The same work without a command line, in four screens: **Project** (open a folder, choose the formats found in it),
+**Settings** (languages, engine, instructions; installed Ollama models are listed, API keys are detected but never
+shown), **Translation** (live progress, stop at any time) and **Review** (correct and approve translations, then write
+the translated files). It works on the same `tradforge.config.json` and memory as the command line: you can switch
+from one to the other on the same project. Its interface is in French for now.
+
+It is not published yet. To run it from the sources (after step 2 above):
+
+```sh
+npm run desktop           # starts the application
+npm run desktop:package   # builds a portable Windows executable in packages/desktop/release/
+```
+
+The portable executable is a single `.exe`: no installation, double-click it. It is **not signed** yet, so Windows
+SmartScreen warns about an unknown publisher the first time: choose "More info", then "Run anyway". API keys are read
+from environment variables, as with the command line: set them before starting the application.
+
 ## Commands
 
 | Command | What it does |
@@ -327,7 +346,7 @@ texts written for tradforge.
 
 ## Roadmap
 
-1. **Desktop application**: open a file or a folder, translate, review — no command line needed.
+1. **Desktop application**: downloads on GitHub, a signed executable (SignPath Foundation), an English interface.
 
 ## Contributing
 

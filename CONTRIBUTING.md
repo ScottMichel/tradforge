@@ -18,6 +18,7 @@ npm run check      # typecheck + lint + tests
 | --- | --- |
 | `npm run dev -- <command>` | Run the command line from the sources, e.g. `npm run dev -- status` |
 | `npm run desktop` | Start the desktop application; changes to its page show at once |
+| `npm run desktop:package` | Build the portable Windows executable in `packages/desktop/release/` |
 | `npm test` / `npm run test:watch` | Run the tests (Vitest) |
 | `npm run typecheck` | TypeScript, strict mode |
 | `npm run lint` / `npm run format` | Check / fix lint and formatting (Biome) |

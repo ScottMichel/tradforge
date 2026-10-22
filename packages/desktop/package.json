@@ -8,22 +8,50 @@
   "type": "module",
   "main": "dist/main/main.js",
   "scripts": {
-    "dev": "tsc -p tsconfig.build.json && node scripts/dev.mjs",
-    "build": "tsc -p tsconfig.build.json && vite build",
+    "dev": "npm run build:code && node scripts/dev.mjs",
+    "build": "npm run build:code && vite build",
+    "build:code": "tsc -p tsconfig.build.json && vite build -c vite.main.config.ts",
+    "package": "npm run build && electron-builder --win portable",
     "start": "electron .",
     "typecheck": "tsc --noEmit && tsc -p src/renderer/tsconfig.json",
     "test": "vitest run"
-  },
-  "dependencies": {
-    "tradforge": "0.1.0"
   },
   "devDependencies": {
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource-variable/jetbrains-mono": "5.3.0",
     "@types/node": "^26.6.5",
     "electron": "44.7.0",
+    "electron-builder": "26.15.3",
+    "tradforge": "0.1.0",
     "typescript": "^7.0.2",
     "vite": "8.2.4",
     "vitest": "^5.0.5"
+  },
+  "build": {
+    "appId": "io.github.scottmichel.tradforge",
+    "productName": "tradforge",
+    "copyright": "Copyright (c) Kazuugnii",
+    "files": [
+      "dist/**/*",
+      "!**/*.map",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "tradforge-${version}-portable.exe"
+    }
   }
 }
